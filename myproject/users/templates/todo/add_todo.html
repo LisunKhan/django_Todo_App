@@ -1,0 +1,46 @@
+{% extends 'todo/base.html' %}
+{% block title %}Add Todo{% endblock %}
+
+{% block content %}
+<h1>Add Todo</h1>
+<table class="table">
+    <form method="post">
+        {% csrf_token %}
+        <tr>
+            <td><label for="title">Title:</label></td>
+            <td><input type="text" name="title" id="title" required></td>
+        </tr>
+        <tr>
+            <td><label for="description">Description:</label></td>
+            <td><textarea name="description" id="description" rows="3" ></textarea></td>
+        </tr>
+        <tr>
+            <td><button type="submit" class="btn btn-primary">Add</button> </td>
+            <td><a href="{% url 'todo_list' %}" class="btn btn-secondary">Back to Todo List</a>
+            </td>
+        </tr>
+    </form>
+</table>
+{% endblock %}
+
+{% comment %} {% extends 'todo/base.html' %}
+{% block title %}Add Todo{% endblock %}
+
+{% block content %}
+<h1>Add Todo</h1>
+<form method="post">
+    {% csrf_token %}
+    <div>
+        <label for="title">Title:</label>
+        <input type="text" name="title" id="title" required>
+    </div>
+    <div>
+        <label for="description">Description:</label>
+        <textarea name="description" id="description" rows="4"></textarea>
+    </div>
+    <div>
+        <button type="submit">Add</button>
+    </div>
+</form>
+<a href="{% url 'todo_list' %}">Back to Todo List</a>
+{% endblock %} {% endcomment %}

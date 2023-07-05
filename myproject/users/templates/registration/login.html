@@ -1,0 +1,36 @@
+{% extends 'registration/base_reg.html' %}
+
+{% block title %}Login{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h1>Login</h1>
+    <table class="table">
+        <form method="post">
+            {% csrf_token %}
+            <tr>
+                <th>{{ form.username.label_tag }}</th>
+                <td>{{ form.username }}</td>
+            </tr>
+            <tr>
+                <th>{{ form.password.label_tag }}</th>
+                <td>{{ form.password }}</td>
+            </tr>
+            <tr>
+                <td colspan="2">
+                    <button type="submit" class="btn btn-primary">Login</button>
+                </td>
+            </tr>
+        </form>
+    </table>
+    <p>Don't have an account? <a href="{% url 'register' %}">Sign Up</a></p>
+</div>
+{% endblock %}
+
+
+{% comment %} <form method="POST">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <button type="submit">Login</button>
+</form>
+<p>Don't have an account? <a href="{% url 'register' %}">Sign Up</a></p> {% endcomment %}
