@@ -2,23 +2,26 @@
 {% block title %}Todo Item Detail{% endblock %}
 
 {% block content %}
-<h1>Todo Item Detail</h1>
-<p>Title: {{ todo.title }}</p>
-<p>Description: {{ todo.description }}</p>
-<p>Completed: {% if todo.completed %}Yes{% else %}No{% endif %}</p>
-<p>Remaining Time: {{ remaining_time }}</p>
-<a href="{% url 'todo_list' %}">Back to Todo List</a>
+  <div class="container">
+    <h1>Todo Item Detail</h1>
+    <table class="table">
+      <tr>
+        <th>Title</th>
+        <td>{{ todo.title }}</td>
+      </tr>
+      <tr>
+        <th>Description</th>
+        <td>{{ todo.description }}</td>
+      </tr>
+      <tr>
+        <th>Completed</th>
+        <td>{% if todo.completed %}Yes{% else %}No{% endif %}</td>
+      </tr>
+      <tr>
+        <th>Remaining Time</th>
+        <td>{{ remaining_time }}</td>
+      </tr>
+    </table>
+    <a href="{% url 'todo_list' %}" class="btn btn-secondary" >Back to Todo List</a>
+  </div>
 {% endblock %}
-
-{% comment %} <!-- todo_detail.html -->
-
-{% extends 'todo/base.html' %}
-{% block title %}Todo Item Detail{% endblock %}
-
-{% block content %}
-<h1>Todo Item Detail</h1>
-<p>Title: {{ todo.title }}</p>
-<p>Description: {{ todo.description }}</p>
-<p>Completed: {% if todo.completed %}Yes{% else %}No{% endif %}</p>
-<a href="{% url 'todo_list' %}">Back to Todo List</a>
-{% endblock %} {% endcomment %}

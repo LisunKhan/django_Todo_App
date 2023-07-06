@@ -21,6 +21,18 @@
           <td>{{ form.password2 }}</td>
         </tr>
         <tr>
+          <th>{{ form.profile.location.label_tag }}</th>
+          <td>{{ form.profile.location }}</td>
+        </tr>
+        <tr>
+          <th>{{ form.profile.bio.label_tag }}</th>
+          <td>{{ form.profile.bio }}</td>
+        </tr>
+        <tr>
+          <th>{{ form.profile.date_of_birth.label_tag }}</th>
+          <td>{{ form.profile.date_of_birth }}</td>
+        </tr>
+        <tr>
           <td colspan="2">
             <button type="submit" class="btn btn-primary">Register</button>
           </td>
@@ -31,10 +43,3 @@
   </div>
 {% endblock %}
 
-
-{% comment %} <form method="POST">
-    {% csrf_token %}
-    {{ form.as_p }}
-    <button type="submit">Register</button>
-  </form>
-   {% endcomment %}
