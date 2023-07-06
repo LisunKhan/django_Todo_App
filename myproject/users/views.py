@@ -126,3 +126,15 @@ def profile(request):
     user = request.user
     profile = UserProfile.objects.get(user=user)
     return render(request, 'todo/profile.html', {'profile': profile})
+
+@login_required
+def edit_profile(request):
+    if request.method == 'POST':
+        form = UserProfileForm(request.POST, request.FILES, instance=request.user.userprofile)
+        if form.is_valid():
+            form.save()
+            return redirect('profile')
+    else:
+        form = UserProfileForm(instance=request.user.userprofile)
+    
+    return render(request, 'todo/edit_profile.html', {'form': form})

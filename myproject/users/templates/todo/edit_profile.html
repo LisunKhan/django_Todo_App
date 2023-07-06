@@ -1,0 +1,16 @@
+{% extends 'todo/base.html' %}
+
+{% block title %}Edit Profile{% endblock %}
+
+{% block content %}
+  <div class="container">
+    <h1>Edit Profile</h1>
+    <form method="post" enctype="multipart/form-data">
+      {% csrf_token %}
+      <table class="table">
+        {{ form.as_table }}
+      </table>
+      <button type="submit" class="btn btn-primary">Save</button> <a href="{% url 'profile' %}" class="btn btn-secondary">Back</a>
+    </form>
+  </div>
+{% endblock %}

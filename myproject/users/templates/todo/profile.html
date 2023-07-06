@@ -5,17 +5,18 @@
 {% block content %}
   <div class="container">
     <h1>User Profile</h1>
+    
+    {% if profile.profile_pic %}
+        <img src="{{ profile.profile_pic.url }}" alt="Profile Picture">
+    {% else %}
+        No profile picture available.
+    {% endif %}
+         
     <table class="table">
       <tr>
         <th>Username</th>
         <td>{{ user.username }}</td>
       </tr>
-      {% comment %}
-      <tr>
-        <th>Profile Picture</th>
-        <td><img src="{{ user.userprofile.profile_pic.url }}" alt="Profile Picture"></td>
-      </tr>
-      {% endcomment %}
       <tr>
         <th>Bio</th>
         <td>{{ profile.bio }}</td>
@@ -29,9 +30,7 @@
         <td>{{ profile.location }}</td>
       </tr>
     </table>
-    {% comment %}
-    <a href="{% url 'edit_profile' %}">Edit Profile</a>
-    {% endcomment %}
+    <a href="{% url 'edit_profile' %}" class="btn btn-primary" >Edit Profile</a>
   </div>
 {% endblock %}
 
