@@ -4,6 +4,8 @@ from django.contrib.auth import login
 from django.contrib.auth.decorators import login_required
 from .models import TodoItem
 from .forms import TodoForm
+from django.utils import timezone
+
 
 def register(request):
     if request.method == 'POST':
@@ -81,7 +83,14 @@ def delete_todo(request, todo_id):
 #         return redirect('todo_list')
 #     return render(request, 'todo/delete_todo.html', {'todo': todo})
 
+# @login_required
+# def todo_detail(request, todo_id):
+#     todo = get_object_or_404(TodoItem, id=todo_id)
+#     return render(request, 'todo/todo_detail.html', {'todo': todo})
+
 @login_required
 def todo_detail(request, todo_id):
     todo = get_object_or_404(TodoItem, id=todo_id)
-    return render(request, 'todo/todo_detail.html', {'todo': todo})
+    now = timezone.now()
+    remaining_time = todo.deadline - now
+    return render(request, 'todo/todo_detail.html', {'todo': todo, 'remaining_time': remaining_time})

@@ -1,4 +1,16 @@
-<!-- todo_detail.html -->
+{% extends 'todo/base.html' %}
+{% block title %}Todo Item Detail{% endblock %}
+
+{% block content %}
+<h1>Todo Item Detail</h1>
+<p>Title: {{ todo.title }}</p>
+<p>Description: {{ todo.description }}</p>
+<p>Completed: {% if todo.completed %}Yes{% else %}No{% endif %}</p>
+<p>Remaining Time: {{ remaining_time }}</p>
+<a href="{% url 'todo_list' %}">Back to Todo List</a>
+{% endblock %}
+
+{% comment %} <!-- todo_detail.html -->
 
 {% extends 'todo/base.html' %}
 {% block title %}Todo Item Detail{% endblock %}
@@ -9,4 +21,4 @@
 <p>Description: {{ todo.description }}</p>
 <p>Completed: {% if todo.completed %}Yes{% else %}No{% endif %}</p>
 <a href="{% url 'todo_list' %}">Back to Todo List</a>
-{% endblock %}
+{% endblock %} {% endcomment %}
