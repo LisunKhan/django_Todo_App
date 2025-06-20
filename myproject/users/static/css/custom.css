@@ -1,0 +1,19 @@
+/* General body styling (example) */
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    line-height: 1.6;
+    /* background-color: #f4f4f4; */ /* Optional: A very light gray background */
+    /* color: #333; */ /* Optional: Default text color */
+}
+
+/* Navbar custom styling (example) */
+.navbar-brand {
+    font-weight: bold;
+}
+
+/* Footer custom styling (example) */
+.footer {
+    font-size: 0.9em;
+}
+
+/* Add more specific styles as needed */
