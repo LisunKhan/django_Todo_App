@@ -5,6 +5,7 @@ from django.contrib.auth.decorators import login_required
 from .models import TodoItem
 from .forms import TodoForm
 from django.db.models import Sum
+from django.urls import reverse
 
 def register(request):
     if request.method == 'POST':
@@ -95,3 +96,15 @@ def task_report(request):
         'tasks': tasks,
         'total_time_spent': total_time_spent
     })
+
+@login_required
+def edit_todo(request, todo_id):
+    todo = get_object_or_404(TodoItem, id=todo_id, user=request.user)
+    if request.method == 'POST':
+        form = TodoForm(request.POST, instance=todo)
+        if form.is_valid():
+            form.save()
+            return redirect(reverse('todo_detail', args=[todo.id]))
+    else:
+        form = TodoForm(instance=todo)
+    return render(request, 'todo/edit_todo.html', {'form': form, 'todo': todo})

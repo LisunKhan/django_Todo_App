@@ -202,3 +202,135 @@ class TodoViewTests(TestCase):
         response = self.client.get(url)
         self.assertEqual(response.status_code, 302) # Should redirect to login
         self.assertTrue(response.url.startswith(reverse('login')))
+
+    # Tests for edit_todo view
+    def test_edit_todo_login_required(self):
+        """
+        Test that edit_todo view requires login.
+        """
+        self.client.logout()
+        # Attempt to access edit page for a dummy task ID
+        url = reverse('edit_todo', args=[1])
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 302)
+        self.assertTrue(response.url.startswith(reverse('login')))
+
+    def test_edit_todo_task_ownership_get(self):
+        """
+        Test user cannot GET edit page for another user's task (should 404).
+        """
+        other_task = TodoItem.objects.create(user=self.other_user, title='Other User Task Edit', description='Test')
+        url = reverse('edit_todo', args=[other_task.id])
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 404)
+
+    def test_edit_todo_task_ownership_post(self):
+        """
+        Test user cannot POST to edit another user's task (should 404, no data change).
+        """
+        other_task = TodoItem.objects.create(user=self.other_user, title='Original Other Title', description='Original Other Desc', time_spent=10)
+        url = reverse('edit_todo', args=[other_task.id])
+        post_data = {'title': 'Attempted New Title', 'description': 'Attempted New Desc', 'time_spent': 99}
+
+        response = self.client.post(url, post_data)
+        self.assertEqual(response.status_code, 404)
+
+        # Verify the task data has not changed
+        other_task.refresh_from_db()
+        self.assertEqual(other_task.title, 'Original Other Title')
+        self.assertEqual(other_task.description, 'Original Other Desc')
+        self.assertEqual(other_task.time_spent, 10)
+
+    def test_edit_todo_task_not_found_get(self):
+        """
+        Test GET request to edit URL for a non-existent todo_id results in 404.
+        """
+        non_existent_id = 9999
+        url = reverse('edit_todo', args=[non_existent_id])
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 404)
+
+    def test_edit_todo_task_not_found_post(self):
+        """
+        Test POST request to edit URL for a non-existent todo_id results in 404.
+        """
+        non_existent_id = 9999
+        url = reverse('edit_todo', args=[non_existent_id])
+        post_data = {'title': 'Title', 'description': 'Description', 'time_spent': 10}
+        response = self.client.post(url, post_data)
+        self.assertEqual(response.status_code, 404)
+
+    def test_edit_todo_successful_get(self):
+        """
+        Test successful GET request for edit_todo page.
+        """
+        task = TodoItem.objects.create(user=self.user, title='My Edit Task', description='My Desc', time_spent=40)
+        url = reverse('edit_todo', args=[task.id])
+        response = self.client.get(url)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIsInstance(response.context['form'], TodoForm)
+        self.assertEqual(response.context['form'].initial['title'], 'My Edit Task')
+        self.assertEqual(response.context['form'].initial['description'], 'My Desc')
+        self.assertEqual(response.context['form'].initial['time_spent'], 40)
+        self.assertContains(response, 'My Edit Task') # Check if title is rendered
+
+    def test_edit_todo_successful_post_update(self):
+        """
+        Test successful POST request to update a task.
+        """
+        task = TodoItem.objects.create(user=self.user, title='Original Title', description='Original Desc', time_spent=20)
+        url = reverse('edit_todo', args=[task.id])
+        updated_data = {
+            'title': 'Updated Title',
+            'description': 'Updated Desc',
+            'time_spent': 88,
+            'completed': True # Assuming 'completed' is part of the form, if not, remove
+        }
+
+        # Check if 'completed' is actually in the form fields
+        # If not, the test data should not include it, or the form needs to be updated.
+        # For now, assuming TodoForm includes 'title', 'description', 'time_spent'.
+        # If 'completed' is not in TodoForm.Meta.fields, it won't be processed.
+        # Let's get the actual fields from the form to be sure
+        temp_form = TodoForm()
+        form_fields = temp_form.fields.keys()
+
+        # Only include fields that are actually in the form
+        valid_post_data = {k: v for k, v in updated_data.items() if k in form_fields}
+
+        response = self.client.post(url, valid_post_data)
+
+        # Should redirect to todo_detail page
+        self.assertEqual(response.status_code, 302)
+        self.assertRedirects(response, reverse('todo_detail', args=[task.id]))
+
+        task.refresh_from_db()
+        self.assertEqual(task.title, valid_post_data['title'])
+        self.assertEqual(task.description, valid_post_data['description'])
+        self.assertEqual(task.time_spent, valid_post_data['time_spent'])
+        # if 'completed' in valid_post_data:
+        #     self.assertEqual(task.completed, valid_post_data['completed'])
+
+
+    def test_edit_todo_post_invalid_data(self):
+        """
+        Test POST request with invalid data (e.g., blank title).
+        """
+        task = TodoItem.objects.create(user=self.user, title='Valid Title', description='Valid Desc', time_spent=15)
+        url = reverse('edit_todo', args=[task.id])
+        invalid_data = {
+            'title': '',  # Invalid: title is required
+            'description': 'Description with no title',
+            'time_spent': 10
+        }
+        response = self.client.post(url, invalid_data)
+
+        self.assertEqual(response.status_code, 200) # Should re-render the form
+        self.assertTrue(response.context['form'].errors) # Check for form errors
+        self.assertIn('title', response.context['form'].errors) # Specifically title error
+
+        task.refresh_from_db()
+        self.assertEqual(task.title, 'Valid Title') # Data should not have changed
+        self.assertEqual(task.description, 'Valid Desc')
+        self.assertEqual(task.time_spent, 15)

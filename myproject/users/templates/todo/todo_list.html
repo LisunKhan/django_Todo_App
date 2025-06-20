@@ -11,7 +11,7 @@
             <th>Title</th>
             <th>Description</th>
             <th>Time Spent (min)</th>
-            <th></th>
+            <th>Actions</th>
         </tr>
     </thead>
     <tbody>
@@ -21,7 +21,8 @@
             <td>{{ todo.description }}</td>
             <td>{{ todo.time_spent }}</td>
             <td>
-                <a href="{% url 'delete_todo' todo.id %}" class="btn btn-danger" >Delete</a>
+                <a href="{% url 'edit_todo' todo.id %}" class="btn btn-sm btn-outline-secondary">Edit</a>
+                <a href="{% url 'delete_todo' todo.id %}" class="btn btn-sm btn-danger" >Delete</a>
             </td>
         </tr>
         {% endfor %}

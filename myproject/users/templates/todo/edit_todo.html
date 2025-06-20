@@ -1,0 +1,16 @@
+{% extends 'todo/base.html' %}
+
+{% block title %}Edit Task: {{ todo.title }}{% endblock %}
+
+{% block content %}
+<h1>Edit Task: {{ todo.title }}</h1>
+
+<form method="POST" action="">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <button type="submit" class="btn btn-primary">Save Changes</button>
+</form>
+
+<a href="{% url 'todo_detail' todo.id %}" class="btn btn-secondary mt-2">Cancel</a>
+<a href="{% url 'todo_list' %}" class="btn btn-info mt-2">Back to Todo List</a>
+{% endblock %}
