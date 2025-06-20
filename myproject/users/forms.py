@@ -42,4 +42,4 @@ class CustomAuthenticationForm(AuthenticationForm):
 class TodoForm(forms.ModelForm):
     class Meta:
         model = TodoItem
-        fields = ['title', 'description']
+        fields = ['title', 'description', 'time_spent']
