@@ -9,19 +9,15 @@
         <tr>
             <th>Title</th>
             <th>Description</th>
-            <th>Time Spent (mins)</th>
             <th></th>
         </tr>
     </thead>
     <tbody>
         {% for todo in todos %}
-        <tr {% if todo.completed %}class="completed-task"{% endif %}>
+        <tr>
             <td><b><a href="{% url 'todo_detail' todo.id %}">{{ todo.title }}</a></b></td>
             <td>{{ todo.description }}</td>
-            <td>{{ todo.time_spent }}</td>
             <td>
-                <a href="{% url 'toggle_todo_status' todo.id %}" class="btn btn-secondary">{% if todo.completed %}Mark as Incomplete{% else %}Mark as Complete{% endif %}</a>
-                <a href="{% url 'edit_todo' todo.id %}" class="btn btn-primary">Edit</a>
                 <a href="{% url 'delete_todo' todo.id %}" class="btn btn-danger" >Delete</a>
             </td>
         </tr>
