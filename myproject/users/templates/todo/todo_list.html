@@ -4,12 +4,14 @@
 
 {% block content %}
 <h1>Todo List</h1>
+<p><a href="{% url 'task_report' %}" class="btn btn-info">View Task Report</a></p>
 <table class="table table-striped">
     <thead>
         <tr>
             <th>Title</th>
             <th>Description</th>
-            <th></th>
+            <th>Time Spent (min)</th>
+            <th>Actions</th>
         </tr>
     </thead>
     <tbody>
@@ -17,8 +19,10 @@
         <tr>
             <td><b><a href="{% url 'todo_detail' todo.id %}">{{ todo.title }}</a></b></td>
             <td>{{ todo.description }}</td>
+            <td>{{ todo.time_spent }}</td>
             <td>
-                <a href="{% url 'delete_todo' todo.id %}" class="btn btn-danger" >Delete</a>
+                <a href="{% url 'edit_todo' todo.id %}" class="btn btn-sm btn-outline-secondary">Edit</a>
+                <a href="{% url 'delete_todo' todo.id %}" class="btn btn-sm btn-danger" >Delete</a>
             </td>
         </tr>
         {% endfor %}

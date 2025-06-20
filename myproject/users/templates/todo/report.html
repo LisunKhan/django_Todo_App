@@ -1,0 +1,36 @@
+{% extends 'todo/base.html' %}
+
+{% block title %}Task Report{% endblock %}
+
+{% block content %}
+<h1>Task Report</h1>
+
+<h2>Total Time Spent on All Tasks: {{ total_time_spent }} minute(s)</h2>
+
+<table class="table table-striped">
+    <thead>
+        <tr>
+            <th>Title</th>
+            <th>Description</th>
+            <th>Status</th>
+            <th>Time Spent (min)</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for task in tasks %}
+        <tr>
+            <td><a href="{% url 'todo_detail' task.id %}">{{ task.title }}</a></td>
+            <td>{{ task.description }}</td>
+            <td>{% if task.completed %}Completed{% else %}Pending{% endif %}</td>
+            <td>{{ task.time_spent }}</td>
+        </tr>
+        {% empty %}
+        <tr>
+            <td colspan="4">No tasks found.</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<a href="{% url 'todo_list' %}" class="btn btn-primary">Back to Todo List</a>
+{% endblock %}
