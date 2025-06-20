@@ -8,13 +8,42 @@
     <table class="table">
         <form method="post">
             {% csrf_token %}
+            {% if form.non_field_errors %}
+            <tr class="errorlist">
+              <td colspan="2">
+                <ul class="errorlist">
+                  {% for error in form.non_field_errors %}
+                    <li>{{ error }}</li>
+                  {% endfor %}
+                </ul>
+              </td>
+            </tr>
+            {% endif %}
             <tr>
                 <th>{{ form.username.label_tag }}</th>
-                <td>{{ form.username }}</td>
+                <td>
+                    {{ form.username }}
+                    {% if form.username.errors %}
+                      <ul class="errorlist">
+                        {% for error in form.username.errors %}
+                          <li>{{ error }}</li>
+                        {% endfor %}
+                      </ul>
+                    {% endif %}
+                </td>
             </tr>
             <tr>
                 <th>{{ form.password.label_tag }}</th>
-                <td>{{ form.password }}</td>
+                <td>
+                    {{ form.password }}
+                    {% if form.password.errors %}
+                      <ul class="errorlist">
+                        {% for error in form.password.errors %}
+                          <li>{{ error }}</li>
+                        {% endfor %}
+                      </ul>
+                    {% endif %}
+                </td>
             </tr>
             <tr>
                 <td colspan="2">
