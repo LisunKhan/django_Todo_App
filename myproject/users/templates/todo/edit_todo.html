@@ -3,14 +3,78 @@
 {% block title %}Edit Task: {{ todo.title }}{% endblock %}
 
 {% block content %}
-<h1>Edit Task: {{ todo.title }}</h1>
+<div style="display: flex; justify-content: center; align-items: center; flex-direction: column;">
+    <h1>Edit Task: {{ todo.title }}</h1>
+    <form method="post" action="" style="width: 50%; margin-top: 20px;">
+        {% csrf_token %}
+        <div style="margin-bottom: 15px;">
+            <div style="margin-bottom: 5px;">
+                <label for="{{ form.title.id_for_label }}">Title:</label>
+            </div>
+            <div>
+                {{ form.title }}
+            </div>
+            {% if form.title.errors %}
+                <div style="color: red; font-size: 0.9em;">
+                    {% for error in form.title.errors %}
+                        <p>{{ error }}</p>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        </div>
 
-<form method="POST" action="">
-    {% csrf_token %}
-    {{ form.as_p }}
-    <button type="submit" class="btn btn-primary">Save Changes</button>
-</form>
+        <div style="margin-bottom: 15px;">
+            <div style="margin-bottom: 5px;">
+                <label for="{{ form.description.id_for_label }}">Description:</label>
+            </div>
+            <div>
+                {{ form.description }}
+            </div>
+            {% if form.description.errors %}
+                <div style="color: red; font-size: 0.9em;">
+                    {% for error in form.description.errors %}
+                        <p>{{ error }}</p>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        </div>
 
-<a href="{% url 'todo_detail' todo.id %}" class="btn btn-secondary mt-2">Cancel</a>
-<a href="{% url 'todo_list' %}" class="btn btn-info mt-2">Back to Todo List</a>
+        <div style="margin-bottom: 15px;">
+            <div style="margin-bottom: 5px;">
+                <label for="{{ form.completed.id_for_label }}">Completed:</label>
+            </div>
+            <div>
+                {{ form.completed }}
+            </div>
+            {% if form.completed.errors %}
+                <div style="color: red; font-size: 0.9em;">
+                    {% for error in form.completed.errors %}
+                        <p>{{ error }}</p>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        </div>
+
+        <div style="margin-top: 20px; display: flex; justify-content: space-between;">
+            <button type="submit" class="btn btn-primary" style="padding: 10px 20px;">Save Changes</button>
+            <a href="{% url 'todo_detail' todo.id %}" class="btn btn-secondary" style="padding: 10px 20px; text-decoration: none;">Cancel</a>
+        </div>
+    </form>
+    <div style="margin-top: 15px;">
+        <a href="{% url 'todo_list' %}" class="btn btn-info" style="padding: 10px 20px; text-decoration: none;">Back to Todo List</a>
+    </div>
+</div>
+
+<style>
+    /* Assuming form widgets might not pick up 100% width by default */
+    #{{ form.title.id_for_label }},
+    #{{ form.description.id_for_label }} {
+        width: 100%;
+        padding: 8px;
+        box-sizing: border-box;
+    }
+    #{{ form.completed.id_for_label }} {
+        /* Specific styling for checkbox if needed */
+    }
+</style>
 {% endblock %}

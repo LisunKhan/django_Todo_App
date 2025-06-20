@@ -2,45 +2,30 @@
 {% block title %}Add Todo{% endblock %}
 
 {% block content %}
-<h1>Add Todo</h1>
-<table class="table">
-    <form method="post">
+<div style="display: flex; justify-content: center; align-items: center; flex-direction: column;">
+    <h1>Add Todo</h1>
+    <form method="post" style="width: 50%; margin-top: 20px;">
         {% csrf_token %}
-        <tr>
-            <td><label for="title">Title:</label></td>
-            <td><input type="text" name="title" id="title" required></td>
-        </tr>
-        <tr>
-            <td><label for="description">Description:</label></td>
-            <td><textarea name="description" id="description" rows="3" ></textarea></td>
-        </tr>
-        <tr>
-            <td><button type="submit" class="btn btn-primary">Add</button> </td>
-            <td><a href="{% url 'todo_list' %}" class="btn btn-secondary">Back to Todo List</a>
-            </td>
-        </tr>
+        <div style="margin-bottom: 15px;">
+            <div style="margin-bottom: 5px;">
+                <label for="title">Title:</label>
+            </div>
+            <div>
+                <input type="text" name="title" id="title" required style="width: 100%; padding: 8px; box-sizing: border-box;">
+            </div>
+        </div>
+        <div style="margin-bottom: 15px;">
+            <div style="margin-bottom: 5px;">
+                <label for="description">Description:</label>
+            </div>
+            <div>
+                <textarea name="description" id="description" rows="3" style="width: 100%; padding: 8px; box-sizing: border-box;"></textarea>
+            </div>
+        </div>
+        <div style="margin-top: 20px; display: flex; justify-content: space-between;">
+            <button type="submit" class="btn btn-primary" style="padding: 10px 20px;">Add</button>
+            <a href="{% url 'todo_list' %}" class="btn btn-secondary" style="padding: 10px 20px; text-decoration: none;">Back to Todo List</a>
+        </div>
     </form>
-</table>
+</div>
 {% endblock %}
-
-{% comment %} {% extends 'todo/base.html' %}
-{% block title %}Add Todo{% endblock %}
-
-{% block content %}
-<h1>Add Todo</h1>
-<form method="post">
-    {% csrf_token %}
-    <div>
-        <label for="title">Title:</label>
-        <input type="text" name="title" id="title" required>
-    </div>
-    <div>
-        <label for="description">Description:</label>
-        <textarea name="description" id="description" rows="4"></textarea>
-    </div>
-    <div>
-        <button type="submit">Add</button>
-    </div>
-</form>
-<a href="{% url 'todo_list' %}">Back to Todo List</a>
-{% endblock %} {% endcomment %}

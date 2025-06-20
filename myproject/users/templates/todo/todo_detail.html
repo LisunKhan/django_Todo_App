@@ -4,11 +4,29 @@
 {% block title %}Todo Item Detail{% endblock %}
 
 {% block content %}
-<h1>Todo Item Detail</h1>
-<p>Title: {{ todo.title }}</p>
-<p>Description: {{ todo.description }}</p>
-<p>Time Spent (min): {{ todo.time_spent }}</p>
-<p>Completed: {% if todo.completed %}Yes{% else %}No{% endif %}</p>
-<a href="{% url 'edit_todo' todo.id %}" class="btn btn-secondary">Edit Task</a>
-<a href="{% url 'todo_list' %}" class="btn btn-info">Back to Todo List</a>
+<div style="display: flex; justify-content: center; align-items: center; flex-direction: column;">
+    <h1 style="margin-bottom: 30px;">Todo Item Detail</h1>
+    <div style="width: 50%; padding: 20px; border: 1px solid #ddd; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+        <div style="margin-bottom: 15px; padding-bottom: 10px; border-bottom: 1px solid #eee;">
+            <strong style="color: #333;">Title:</strong>
+            <span style="margin-left: 10px; color: #555;">{{ todo.title }}</span>
+        </div>
+        <div style="margin-bottom: 15px; padding-bottom: 10px; border-bottom: 1px solid #eee;">
+            <strong style="color: #333;">Description:</strong>
+            <p style="margin-left: 10px; margin-top: 5px; color: #555; white-space: pre-wrap;">{{ todo.description|default:"N/A" }}</p>
+        </div>
+        <div style="margin-bottom: 15px; padding-bottom: 10px; border-bottom: 1px solid #eee;">
+            <strong style="color: #333;">Time Spent (min):</strong>
+            <span style="margin-left: 10px; color: #555;">{{ todo.time_spent }}</span>
+        </div>
+        <div style="margin-bottom: 20px;">
+            <strong style="color: #333;">Completed:</strong>
+            <span style="margin-left: 10px; color: #555;">{% if todo.completed %}Yes{% else %}No{% endif %}</span>
+        </div>
+        <div style="margin-top: 20px; display: flex; justify-content: space-between;">
+            <a href="{% url 'edit_todo' todo.id %}" class="btn btn-secondary" style="padding: 10px 20px; text-decoration: none;">Edit Task</a>
+            <a href="{% url 'todo_list' %}" class="btn btn-info" style="padding: 10px 20px; text-decoration: none;">Back to Todo List</a>
+        </div>
+    </div>
+</div>
 {% endblock %}
