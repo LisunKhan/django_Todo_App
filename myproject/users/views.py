@@ -4,7 +4,6 @@ from .forms import CustomUserCreationForm, CustomAuthenticationForm
 from django.contrib.auth.decorators import login_required
 from .models import TodoItem
 from .forms import TodoForm
-from django.db.models import Sum
 
 def register(request):
     if request.method == 'POST':
@@ -83,41 +82,6 @@ def delete_todo(request, todo_id):
 #     return render(request, 'todo/delete_todo.html', {'todo': todo})
 
 @login_required
-def edit_todo(request, todo_id):
-    todo = get_object_or_404(TodoItem, id=todo_id, user=request.user)
-    if request.method == 'POST':
-        form = TodoForm(request.POST, instance=todo)
-        if form.is_valid():
-            form.save()
-            return redirect('todo_list')
-    else:
-        form = TodoForm(instance=todo)
-    return render(request, 'todo/edit_todo.html', {'form': form, 'todo': todo})
-
-@login_required
 def todo_detail(request, todo_id):
     todo = get_object_or_404(TodoItem, id=todo_id)
     return render(request, 'todo/todo_detail.html', {'todo': todo})
-
-@login_required
-def toggle_todo_status(request, todo_id):
-    todo = get_object_or_404(TodoItem, id=todo_id, user=request.user)
-    todo.completed = not todo.completed
-    todo.save()
-    return redirect('todo_list')
-
-@login_required
-def view_report(request):
-    todos = TodoItem.objects.filter(user=request.user)
-    total_tasks = todos.count()
-    completed_tasks = todos.filter(completed=True).count()
-    pending_tasks = total_tasks - completed_tasks
-    total_time_spent = todos.aggregate(total_time=Sum('time_spent'))['total_time'] or 0
-
-    context = {
-        'total_tasks': total_tasks,
-        'completed_tasks': completed_tasks,
-        'pending_tasks': pending_tasks,
-        'total_time_spent': total_time_spent,
-    }
-    return render(request, 'todo/report.html', context)
