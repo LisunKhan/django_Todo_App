@@ -11,6 +11,7 @@
             <th>Title</th>
             <th>Description</th>
             <th>Time Spent (min)</th>
+            <th>Status</th>
             <th>Actions</th>
         </tr>
     </thead>
@@ -20,6 +21,13 @@
             <td><b><a href="{% url 'todo_detail' todo.id %}">{{ todo.title }}</a></b></td>
             <td>{{ todo.description }}</td>
             <td>{{ todo.time_spent }}</td>
+            <td>
+                {% if todo.completed %}
+                    <span class="badge bg-success">Completed</span>
+                {% else %}
+                    <span class="badge bg-warning text-dark">Pending</span>
+                {% endif %}
+            </td>
             <td>
                 <a href="{% url 'edit_todo' todo.id %}" class="btn btn-sm btn-outline-secondary">Edit</a>
                 <a href="{% url 'delete_todo' todo.id %}" class="btn btn-sm btn-danger" >Delete</a>

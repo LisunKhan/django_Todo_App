@@ -42,7 +42,7 @@ class CustomAuthenticationForm(AuthenticationForm):
 class TodoForm(forms.ModelForm):
     class Meta:
         model = TodoItem
-        fields = ['title', 'description', 'time_spent']
+        fields = ['title', 'description', 'completed', 'time_spent']
         widgets = { # Using widgets to make a field not required is not standard.
                     # Instead, field attributes should be customized in the form's __init__ or by declaring the field explicitly.
                     # However, a more direct way for ModelForm is to specify 'required' in 'field_classes' or 'formfield_callback'

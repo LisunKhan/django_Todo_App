@@ -279,38 +279,32 @@ class TodoViewTests(TestCase):
         """
         Test successful POST request to update a task.
         """
-        task = TodoItem.objects.create(user=self.user, title='Original Title', description='Original Desc', time_spent=20)
+        task = TodoItem.objects.create(user=self.user, title='Original Title', description='Original Desc', time_spent=20, completed=False) # Start with completed=False
         url = reverse('edit_todo', args=[task.id])
         updated_data = {
             'title': 'Updated Title',
             'description': 'Updated Desc',
             'time_spent': 88,
-            'completed': True # Assuming 'completed' is part of the form, if not, remove
+            'completed': True # Explicitly set to True for testing update
         }
 
-        # Check if 'completed' is actually in the form fields
-        # If not, the test data should not include it, or the form needs to be updated.
-        # For now, assuming TodoForm includes 'title', 'description', 'time_spent'.
-        # If 'completed' is not in TodoForm.Meta.fields, it won't be processed.
-        # Let's get the actual fields from the form to be sure
         temp_form = TodoForm()
         form_fields = temp_form.fields.keys()
-
-        # Only include fields that are actually in the form
         valid_post_data = {k: v for k, v in updated_data.items() if k in form_fields}
+
+        # Ensure 'completed' is part of the form fields after our forms.py change
+        self.assertIn('completed', form_fields)
 
         response = self.client.post(url, valid_post_data)
 
-        # Should redirect to todo_detail page
         self.assertEqual(response.status_code, 302)
         self.assertRedirects(response, reverse('todo_detail', args=[task.id]))
 
         task.refresh_from_db()
-        self.assertEqual(task.title, valid_post_data['title'])
-        self.assertEqual(task.description, valid_post_data['description'])
-        self.assertEqual(task.time_spent, valid_post_data['time_spent'])
-        # if 'completed' in valid_post_data:
-        #     self.assertEqual(task.completed, valid_post_data['completed'])
+        self.assertEqual(task.title, updated_data['title'])
+        self.assertEqual(task.description, updated_data['description'])
+        self.assertEqual(task.time_spent, updated_data['time_spent'])
+        self.assertEqual(task.completed, updated_data['completed']) # Verify 'completed' status
 
 
     def test_edit_todo_post_invalid_data(self):
@@ -334,3 +328,21 @@ class TodoViewTests(TestCase):
         self.assertEqual(task.title, 'Valid Title') # Data should not have changed
         self.assertEqual(task.description, 'Valid Desc')
         self.assertEqual(task.time_spent, 15)
+
+    def test_todo_list_displays_status(self):
+        """
+        Test that the todo_list page correctly displays the status of tasks.
+        """
+        TodoItem.objects.create(user=self.user, title='Completed Task', description='This task is done', completed=True)
+        TodoItem.objects.create(user=self.user, title='Pending Task', description='This task is not done', completed=False)
+
+        url = reverse('todo_list')
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+
+        self.assertContains(response, 'Completed Task')
+        # Check for the badge HTML we added in the template
+        self.assertContains(response, '<span class="badge bg-success">Completed</span>')
+
+        self.assertContains(response, 'Pending Task')
+        self.assertContains(response, '<span class="badge bg-warning text-dark">Pending</span>')
