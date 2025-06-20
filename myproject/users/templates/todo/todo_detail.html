@@ -5,8 +5,23 @@
 
 {% block content %}
 <h1>Todo Item Detail</h1>
-<p>Title: {{ todo.title }}</p>
-<p>Description: {{ todo.description }}</p>
-<p>Completed: {% if todo.completed %}Yes{% else %}No{% endif %}</p>
-<a href="{% url 'todo_list' %}">Back to Todo List</a>
+<p><strong>Title:</strong> {{ todo.title }}</p>
+<p><strong>Description:</strong> {{ todo.description }}</p>
+<p><strong>Status:</strong> {% if todo.completed %}Completed{% else %}Incomplete{% endif %}</p>
+<p><strong>Time Spent:</strong> {{ todo.time_spent }} minutes</p>
+
+<div class="mt-3">
+    <a href="{% url 'toggle_todo_status' todo.id %}" class="btn btn-secondary btn-sm">
+        {% if todo.completed %}Mark as Incomplete{% else %}Mark as Complete{% endif %}
+    </a>
+    <a href="{% url 'edit_todo' todo.id %}" class="btn btn-primary btn-sm">Edit</a>
+    <form action="{% url 'delete_todo' todo.id %}" method="post" style="display: inline;">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-danger btn-sm">Delete</button>
+    </form>
+</div>
+
+<div class="mt-4">
+    <a href="{% url 'todo_list' %}" class="btn btn-outline-secondary">Back to Todo List</a>
+</div>
 {% endblock %}

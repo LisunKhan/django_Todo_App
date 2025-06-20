@@ -1,0 +1,29 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.eggs
+*.egg-info/
+dist/
+build/
+*.so
+*.manifest
+*.spec
+
+# Django
+*.log
+db.sqlite3
+/myproject/db.sqlite3
+
+# Virtual environment
+/mydjango/
+
+# Environment variables
+.env
+
+# IDE specific files
+.vscode/
+.idea/
+*.swp
+*.swo
