@@ -7,19 +7,40 @@
     <h1>Todo List</h1>
     <a href="{% url 'task_report' %}" class="btn btn-info">View Task Report</a>
 </div>
+
+<!-- Search Form -->
+<form method="get" action="{% url 'todo_list' %}" class="mb-3">
+    <div class="input-group">
+        <input type="text" name="q" class="form-control" placeholder="Search tasks..." value="{{ request.GET.q | default:'' }}">
+        <button class="btn btn-outline-secondary" type="submit">Search</button>
+    </div>
+</form>
+
 <table class="table table-striped table-hover align-middle">
     <thead>
         <tr>
-            <th>Title</th>
-            <th>Description</th>
+            <th>
+                <a href="?order_by={% if request.GET.order_by == 'title' %}-title{% else %}title{% endif %}&q={{ request.GET.q | default:'' }}">
+                    Title {% if request.GET.order_by == 'title' %}▲{% elif request.GET.order_by == '-title' %}▼{% endif %}
+                </a>
+            </th>
+            <th>Description</th> {# Assuming description is not a primary sort field #}
             <th>Time Spent (hours)</th>
-            <th>Task Date</th>
-            <th>Status</th>
+            <th>
+                <a href="?order_by={% if request.GET.order_by == 'task_date' %}-task_date{% else %}task_date{% endif %}&q={{ request.GET.q | default:'' }}">
+                    Task Date {% if request.GET.order_by == 'task_date' %}▲{% elif request.GET.order_by == '-task_date' %}▼{% endif %}
+                </a>
+            </th>
+            <th>
+                <a href="?order_by={% if request.GET.order_by == 'completed' %}-completed{% else %}completed{% endif %}&q={{ request.GET.q | default:'' }}">
+                    Status {% if request.GET.order_by == 'completed' %}▲{% elif request.GET.order_by == '-completed' %}▼{% endif %}
+                </a>
+            </th>
             <th>Actions</th>
         </tr>
     </thead>
     <tbody>
-        {% for todo in todos %}
+        {% for todo in page_obj %}  {# Use page_obj here #}
         <tr data-id="{{ todo.id }}">
             <td data-field="title"><b><a href="{% url 'todo_detail' todo.id %}">{{ todo.title }}</a></b></td>
             <td data-field="description">{{ todo.description }}</td>
@@ -47,6 +68,29 @@
         {% endfor %}
     </tbody>
 </table>
+
+<!-- Pagination -->
+<nav aria-label="Page navigation">
+    <ul class="pagination justify-content-center">
+        {% if page_obj.has_previous %}
+            <li class="page-item"><a class="page-link" href="?page=1&q={{ request.GET.q | default:'' }}&order_by={{ request.GET.order_by | default:'task_date' }}">&laquo; First</a></li>
+            <li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}&q={{ request.GET.q | default:'' }}&order_by={{ request.GET.order_by | default:'task_date' }}">Previous</a></li>
+        {% else %}
+            <li class="page-item disabled"><span class="page-link">&laquo; First</span></li>
+            <li class="page-item disabled"><span class="page-link">Previous</span></li>
+        {% endif %}
+
+        <li class="page-item disabled"><span class="page-link">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span></li>
+
+        {% if page_obj.has_next %}
+            <li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}&q={{ request.GET.q | default:'' }}&order_by={{ request.GET.order_by | default:'task_date' }}">Next</a></li>
+            <li class="page-item"><a class="page-link" href="?page={{ page_obj.paginator.num_pages }}&q={{ request.GET.q | default:'' }}&order_by={{ request.GET.order_by | default:'task_date' }}">Last &raquo;</a></li>
+        {% else %}
+            <li class="page-item disabled"><span class="page-link">Next</span></li>
+            <li class="page-item disabled"><span class="page-link">Last &raquo;</span></li>
+        {% endif %}
+    </ul>
+</nav>
 
 {% csrf_token %} {# For AJAX POST requests #}
 
