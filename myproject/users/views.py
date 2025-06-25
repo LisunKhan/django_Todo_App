@@ -294,8 +294,7 @@ def download_csv_report(request):
     except UserProfile.DoesNotExist: # Django raises User.profile.RelatedObjectDoesNotExist if profile doesn't exist
         user_bio = ""
 
-
-    todo_items = TodoItem.objects.filter(user=user)
+    todo_items = TodoItem.objects.filter(user=user, time_spent__gt=0) # Only include todos with time spent
 
     response = HttpResponse(content_type='text/csv')
     response['Content-Disposition'] = 'attachment; filename="todo_report.csv"'
