@@ -114,7 +114,6 @@ def add_todo(request):
                     'description': todo.description,
                     'status': todo.status, # Add status
                     'get_status_display': todo.get_status_display(), # Add display for status
-                    'completed': todo.completed, # Keep if still used, or remove if status replaces it
                     'task_date': todo.task_date.strftime('%Y-%m-%d') if todo.task_date else None,
                     'time_spent_hours': todo.time_spent_hours, # Using the property
                 }
@@ -253,9 +252,6 @@ def inline_edit_todo(request, todo_id):
         new_status = data.get('status', todo.status)
         if new_status in [choice[0] for choice in TodoItem.STATUS_CHOICES]:
             todo.status = new_status
-        # If 'completed' is still a database field and needs to be synced:
-        # todo.completed = (todo.status == 'done')
-        # Otherwise, if 'completed' is a property or removed, this is not needed.
 
         task_date_str = data.get('task_date')
         if task_date_str:
@@ -287,7 +283,6 @@ def inline_edit_todo(request, todo_id):
                 'description': todo.description,
                 'status': todo.status,
                 'get_status_display': todo.get_status_display(),
-                # 'completed': todo.completed, # Keep if other parts of frontend expect it
                 'task_date': todo.task_date.strftime('%Y-%m-%d') if todo.task_date else None,
                 'time_spent_hours': todo.time_spent_hours, # Use the property for the response
             }
@@ -344,7 +339,7 @@ def download_csv_report(request):
     # Write header row
     writer.writerow([
         'Username', 'Email', 'Bio',
-        'Todo Title', 'Todo Description', 'Status', # Changed 'Completed' to 'Status'
+        'Todo Title', 'Todo Description', 'Status',
         'Time Spent (hours)', 'Created At', 'Updated At', 'Task Date'
     ])
 
@@ -362,7 +357,7 @@ def download_csv_report(request):
                 user_bio,
                 item.title,
                 item.description,
-                item.get_status_display(), # Use get_status_display()
+                item.get_status_display(),
                 item.time_spent_hours, # Using the property
                 item.created_at.strftime('%Y-%m-%d %H:%M:%S') if item.created_at else '',
                 item.updated_at.strftime('%Y-%m-%d %H:%M:%S') if item.updated_at else '',

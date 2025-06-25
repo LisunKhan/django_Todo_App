@@ -53,12 +53,6 @@
                         </select>
                         <div class="invalid-feedback" id="error_status_modal"></div>
                     </div>
-                    {# Keep completed for now if backend logic relies on it, or remove if status replaces it entirely #}
-                    {# <div class="mb-3 form-check">
-                        <input type="checkbox" name="completed" class="form-check-input" id="id_completed_modal">
-                        <label class="form-check-label" for="id_completed_modal">Completed</label>
-                        <div class="invalid-feedback" id="error_completed_modal"></div>
-                    </div> #}
                     <div class="modal-footer">
                         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
                         <button type="submit" class="btn btn-primary">Save Task</button>
@@ -204,8 +198,7 @@ document.addEventListener('DOMContentLoaded', function () {
         // Ensure 'completed' is derived from status if it's still part of the form submission expected by the view for 'add_todo'
         // This depends on how the 'add_todo' view and 'TodoForm' handle the 'completed' field.
         // If TodoForm still has 'completed', it might be auto-set by status, or it needs to be sent.
-        // For the purpose of this update, we assume 'status' is the source of truth and 'completed' might be derived.
-        data['completed'] = data['status'] === 'done';
+            // For the purpose of this update, we assume 'status' is the source of truth.
 
 
         fetch("{% url 'add_todo' %}", {
@@ -513,10 +506,9 @@ document.addEventListener('DOMContentLoaded', function () {
             time_spent_hours: time_spent_hours,
             task_date: task_date,
             status: status, // Send status
-            // completed: status === 'done', // Derive completed if backend still needs it
         };
-        // If your backend for inline_edit specifically needs 'completed', uncomment the line above.
-        // Otherwise, if it directly uses 'status', this is fine.
+        // If your backend for inline_edit specifically needs 'completed', this is where it would be derived.
+        // However, since we are removing 'completed' functionality, this is no longer needed.
         // For consistency with the plan, we assume the backend will handle 'status'.
 
         fetch(`/todo/inline_edit/${todoId}/`, {

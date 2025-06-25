@@ -3,8 +3,8 @@ from .models import TodoItem
 
 # Register your models here.
 class TodoItemAdmin(admin.ModelAdmin):
-    list_display = ('title', 'completed', 'user', 'created_at', 'updated_at', 'task_date')
-    list_filter = ('completed', 'user', 'created_at', 'updated_at', 'task_date')
+    list_display = ('title', 'status', 'user', 'created_at', 'updated_at', 'task_date')
+    list_filter = ('status', 'user', 'created_at', 'updated_at', 'task_date')
     search_fields = ('title', 'description')
     readonly_fields = ('created_at', 'updated_at')
 
