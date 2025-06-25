@@ -2,13 +2,57 @@
 {% block title %}Add Todo{% endblock %}
 
 {% block content %}
-<h1>Add Todo</h1>
-<form method="post">
-    {% csrf_token %}
-    {{ form.as_p }}
-    <button type="submit" class="btn btn-primary">Add</button>
-    <a href="{% url 'todo_list' %}" class="btn btn-secondary">Back to Todo List</a>
-</form>
+<div class="row justify-content-center">
+    <div class="col-md-8 col-lg-6">
+        <div class="card shadow-sm">
+            <div class="card-header bg-primary text-white">
+                <h1 class="h4 mb-0">Add New Todo</h1>
+            </div>
+            <div class="card-body">
+                <form method="post" novalidate>
+                    {% csrf_token %}
+                    {% for field in form %}
+                        <div class="mb-3">
+                            <label for="{{ field.id_for_label }}" class="form-label">{{ field.label }}</label>
+                            {{ field }}
+                            {% if field.help_text %}
+                                <small class="form-text text-muted">{{ field.help_text }}</small>
+                            {% endif %}
+                            {% for error in field.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {{ error }}
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% endfor %}
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-end mt-4">
+                        <a href="{% url 'todo_list' %}" class="btn btn-outline-secondary me-md-2">Cancel</a>
+                        <button type="submit" class="btn btn-primary">Add Task</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+{# Apply form-control class to relevant input types via JS if not already handled by a widget #}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.querySelector('form');
+    form.querySelectorAll('input[type="text"], input[type="email"], input[type="password"], input[type="number"], input[type="url"], input[type="tel"], input[type="date"], input[type="time"], textarea, select').forEach(function(el) {
+        if (!el.classList.contains('form-control-plaintext')) { // Don't style plaintext inputs like readonly fields might be
+             if (el.type === 'file' && !el.classList.contains('form-control-file')) {
+                el.classList.add('form-control'); // Bootstrap 5 uses form-control for file inputs too
+            } else if (el.type !== 'file' && el.type !== 'checkbox' && el.type !== 'radio' && !el.classList.contains('form-select')) {
+                 el.classList.add('form-control');
+            }
+             if (el.tagName === 'SELECT' && !el.classList.contains('form-select')) {
+                el.classList.add('form-select');
+            }
+        }
+    });
+});
+</script>
 {% endblock %}
 
 {% comment %} {% extends 'todo/base.html' %}

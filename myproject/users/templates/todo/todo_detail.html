@@ -1,17 +1,66 @@
 <!-- todo_detail.html -->
 
 {% extends 'todo/base.html' %}
-{% block title %}Todo Item Detail{% endblock %}
+{% block title %}Task Details: {{ todo.title|truncatewords:5 }}{% endblock %}
 
 {% block content %}
-<h1>Todo Item Detail</h1>
-<p>Title: {{ todo.title }}</p>
-<p>Description: {{ todo.description }}</p>
-<p>Task Date: {{ todo.task_date|date:"Y-m-d"|default:"Not set" }}</p>
-<p>Time Spent (min): {{ todo.time_spent }} ({{ todo.time_spent_hours|floatformat:2 }}h)</p>
-<p>Status: {% if todo.completed %}Completed{% else %}Pending{% endif %}</p>
-<p>Created At: {{ todo.created_at|date:"Y-m-d H:i" }}</p>
-<p>Last Updated: {{ todo.updated_at|date:"Y-m-d H:i" }}</p>
-<a href="{% url 'edit_todo' todo.id %}" class="btn btn-secondary">Edit Task</a>
-<a href="{% url 'todo_list' %}" class="btn btn-info">Back to Todo List</a>
+<div class="row justify-content-center">
+    <div class="col-md-10 col-lg-8">
+        <div class="card shadow-sm">
+            <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                <h1 class="h4 mb-0">Task: {{ todo.title }}</h1>
+                {% if todo.completed %}
+                    <span class="badge bg-success">Completed</span>
+                {% else %}
+                    <span class="badge bg-warning text-dark">Pending</span>
+                {% endif %}
+            </div>
+            <div class="card-body">
+                {% if todo.description %}
+                    <h5 class="card-title">Description</h5>
+                    <p class="card-text" style="white-space: pre-wrap;">{{ todo.description }}</p>
+                    <hr>
+                {% endif %}
+
+                <dl class="row">
+                    <dt class="col-sm-4">Task Date</dt>
+                    <dd class="col-sm-8">{{ todo.task_date|date:"l, F j, Y"|default:"Not set" }}</dd>
+
+                    <dt class="col-sm-4">Time Spent</dt>
+                    <dd class="col-sm-8">{{ todo.time_spent_hours|floatformat:2 }} hour(s)</dd>
+
+                    <dt class="col-sm-4">Status</dt>
+                    <dd class="col-sm-8">
+                        {% if todo.completed %}
+                            Completed
+                        {% else %}
+                            Pending
+                        {% endif %}
+                    </dd>
+
+                    <dt class="col-sm-4 text-muted">Created At</dt>
+                    <dd class="col-sm-8 text-muted">{{ todo.created_at|date:"F j, Y, P" }}</dd>
+
+                    <dt class="col-sm-4 text-muted">Last Updated</dt>
+                    <dd class="col-sm-8 text-muted">{{ todo.updated_at|date:"F j, Y, P" }}</dd>
+                </dl>
+            </div>
+            <div class="card-footer bg-light text-end">
+                <a href="{% url 'edit_todo' todo.id %}" class="btn btn-outline-primary me-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-pencil-square me-1" viewBox="0 0 16 16">
+                        <path d="M15.502 1.94a.5.5 0 0 1 0 .706L14.459 3.69l-2-2L13.502.646a.5.5 0 0 1 .707 0l1.293 1.293zm-1.75 2.456-2-2L4.939 9.21a.5.5 0 0 0-.121.196l-.805 2.414a.25.25 0 0 0 .316.316l2.414-.805a.5.5 0 0 0 .196-.12l6.813-6.814z"/>
+                        <path fill-rule="evenodd" d="M1 13.5A1.5 1.5 0 0 0 2.5 15h11a1.5 1.5 0 0 0 1.5-1.5v-6a.5.5 0 0 0-1 0v6a.5.5 0 0 1-.5.5h-11a.5.5 0 0 1-.5-.5v-11a.5.5 0 0 1 .5-.5H9a.5.5 0 0 0 0-1H2.5A1.5 1.5 0 0 0 1 2.5z"/>
+                    </svg>
+                    Edit Task
+                </a>
+                <a href="{% url 'todo_list' %}" class="btn btn-outline-secondary">
+                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-arrow-left-circle me-1" viewBox="0 0 16 16">
+                        <path fill-rule="evenodd" d="M1 8a7 7 0 1 0 14 0A7 7 0 0 0 1 8m15 0A8 8 0 1 1 0 8a8 8 0 0 1 16 0m-4.5-.5a.5.5 0 0 1 0 1H5.707l2.147 2.146a.5.5 0 0 1-.708.708l-3-3a.5.5 0 0 1 0-.708l3-3a.5.5 0 1 1 .708.708L5.707 7.5z"/>
+                    </svg>
+                    Back to List
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
 {% endblock %}
