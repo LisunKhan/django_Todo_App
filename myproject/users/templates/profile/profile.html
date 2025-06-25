@@ -1,0 +1,31 @@
+{% extends "todo/base.html" %}
+
+{% block title %}User Profile{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>User Profile</h2>
+    <div class="card">
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-3">
+                    {% if profile.profile_picture %}
+                        <img src="{{ profile.profile_picture.url }}" alt="{{ user.username }}'s Profile Picture" class="img-fluid rounded-circle" style="width: 150px; height: 150px; object-fit: cover;">
+                    {% else %}
+                        <img src="https://via.placeholder.com/150" alt="Default Profile Picture" class="img-fluid rounded-circle" style="width: 150px; height: 150px;">
+                    {% endif %}
+                </div>
+                <div class="col-md-9">
+                    <h4 class="card-title">{{ user.username }}</h4>
+                    <p class="card-text"><strong>Email:</strong> {{ user.email }}</p>
+                    <p class="card-text"><strong>Bio:</strong></p>
+                    <p>{{ profile.bio|linebreaksbr|default:"No bio provided." }}</p>
+                </div>
+            </div>
+            <hr>
+            <a href="{% url 'edit_profile_view' %}" class="btn btn-primary">Edit Profile</a>
+            <a href="{% url 'todo_list' %}" class="btn btn-secondary">Back to Todo List</a>
+        </div>
+    </div>
+</div>
+{% endblock %}

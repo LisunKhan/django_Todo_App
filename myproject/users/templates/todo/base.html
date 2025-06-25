@@ -31,6 +31,9 @@
                             <a class="nav-link" href="{% url 'task_report' %}">Task Report</a>
                         </li>
                         <li class="nav-item">
+                            <a class="nav-link" href="{% url 'profile_view' %}">View Profile</a>
+                        </li>
+                        <li class="nav-item">
                             <a class="nav-link" href="{% url 'logout' %}">Logout ({{ user.username }})</a>
                         </li>
                     {% else %}

@@ -12,4 +12,7 @@ urlpatterns = [
     path('todo/<int:todo_id>/edit/', views.edit_todo, name='edit_todo'),
     path('todo/inline_edit/<int:todo_id>/', views.inline_edit_todo, name='inline_edit_todo'),
     path('report/', views.task_report, name='task_report'),
+    # Profile URLs
+    path('profile/', views.profile_view, name='profile_view'),
+    path('profile/edit/', views.edit_profile_view, name='edit_profile_view'),
 ]

@@ -45,18 +45,26 @@ class TodoForm(forms.ModelForm):
 
     class Meta:
         model = TodoItem
-        fields = ['title', 'description', 'completed', 'task_date', 'time_spent_hours']
-        # We'll handle 'time_spent' (minutes) separately
+        # Include all model fields that the form should handle directly or indirectly.
+        # 'time_spent' is the actual model field.
+        fields = ['title', 'description', 'completed', 'task_date', 'time_spent']
 
     def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        # Initialize time_spent_hours if instance exists
-        if self.instance and self.instance.pk:
-            self.fields['time_spent_hours'].initial = self.instance.time_spent_hours
+        super().__init__(*args, **kwargs) # Populates self.initial for fields in Meta.fields
 
-        # Make original time_spent field not required directly by the form
-        # as we are using time_spent_hours for input.
-        # self.fields['time_spent'].required = False # Not needed if not in Meta.fields
+        # Set the initial value for 'time_spent_hours' in the form's initial data dictionary.
+        if self.instance and self.instance.pk and self.instance.time_spent is not None:
+            self.initial['time_spent_hours'] = self.instance.time_spent_hours
+        else:
+            # Provide a default for time_spent_hours if no instance or time_spent is None
+            self.initial['time_spent_hours'] = self.fields['time_spent_hours'].initial if self.fields['time_spent_hours'].initial is not None else 0
+
+
+        # Make the actual model field 'time_spent' not required and hidden.
+        if 'time_spent' in self.fields:
+            self.fields['time_spent'].required = False
+            self.fields['time_spent'].widget = forms.HiddenInput()
+
 
     def clean_time_spent_hours(self):
         hours = self.cleaned_data.get('time_spent_hours')
@@ -79,3 +87,20 @@ class TodoForm(forms.ModelForm):
         # if we were directly passing self.cleaned_data to model.
         # However, ModelForm's save() handles this by only using fields that exist on the model.
         return super().save(commit)
+
+
+from .models import UserProfile # Import UserProfile
+
+class UserProfileForm(forms.ModelForm):
+    class Meta:
+        model = UserProfile # Corrected model
+        fields = ['bio', 'profile_picture']
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['bio'].widget.attrs.update({'rows': 3, 'placeholder': 'Tell us a bit about yourself...'})
+        self.fields['profile_picture'].widget.attrs.update({'class': 'form-control-file'})
+
+        # Make fields not required by default, as users may not want to update all fields at once
+        self.fields['bio'].required = False
+        self.fields['profile_picture'].required = False
