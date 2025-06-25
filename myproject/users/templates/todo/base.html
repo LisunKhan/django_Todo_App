@@ -14,27 +14,16 @@
 <body class="d-flex flex-column h-100">
 
 <header>
-    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
-        <div class="container">
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary fixed-top">
+        <div class="container-fluid">
             <a class="navbar-brand" href="{% url 'todo_list' %}">Todo App</a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
                 <span class="navbar-toggler-icon"></span>
             </button>
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav ms-auto mb-2 mb-lg-0">
-                    <li class="nav-item">
-                        <a class="nav-link" href="{% url 'todo_list' %}">Todo List</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="{% url 'add_todo' %}">Add Todo</a>
-                    </li>
+                    <!-- Top navbar items can remain here or be moved/duplicated to sidebar -->
                     {% if user.is_authenticated %}
-                        <li class="nav-item">
-                            <a class="nav-link" href="{% url 'task_report' %}">Task Report</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="{% url 'profile_view' %}">View Profile</a>
-                        </li>
                         <li class="nav-item">
                             <a class="nav-link" href="{% url 'logout' %}">Logout ({{ user.username }})</a>
                         </li>
@@ -52,15 +41,88 @@
     </nav>
 </header>
 
-<main class="flex-shrink-0">
-    <div class="container mt-4">
-        {% block content %}
-        <!-- This block will be replaced by the content from other templates -->
-        {% endblock %}
-    </div>
-</main>
+<div class="container-fluid layout-container">
+    <div class="row flex-nowrap">
+        <!-- Sidebar -->
+        <nav id="sidebarMenu" class="col-md-3 col-lg-2 d-md-block bg-light sidebar collapse">
+            <div class="position-sticky pt-3">
+                <ul class="nav flex-column">
+                    <li class="nav-item">
+                        <a class="nav-link active" aria-current="page" href="{% url 'todo_list' %}">
+                            <i class="fas fa-home"></i>
+                            Dashboard
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'todo_list' %}">
+                            <i class="fas fa-list-ul"></i>
+                            Todo List
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'add_todo' %}">
+                            <i class="fas fa-plus-square"></i>
+                            Add Todo
+                        </a>
+                    </li>
+                    {% if user.is_authenticated %}
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'task_report' %}">
+                            <i class="fas fa-chart-line"></i>
+                            Task Report
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'profile_view' %}">
+                            <i class="fas fa-user"></i>
+                            View Profile
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'edit_profile_view' %}">
+                            <i class="fas fa-user-edit"></i>
+                            Edit Profile
+                        </a>
+                    </li>
+                    <hr>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'logout' %}">
+                            <i class="fas fa-sign-out-alt"></i>
+                            Logout
+                        </a>
+                    </li>
+                    {% else %}
+                    <hr>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'login' %}">
+                            <i class="fas fa-sign-in-alt"></i>
+                            Login
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'register' %}">
+                            <i class="fas fa-user-plus"></i>
+                            Register
+                        </a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </div>
+        </nav>
 
-<footer class="footer mt-auto py-3 bg-light text-center">
+        <!-- Main content -->
+        <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4 flex-shrink-0">
+            <div class="pt-3 pb-2 mb-3 border-bottom">
+                <h1 class="h2">{% block page_title %}{% endblock %}</h1>
+            </div>
+            {% block content %}
+            <!-- This block will be replaced by the content from other templates -->
+            {% endblock %}
+        </main>
+    </div>
+</div>
+
+<footer class="footer mt-auto py-3 bg-light text-center fixed-bottom">
     <div class="container">
         <p class="text-muted">© {% now "Y" %} Todo App. All rights reserved.</p>
     </div>
