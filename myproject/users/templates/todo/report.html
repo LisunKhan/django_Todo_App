@@ -5,7 +5,7 @@
 {% block content %}
 <h1>Task Report</h1>
 
-<h2>Total Time Spent on All Tasks: {{ total_time_spent }} minute(s)</h2>
+<h2>Total Time Spent on All Tasks: {{ total_time_spent_hours|floatformat:2 }} hour(s)</h2>
 
 <table class="table table-striped">
     <thead>
@@ -13,7 +13,7 @@
             <th>Title</th>
             <th>Description</th>
             <th>Status</th>
-            <th>Time Spent (min)</th>
+            <th>Time Spent (hours)</th>
         </tr>
     </thead>
     <tbody>
@@ -22,7 +22,7 @@
             <td><a href="{% url 'todo_detail' task.id %}">{{ task.title }}</a></td>
             <td>{{ task.description }}</td>
             <td>{% if task.completed %}Completed{% else %}Pending{% endif %}</td>
-            <td>{{ task.time_spent }}</td>
+            <td>{{ task.time_spent_hours|floatformat:2 }}h</td>
         </tr>
         {% empty %}
         <tr>

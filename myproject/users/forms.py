@@ -40,16 +40,41 @@ class CustomAuthenticationForm(AuthenticationForm):
         self.error_messages['inactive'] = "This account is inactive. Please contact support."
 
 class TodoForm(forms.ModelForm):
+    time_spent_hours = forms.FloatField(label="Time Spent (hours)", required=False)
+
     class Meta:
         model = TodoItem
-        fields = ['title', 'description', 'completed', 'time_spent']
-        widgets = { # Using widgets to make a field not required is not standard.
-                    # Instead, field attributes should be customized in the form's __init__ or by declaring the field explicitly.
-                    # However, a more direct way for ModelForm is to specify 'required' in 'field_classes' or 'formfield_callback'
-                    # or by overriding the field.
-                    # For this case, the simplest is often to declare the field explicitly if it needs customization beyond what Meta provides by default.
-        }
+        fields = ['title', 'description', 'completed', 'time_spent_hours']
+        # We'll handle 'time_spent' (minutes) separately
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields['time_spent'].required = False
+        # Initialize time_spent_hours if instance exists
+        if self.instance and self.instance.pk:
+            self.fields['time_spent_hours'].initial = self.instance.time_spent_hours
+
+        # Make original time_spent field not required directly by the form
+        # as we are using time_spent_hours for input.
+        # self.fields['time_spent'].required = False # Not needed if not in Meta.fields
+
+    def clean_time_spent_hours(self):
+        hours = self.cleaned_data.get('time_spent_hours')
+        if hours is None:
+            return 0  # Default to 0 if not provided
+        if hours < 0:
+            raise forms.ValidationError("Time spent cannot be negative.")
+        return hours
+
+    def save(self, commit=True):
+        # Get the hours from the cleaned data
+        hours = self.cleaned_data.get('time_spent_hours', 0)
+        # Convert hours to minutes and set it on the instance
+        self.instance.time_spent = int((hours or 0) * 60)
+
+        # Call the superclass's save method to save the instance
+        # but ensure 'time_spent_hours' is not passed to the model's constructor
+        # if it's not a model field.
+        # Since 'time_spent_hours' is not a model field, we should pop it
+        # if we were directly passing self.cleaned_data to model.
+        # However, ModelForm's save() handles this by only using fields that exist on the model.
+        return super().save(commit)

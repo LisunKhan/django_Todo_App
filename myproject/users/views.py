@@ -91,10 +91,11 @@ def todo_detail(request, todo_id):
 @login_required
 def task_report(request):
     tasks = TodoItem.objects.filter(user=request.user)
-    total_time_spent = tasks.aggregate(total_time=Sum('time_spent'))['total_time'] or 0
+    total_time_spent_minutes = tasks.aggregate(total_time=Sum('time_spent'))['total_time'] or 0
+    total_time_spent_hours = total_time_spent_minutes / 60
     return render(request, 'todo/report.html', {
         'tasks': tasks,
-        'total_time_spent': total_time_spent
+        'total_time_spent_hours': total_time_spent_hours
     })
 
 @login_required
@@ -108,3 +109,45 @@ def edit_todo(request, todo_id):
     else:
         form = TodoForm(instance=todo)
     return render(request, 'todo/edit_todo.html', {'form': form, 'todo': todo})
+
+import json
+from django.http import JsonResponse
+from django.views.decorators.http import require_POST
+
+@login_required
+@require_POST # Ensures this view only accepts POST requests
+def inline_edit_todo(request, todo_id):
+    try:
+        todo = get_object_or_404(TodoItem, id=todo_id, user=request.user)
+        data = json.loads(request.body)
+
+        todo.title = data.get('title', todo.title)
+        todo.description = data.get('description', todo.description)
+        todo.completed = data.get('completed', todo.completed)
+
+        if 'time_spent_hours' in data:
+            try:
+                hours = float(data['time_spent_hours'])
+                if hours < 0:
+                    return JsonResponse({'success': False, 'error': 'Time spent cannot be negative.'}, status=400)
+                todo.time_spent = int(hours * 60)
+            except ValueError:
+                return JsonResponse({'success': False, 'error': 'Invalid time format.'}, status=400)
+
+        todo.save()
+
+        return JsonResponse({
+            'success': True,
+            'todo': {
+                'id': todo.id,
+                'title': todo.title,
+                'description': todo.description,
+                'completed': todo.completed,
+                'time_spent_hours': todo.time_spent_hours, # Use the property for the response
+            }
+        })
+    except json.JSONDecodeError:
+        return JsonResponse({'success': False, 'error': 'Invalid JSON.'}, status=400)
+    except Exception as e:
+        # Log the exception e
+        return JsonResponse({'success': False, 'error': 'An unexpected error occurred.'}, status=500)
