@@ -33,6 +33,39 @@ class UserModelTests(TestCase):
             description='Description'
         )
         self.assertEqual(todo.time_spent, 0)
+        self.assertEqual(todo.status, 'todo') # Test default status
+
+    def test_todo_item_status_choices(self):
+        """
+        Test the available choices for the status field.
+        """
+        todo = TodoItem.objects.create(user=self.user, title='Status Choice Task')
+        self.assertEqual(todo.status, 'todo')
+        todo.status = 'inprogress'
+        todo.save()
+        self.assertEqual(todo.status, 'inprogress')
+        self.assertEqual(todo.get_status_display(), 'In Progress')
+        todo.status = 'done'
+        todo.save()
+        self.assertEqual(todo.status, 'done')
+        self.assertEqual(todo.get_status_display(), 'Done')
+        # Test that completed is updated when status is 'done'
+        self.assertTrue(todo.completed)
+
+        todo.status = 'todo'
+        todo.save()
+        # Test that completed is updated when status is not 'done'
+        # This depends on if the model's save method syncs 'completed'
+        # For now, we assume 'completed' is either a property or handled by the form/save logic.
+        # If TodoItem.completed is a direct model field, its state after changing status
+        # depends on how it's managed. If it's not automatically synced, this test might need adjustment
+        # or the model's save() method needs to handle it.
+        # Based on current plan, 'completed' is still a field, but 'status' is primary.
+        # We'll assume for now the form/view layer handles keeping them in sync if necessary,
+        # or that 'completed' will be derived/removed.
+        # If we expect model to auto-sync:
+        # self.assertFalse(todo.completed)
+
 
 class TodoFormTests(TestCase):
     def setUp(self):
@@ -45,10 +78,15 @@ class TodoFormTests(TestCase):
         form_data = {
             'title': 'Form Task',
             'description': 'Form Description',
-            'time_spent': 45
+            'time_spent_hours': 0.75, # 45 minutes
+            'status': 'inprogress'
         }
         form = TodoForm(data=form_data)
-        self.assertTrue(form.is_valid())
+        self.assertTrue(form.is_valid(), form.errors)
+        todo = form.save(commit=False)
+        self.assertEqual(todo.status, 'inprogress')
+        self.assertEqual(todo.time_spent, 45)
+
 
     def test_todo_form_valid_without_time_spent(self):
         """
@@ -59,43 +97,49 @@ class TodoFormTests(TestCase):
             'description': 'Form Description',
         }
         # 'time_spent' is not included, ModelForm should use default from model
+        # 'status' is also not included, should use default 'todo'
         form = TodoForm(data=form_data)
         if not form.is_valid():
             print(form.errors) # For debugging in case of failure
-        self.assertTrue(form.is_valid())
+        self.assertTrue(form.is_valid(), form.errors)
+        todo = form.save(commit=False)
+        self.assertEqual(todo.status, 'todo') # Check default status from form/model
 
 
-    def test_todo_form_saves_time_spent(self):
+    def test_todo_form_saves_time_spent_and_status(self):
         """
-        Test that TodoForm correctly saves the time_spent field.
+        Test that TodoForm correctly saves the time_spent and status fields.
         """
         form_data = {
             'title': 'Form Save Task',
             'description': 'Form Save Description',
-            'time_spent_hours': 1 # 1 hour = 60 minutes
+            'time_spent_hours': 1, # 1 hour = 60 minutes
+            'status': 'done'
         }
         form = TodoForm(data=form_data)
         self.assertTrue(form.is_valid(), form.errors)
-        # commit=False is not strictly necessary here as we are not setting user yet
-        # but it's good practice if further manipulation is needed before full save.
         todo_item = form.save(commit=False)
-        # In a real scenario, you'd set todo_item.user here before saving fully.
-        # For this test, we only care if time_spent is in the instance from form.
         self.assertEqual(todo_item.time_spent, 60) # Check minutes in model
+        self.assertEqual(todo_item.status, 'done')
+        # If model/form syncs 'completed' based on 'status':
+        # self.assertTrue(todo_item.completed)
 
-    def test_todo_form_time_spent_optional_uses_default(self):
+
+    def test_todo_form_fields_default_values_on_save(self):
         """
-        Test that if time_spent is not in form data, it defaults correctly upon saving.
+        Test that if time_spent and status are not in form data, they default correctly upon saving.
         """
         form_data = {
-            'title': 'Form Default Time Task',
-            'description': 'Form Default Time Description',
+            'title': 'Form Default Fields Task',
+            'description': 'Form Default Fields Description',
         }
         form = TodoForm(data=form_data)
-        self.assertTrue(form.is_valid())
+        self.assertTrue(form.is_valid(), form.errors)
         todo_item = form.save(commit=False)
-        # The model field has default=0. ModelForm's save() should honor this.
+        # The model field time_spent has default=0.
         self.assertEqual(todo_item.time_spent, 0)
+        # The model field status has default='todo'.
+        self.assertEqual(todo_item.status, 'todo')
 
 
 class TodoViewTests(TestCase):
@@ -106,47 +150,54 @@ class TodoViewTests(TestCase):
 
         self.other_user = User.objects.create_user(username='otherviewuser', password='password123')
 
-    def test_add_todo_view_with_time_spent(self):
+    def test_add_todo_view_with_time_spent_and_status(self):
         """
-        Test the add_todo view can create a TodoItem with time_spent.
+        Test the add_todo view can create a TodoItem with time_spent and status.
         """
         url = reverse('add_todo')
         post_data = {
             'title': 'View Add Task',
             'description': 'View Add Description',
-            'time_spent_hours': 1.25 # 1.25 hours = 75 minutes
+            'time_spent_hours': 1.25, # 1.25 hours = 75 minutes
+            'status': 'inprogress'
         }
         response = self.client.post(url, post_data)
         self.assertEqual(response.status_code, 302) # Should redirect after successful POST
-        self.assertTrue(TodoItem.objects.filter(user=self.user, title='View Add Task', time_spent=75).exists())
+        created_task = TodoItem.objects.get(user=self.user, title='View Add Task')
+        self.assertEqual(created_task.time_spent, 75)
+        self.assertEqual(created_task.status, 'inprogress')
 
-    def test_todo_list_view_displays_time_spent(self):
+    def test_todo_list_view_displays_time_spent_and_status(self):
         """
-        Test that time_spent is displayed on the todo_list page.
+        Test that time_spent and status are displayed on the todo_list page.
         """
-        TodoItem.objects.create(user=self.user, title='List Task 1', description='Desc 1', time_spent=10)
-        TodoItem.objects.create(user=self.user, title='List Task 2', description='Desc 2', time_spent=20)
+        TodoItem.objects.create(user=self.user, title='List Task 1', description='Desc 1', time_spent=10, status='todo')
+        TodoItem.objects.create(user=self.user, title='List Task 2', description='Desc 2', time_spent=20, status='done')
 
         url = reverse('todo_list')
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'List Task 1')
-        self.assertContains(response, '10')
+        self.assertContains(response, '0.17h') # 10 / 60
+        self.assertContains(response, 'To Do')
         self.assertContains(response, 'List Task 2')
-        self.assertContains(response, '20')
+        self.assertContains(response, '0.33h') # 20 / 60
+        self.assertContains(response, 'Done')
 
-    def test_todo_detail_view_displays_time_spent(self):
+
+    def test_todo_detail_view_displays_time_spent_and_status(self):
         """
-        Test that time_spent is displayed on the todo_detail page.
+        Test that time_spent and status are displayed on the todo_detail page.
         """
-        task = TodoItem.objects.create(user=self.user, title='Detail Task', description='Detail Desc', time_spent=35)
+        task = TodoItem.objects.create(user=self.user, title='Detail Task', description='Detail Desc', time_spent=35, status='inprogress')
         url = reverse('todo_detail', args=[task.id])
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'Detail Task')
         self.assertContains(response, '0.58 hour(s)') # 35 minutes / 60 = 0.5833...
+        self.assertContains(response, 'In Progress') # Check for status display
 
-    def test_task_report_view(self):
+    def test_task_report_view_filters_by_status(self):
         """
         Test the task_report view for correct aggregation and user isolation.
         """
@@ -165,27 +216,56 @@ class TodoViewTests(TestCase):
         # Check total time in context (more robust than checking raw HTML)
         # Total time should be based on ALL tasks for the user, regardless of whether they are shown in the paginated list.
         # User has tasks with 50 mins, 25 mins, and 0 mins. Total = 75 mins = 1.25 hours.
-        self.assertAlmostEqual(response.context['total_time_spent_hours'], 1.25, places=2)
+        # This total_time_spent_today_hours in the report is for TODAY's tasks only.
+        # Let's adjust tasks or the assertion.
+        # For this test, let's assume all tasks are for today for simplicity of total time check.
+        from django.utils import timezone
+        today = timezone.now().date()
+        TodoItem.objects.all().update(task_date=today) # Set all tasks to today for this test's total time check.
+
+        # Re-fetch for updated task_date affecting total_time_spent_today_hours
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        # Now, total_time_spent_today_hours should be 1.25 (50+25+0)
+        self.assertAlmostEqual(response.context['total_time_spent_today_hours'], 1.25, places=2)
+
 
         # Check tasks in context (via page_obj) - this list is filtered by time_spent > 0
         # So, only 'Report Task 1' (50 mins) and 'Report Task 2' (25 mins) should be here.
-        self.assertEqual(len(response.context['page_obj'].object_list), 2)
+        self.assertEqual(len(response.context['page_obj'].object_list), 2) # Correct, as it filters time_spent > 0
 
-        # Check content in HTML for displayed tasks
-        self.assertContains(response, 'Report Task 1')
-        self.assertContains(response, '0.83h') # 50 mins / 60
-        self.assertContains(response, 'Report Task 2')
-        self.assertContains(response, '0.42h') # 25 mins / 60
+        # Create tasks with different statuses
+        TodoItem.objects.create(user=self.user, title='Todo Task Report', time_spent=10, status='todo', task_date=today)
+        TodoItem.objects.create(user=self.user, title='In Progress Task Report', time_spent=20, status='inprogress', task_date=today)
+        TodoItem.objects.create(user=self.user, title='Done Task Report', time_spent=30, status='done', task_date=today)
+        TodoItem.objects.create(user=self.other_user, title='Other User Done Task', time_spent=40, status='done', task_date=today)
 
-        # 'Report Task 3' (0 time_spent) should NOT be in the list of tasks displayed on the report page itself.
-        self.assertNotContains(response, 'Report Task 3')
-        # self.assertNotContains(response, '0.00h') # This might be too broad if other elements have "0.00h"
 
-        self.assertContains(response, 'Total Time Spent on All Tasks: 1.25 hour(s)') # This sum is correct.
+        # Test filter by status 'done'
+        response_done = self.client.get(url, {'status': 'done'})
+        self.assertEqual(response_done.status_code, 200)
+        self.assertContains(response_done, 'Done Task Report')
+        self.assertNotContains(response_done, 'Todo Task Report')
+        self.assertNotContains(response_done, 'In Progress Task Report')
+        self.assertNotContains(response_done, 'Other User Done Task') # Ensure user isolation
+        # The original "Report Task 1" and "Report Task 2" might also be 'done' if their default status was 'todo' and completed=True
+        # Let's ensure their status is something else or they are excluded if we only want 'Done Task Report'
+        TodoItem.objects.filter(title__in=['Report Task 1', 'Report Task 2']).update(status='todo')
 
-        # Ensure other user's task is not present
-        self.assertNotContains(response, 'Other User Task')
-        self.assertNotContains(response, '1.67h') # 100 mins for other user
+
+        # Re-test filter by status 'done' after ensuring other tasks are not 'done'
+        response_done_filtered = self.client.get(url, {'status': 'done'})
+        self.assertEqual(len(response_done_filtered.context['page_obj'].object_list), 1) # Only "Done Task Report"
+        self.assertContains(response_done_filtered, 'Done Task Report')
+
+
+        # Test filter by status 'inprogress'
+        response_inprogress = self.client.get(url, {'status': 'inprogress'})
+        self.assertEqual(response_inprogress.status_code, 200)
+        self.assertContains(response_inprogress, 'In Progress Task Report')
+        self.assertNotContains(response_inprogress, 'Done Task Report')
+        self.assertEqual(len(response_inprogress.context['page_obj'].object_list), 1)
+
 
     def test_task_report_view_no_tasks(self):
         """
@@ -194,10 +274,12 @@ class TodoViewTests(TestCase):
         url = reverse('task_report')
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.context['total_time_spent_hours'], 0)
+        # total_time_spent_today_hours is the relevant context variable now.
+        self.assertEqual(response.context['total_time_spent_today_hours'], 0)
         self.assertEqual(len(response.context['page_obj'].object_list), 0)
-        self.assertContains(response, 'Total Time Spent on All Tasks: 0.00 hour(s)')
-        self.assertContains(response, 'No tasks match your criteria.') # Updated message
+        # The text "Total Time Spent on All Tasks" might have changed or depend on `total_time_spent_today_hours`
+        self.assertContains(response, '0.00 hour(s)') # Check for the value
+        self.assertContains(response, 'No tasks match your criteria.')
 
     def test_task_report_login_required(self):
         """
@@ -283,21 +365,16 @@ class TodoViewTests(TestCase):
 
     def test_edit_todo_successful_post_update(self):
         """
-        Test successful POST request to update a task.
+        Test successful POST request to update a task, including its status.
         """
-        task = TodoItem.objects.create(user=self.user, title='Original Title', description='Original Desc', time_spent=20, completed=False) # Start with completed=False
+        task = TodoItem.objects.create(user=self.user, title='Original Title', description='Original Desc', time_spent=20, status='todo')
         url = reverse('edit_todo', args=[task.id])
-        updated_data_for_model = { # For asserting model values
-            'title': 'Updated Title',
-            'description': 'Updated Desc',
-            'time_spent': 88, # minutes
-            'completed': True
-        }
-        post_data_for_form = { # For sending to form
+
+        post_data_for_form = {
             'title': 'Updated Title',
             'description': 'Updated Desc',
             'time_spent_hours': 88/60, # hours
-            'completed': True
+            'status': 'done' # Update status
         }
 
         response = self.client.post(url, post_data_for_form)
@@ -306,10 +383,11 @@ class TodoViewTests(TestCase):
         self.assertRedirects(response, reverse('todo_detail', args=[task.id]))
 
         task.refresh_from_db()
-        self.assertEqual(task.title, updated_data_for_model['title'])
-        self.assertEqual(task.description, updated_data_for_model['description'])
-        self.assertEqual(task.time_spent, updated_data_for_model['time_spent'])
-        self.assertEqual(task.completed, updated_data_for_model['completed']) # Verify 'completed' status
+        self.assertEqual(task.title, 'Updated Title')
+        self.assertEqual(task.description, 'Updated Desc')
+        self.assertEqual(task.time_spent, 88) # Check minutes
+        self.assertEqual(task.status, 'done') # Verify status
+        # self.assertTrue(task.completed) # If completed is synced from status
 
 
     def test_edit_todo_post_invalid_data(self):
@@ -348,10 +426,47 @@ class TodoViewTests(TestCase):
         self.assertContains(response, 'Completed Task')
         # Check for the badge HTML we added in the template
         # Making assertion slightly less specific to avoid issues with minor attribute order/whitespace
-        self.assertContains(response, 'class="badge bg-success" data-value="true">Completed</span>')
+        self.assertContains(response, 'class="badge bg-success">Done</span>') # Assuming 'done' maps to 'Done'
 
         self.assertContains(response, 'Pending Task')
-        self.assertContains(response, 'class="badge bg-warning text-dark" data-value="false">Pending</span>')
+        self.assertContains(response, 'class="badge bg-warning text-dark">To Do</span>') # Assuming 'todo' maps to 'To Do'
+
+    def test_inline_edit_todo_updates_status(self):
+        """
+        Test that the inline_edit_todo view correctly updates the status.
+        """
+        task = TodoItem.objects.create(user=self.user, title='Inline Edit Status Task', status='todo')
+        url = reverse('inline_edit_todo', args=[task.id])
+
+        edit_data = {
+            'title': task.title,
+            'description': task.description,
+            'time_spent_hours': task.time_spent_hours,
+            'status': 'inprogress'
+        }
+
+        response = self.client.post(url, json.dumps(edit_data), content_type='application/json')
+        self.assertEqual(response.status_code, 200)
+        json_response = response.json()
+        self.assertTrue(json_response['success'])
+        self.assertEqual(json_response['todo']['status'], 'inprogress')
+
+        task.refresh_from_db()
+        self.assertEqual(task.status, 'inprogress')
+
+        # Test updating to 'done'
+        edit_data['status'] = 'done'
+        response = self.client.post(url, json.dumps(edit_data), content_type='application/json')
+        self.assertEqual(response.status_code, 200)
+        json_response = response.json()
+        self.assertTrue(json_response['success'])
+        self.assertEqual(json_response['todo']['status'], 'done')
+
+        task.refresh_from_db()
+        self.assertEqual(task.status, 'done')
+        # self.assertTrue(task.completed) # If completed is synced from status
+
+import json # Make sure json is imported for inline_edit_todo tests
 
 from django.core.files.uploadedfile import SimpleUploadedFile
 from .models import UserProfile

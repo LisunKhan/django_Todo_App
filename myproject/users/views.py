@@ -45,11 +45,14 @@ def todo_list(request):
 
     # Ordering
     order_by = request.GET.get('order_by', 'task_date') # Default order by task_date
-    allowed_ordering_fields = ['title', 'task_date', 'completed', '-title', '-task_date', '-completed']
+    # Update allowed_ordering_fields to use 'status' instead of 'completed'
+    allowed_ordering_fields = ['title', 'task_date', 'status', '-title', '-task_date', '-status']
     if order_by not in allowed_ordering_fields:
         order_by = 'task_date' # Fallback to default if invalid field is provided
 
     if order_by:
+        # Ensure that if ordering by 'status', it uses the actual field name
+        # If 'completed' was a boolean and 'status' is char, direct replacement is fine.
         todo_items = todo_items.order_by(order_by)
 
     # Pagination
@@ -109,7 +112,9 @@ def add_todo(request):
                     'id': todo.id,
                     'title': todo.title,
                     'description': todo.description,
-                    'completed': todo.completed,
+                    'status': todo.status, # Add status
+                    'get_status_display': todo.get_status_display(), # Add display for status
+                    'completed': todo.completed, # Keep if still used, or remove if status replaces it
                     'task_date': todo.task_date.strftime('%Y-%m-%d') if todo.task_date else None,
                     'time_spent_hours': todo.time_spent_hours, # Using the property
                 }
@@ -175,18 +180,19 @@ def task_report(request):
 
     # Ordering
     order_by = request.GET.get('order_by', 'task_date') # Default order
-    allowed_ordering_fields = ['title', 'task_date', 'completed', 'time_spent', '-title', '-task_date', '-completed', '-time_spent']
+    allowed_ordering_fields = ['title', 'task_date', 'status', 'time_spent', '-title', '-task_date', '-status', '-time_spent']
     if order_by not in allowed_ordering_fields:
         order_by = 'task_date' # Fallback to default
 
     # Get filter parameters
-    status_filter = request.GET.get('status', '')
+    status_filter = request.GET.get('status', '') # This will be 'todo', 'inprogress', or 'done'
     start_date_filter = request.GET.get('start_date', '')
     end_date_filter = request.GET.get('end_date', '')
 
     # Apply filters
     if status_filter:
-        tasks_for_display = tasks_for_display.filter(completed=(status_filter == 'completed'))
+        # Filter by the new status field
+        tasks_for_display = tasks_for_display.filter(status=status_filter)
     if start_date_filter:
         tasks_for_display = tasks_for_display.filter(task_date__gte=start_date_filter)
     if end_date_filter:
@@ -196,11 +202,9 @@ def task_report(request):
         tasks_for_display = tasks_for_display.order_by(order_by)
 
     # Get unique statuses for dropdown
-    # Considering 'completed' is a boolean, statuses are fixed: 'Completed' and 'Pending'
-    status_options = [
-        {'value': 'completed', 'display': 'Completed'},
-        {'value': 'pending', 'display': 'Pending'}
-    ]
+    # Updated to use the new status choices from the model
+    status_options = [{'value': choice[0], 'display': choice[1]} for choice in TodoItem.STATUS_CHOICES]
+    status_options.insert(0, {'value': '', 'display': 'All Statuses'}) # Option to clear filter
 
     # Pagination for the displayed tasks
     paginator = Paginator(tasks_for_display, 10) # Show 10 tasks per page
@@ -244,7 +248,14 @@ def inline_edit_todo(request, todo_id):
 
         todo.title = data.get('title', todo.title)
         todo.description = data.get('description', todo.description)
-        todo.completed = data.get('completed', todo.completed)
+
+        # Handle status and derive completed if necessary
+        new_status = data.get('status', todo.status)
+        if new_status in [choice[0] for choice in TodoItem.STATUS_CHOICES]:
+            todo.status = new_status
+        # If 'completed' is still a database field and needs to be synced:
+        # todo.completed = (todo.status == 'done')
+        # Otherwise, if 'completed' is a property or removed, this is not needed.
 
         task_date_str = data.get('task_date')
         if task_date_str:
@@ -274,7 +285,9 @@ def inline_edit_todo(request, todo_id):
                 'id': todo.id,
                 'title': todo.title,
                 'description': todo.description,
-                'completed': todo.completed,
+                'status': todo.status,
+                'get_status_display': todo.get_status_display(),
+                # 'completed': todo.completed, # Keep if other parts of frontend expect it
                 'task_date': todo.task_date.strftime('%Y-%m-%d') if todo.task_date else None,
                 'time_spent_hours': todo.time_spent_hours, # Use the property for the response
             }
@@ -331,7 +344,7 @@ def download_csv_report(request):
     # Write header row
     writer.writerow([
         'Username', 'Email', 'Bio',
-        'Todo Title', 'Todo Description', 'Completed',
+        'Todo Title', 'Todo Description', 'Status', # Changed 'Completed' to 'Status'
         'Time Spent (hours)', 'Created At', 'Updated At', 'Task Date'
     ])
 
@@ -339,7 +352,7 @@ def download_csv_report(request):
         # Write a row with user info even if there are no todos
         writer.writerow([
             user.username, user.email, user_bio,
-            'N/A', 'N/A', 'N/A', 'N/A', 'N/A', 'N/A', 'N/A'
+            'N/A', 'N/A', 'N/A', 'N/A', 'N/A', 'N/A', 'N/A' # Matched N/A count
         ])
     else:
         for item in todo_items:
@@ -349,7 +362,7 @@ def download_csv_report(request):
                 user_bio,
                 item.title,
                 item.description,
-                item.completed,
+                item.get_status_display(), # Use get_status_display()
                 item.time_spent_hours, # Using the property
                 item.created_at.strftime('%Y-%m-%d %H:%M:%S') if item.created_at else '',
                 item.updated_at.strftime('%Y-%m-%d %H:%M:%S') if item.updated_at else '',

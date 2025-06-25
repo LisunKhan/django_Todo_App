@@ -13,6 +13,17 @@ class TodoItem(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
     task_date = models.DateField(null=True, blank=True)
 
+    STATUS_CHOICES = [
+        ('todo', 'To Do'),
+        ('inprogress', 'In Progress'),
+        ('done', 'Done'),
+    ]
+    status = models.CharField(
+        max_length=10,
+        choices=STATUS_CHOICES,
+        default='todo',
+    )
+
     @property
     def time_spent_hours(self):
         if self.time_spent is None:
