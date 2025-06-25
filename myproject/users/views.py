@@ -9,6 +9,7 @@ from django.urls import reverse
 from django.core.paginator import Paginator
 from django.http import JsonResponse
 import json
+from datetime import date
 
 def register(request):
     if request.method == 'POST':
@@ -155,12 +156,14 @@ def todo_detail(request, todo_id):
 
 @login_required
 def task_report(request):
-    # Calculate total time spent on ALL tasks for the user (not paginated)
-    all_user_tasks = TodoItem.objects.filter(user=request.user)
-    total_time_spent_minutes = all_user_tasks.aggregate(total_time=Sum('time_spent'))['total_time'] or 0
-    total_time_spent_hours = total_time_spent_minutes / 60
+    # Calculate total time spent on tasks for today by the user
+    today = date.today()
+    todays_tasks = TodoItem.objects.filter(user=request.user, task_date=today)
+    total_time_spent_today_minutes = todays_tasks.aggregate(total_time=Sum('time_spent'))['total_time'] or 0
+    total_time_spent_today_hours = total_time_spent_today_minutes / 60
 
     # Get tasks for display, apply search and ordering
+    # This part remains the same, for the main list of tasks displayed in the table
     tasks_for_display = TodoItem.objects.filter(user=request.user, time_spent__gt=0)
 
     # Search
@@ -176,8 +179,28 @@ def task_report(request):
     if order_by not in allowed_ordering_fields:
         order_by = 'task_date' # Fallback to default
 
+    # Get filter parameters
+    status_filter = request.GET.get('status', '')
+    start_date_filter = request.GET.get('start_date', '')
+    end_date_filter = request.GET.get('end_date', '')
+
+    # Apply filters
+    if status_filter:
+        tasks_for_display = tasks_for_display.filter(completed=(status_filter == 'completed'))
+    if start_date_filter:
+        tasks_for_display = tasks_for_display.filter(task_date__gte=start_date_filter)
+    if end_date_filter:
+        tasks_for_display = tasks_for_display.filter(task_date__lte=end_date_filter)
+
     if order_by:
         tasks_for_display = tasks_for_display.order_by(order_by)
+
+    # Get unique statuses for dropdown
+    # Considering 'completed' is a boolean, statuses are fixed: 'Completed' and 'Pending'
+    status_options = [
+        {'value': 'completed', 'display': 'Completed'},
+        {'value': 'pending', 'display': 'Pending'}
+    ]
 
     # Pagination for the displayed tasks
     paginator = Paginator(tasks_for_display, 10) # Show 10 tasks per page
@@ -186,9 +209,13 @@ def task_report(request):
 
     context = {
         'page_obj': page_obj, # Paginated tasks
-        'total_time_spent_hours': total_time_spent_hours, # Aggregation from all tasks
+        'total_time_spent_today_hours': total_time_spent_today_hours, # Aggregation for today's tasks
         'query': query,
         'current_order_by': order_by,
+        'status_options': status_options,
+        'selected_status': status_filter,
+        'selected_start_date': start_date_filter,
+        'selected_end_date': end_date_filter,
     }
     return render(request, 'todo/report.html', context)
 
