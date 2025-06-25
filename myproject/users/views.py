@@ -4,8 +4,9 @@ from .forms import CustomUserCreationForm, CustomAuthenticationForm
 from django.contrib.auth.decorators import login_required
 from .models import TodoItem
 from .forms import TodoForm
-from django.db.models import Sum
+from django.db.models import Sum, Q
 from django.urls import reverse
+from django.core.paginator import Paginator
 
 def register(request):
     if request.method == 'POST':
@@ -30,8 +31,35 @@ def user_login(request):
 
 @login_required
 def todo_list(request):
-    todos = TodoItem.objects.filter(user=request.user)
-    return render(request, 'todo/todo_list.html', {'todos': todos})
+    todo_items = TodoItem.objects.filter(user=request.user)
+
+    # Search
+    query = request.GET.get('q')
+    if query:
+        todo_items = todo_items.filter(
+            Q(title__icontains=query) | Q(description__icontains=query)
+        )
+
+    # Ordering
+    order_by = request.GET.get('order_by', 'task_date') # Default order by task_date
+    allowed_ordering_fields = ['title', 'task_date', 'completed', '-title', '-task_date', '-completed']
+    if order_by not in allowed_ordering_fields:
+        order_by = 'task_date' # Fallback to default if invalid field is provided
+
+    if order_by:
+        todo_items = todo_items.order_by(order_by)
+
+    # Pagination
+    paginator = Paginator(todo_items, 10) # Show 10 todos per page
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+
+    context = {
+        'page_obj': page_obj,
+        'query': query,
+        'current_order_by': order_by,
+    }
+    return render(request, 'todo/todo_list.html', context)
 
 # @login_required
 # def add_todo(request):
@@ -90,13 +118,42 @@ def todo_detail(request, todo_id):
 
 @login_required
 def task_report(request):
-    tasks = TodoItem.objects.filter(user=request.user)
-    total_time_spent_minutes = tasks.aggregate(total_time=Sum('time_spent'))['total_time'] or 0
+    # Calculate total time spent on ALL tasks for the user (not paginated)
+    all_user_tasks = TodoItem.objects.filter(user=request.user)
+    total_time_spent_minutes = all_user_tasks.aggregate(total_time=Sum('time_spent'))['total_time'] or 0
     total_time_spent_hours = total_time_spent_minutes / 60
-    return render(request, 'todo/report.html', {
-        'tasks': tasks,
-        'total_time_spent_hours': total_time_spent_hours
-    })
+
+    # Get tasks for display, apply search and ordering
+    tasks_for_display = TodoItem.objects.filter(user=request.user)
+
+    # Search
+    query = request.GET.get('q')
+    if query:
+        tasks_for_display = tasks_for_display.filter(
+            Q(title__icontains=query) | Q(description__icontains=query)
+        )
+
+    # Ordering
+    order_by = request.GET.get('order_by', 'task_date') # Default order
+    allowed_ordering_fields = ['title', 'task_date', 'completed', 'time_spent', '-title', '-task_date', '-completed', '-time_spent']
+    if order_by not in allowed_ordering_fields:
+        order_by = 'task_date' # Fallback to default
+
+    if order_by:
+        tasks_for_display = tasks_for_display.order_by(order_by)
+
+    # Pagination for the displayed tasks
+    paginator = Paginator(tasks_for_display, 10) # Show 10 tasks per page
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+
+    context = {
+        'page_obj': page_obj, # Paginated tasks
+        'total_time_spent_hours': total_time_spent_hours, # Aggregation from all tasks
+        'query': query,
+        'current_order_by': order_by,
+    }
+    return render(request, 'todo/report.html', context)
 
 @login_required
 def edit_todo(request, todo_id):
