@@ -5,10 +5,12 @@
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h1>Todo List</h1>
-    <a href="{% url 'task_report' %}" class="btn btn-info">View Task Report</a>
-    <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createTaskModal">
-        Create Task
-    </button>
+    <div class="d-flex gap-2">
+        <a href="{% url 'task_report' %}" class="btn btn-info">View Task Report</a>
+        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createTaskModal">
+            Create Task
+        </button>
+    </div>
 </div>
 
 <!-- Create Task Modal -->
