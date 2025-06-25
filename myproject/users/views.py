@@ -161,7 +161,7 @@ def task_report(request):
     total_time_spent_hours = total_time_spent_minutes / 60
 
     # Get tasks for display, apply search and ordering
-    tasks_for_display = TodoItem.objects.filter(user=request.user)
+    tasks_for_display = TodoItem.objects.filter(user=request.user, time_spent__gt=0)
 
     # Search
     query = request.GET.get('q')
