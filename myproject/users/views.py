@@ -176,8 +176,28 @@ def task_report(request):
     if order_by not in allowed_ordering_fields:
         order_by = 'task_date' # Fallback to default
 
+    # Get filter parameters
+    status_filter = request.GET.get('status', '')
+    start_date_filter = request.GET.get('start_date', '')
+    end_date_filter = request.GET.get('end_date', '')
+
+    # Apply filters
+    if status_filter:
+        tasks_for_display = tasks_for_display.filter(completed=(status_filter == 'completed'))
+    if start_date_filter:
+        tasks_for_display = tasks_for_display.filter(task_date__gte=start_date_filter)
+    if end_date_filter:
+        tasks_for_display = tasks_for_display.filter(task_date__lte=end_date_filter)
+
     if order_by:
         tasks_for_display = tasks_for_display.order_by(order_by)
+
+    # Get unique statuses for dropdown
+    # Considering 'completed' is a boolean, statuses are fixed: 'Completed' and 'Pending'
+    status_options = [
+        {'value': 'completed', 'display': 'Completed'},
+        {'value': 'pending', 'display': 'Pending'}
+    ]
 
     # Pagination for the displayed tasks
     paginator = Paginator(tasks_for_display, 10) # Show 10 tasks per page
@@ -189,6 +209,10 @@ def task_report(request):
         'total_time_spent_hours': total_time_spent_hours, # Aggregation from all tasks
         'query': query,
         'current_order_by': order_by,
+        'status_options': status_options,
+        'selected_status': status_filter,
+        'selected_start_date': start_date_filter,
+        'selected_end_date': end_date_filter,
     }
     return render(request, 'todo/report.html', context)
 
