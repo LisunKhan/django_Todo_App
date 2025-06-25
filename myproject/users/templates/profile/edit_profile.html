@@ -1,0 +1,39 @@
+{% extends "todo/base.html" %}
+{% load crispy_forms_tags %}
+
+{% block title %}Edit Profile{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>Edit Profile</h2>
+    <div class="card">
+        <div class="card-body">
+            <form method="post" enctype="multipart/form-data">
+                {% csrf_token %}
+                {{ form|crispy }}
+                <button type="submit" class="btn btn-success">Save Changes</button>
+                <a href="{% url 'profile_view' %}" class="btn btn-secondary">Cancel</a>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+// Optional: Add some JavaScript for image preview if you like
+document.addEventListener('DOMContentLoaded', function() {
+    var profilePicInput = document.getElementById('id_profile_picture');
+    if (profilePicInput) {
+        profilePicInput.onchange = function(event) {
+            var reader = new FileReader();
+            reader.onload = function(){
+                var output = document.getElementById('profile_pic_preview'); // Assume you add an <img> tag with this ID
+                if (output) {
+                    output.src = reader.result;
+                }
+            };
+            reader.readAsDataURL(event.target.files[0]);
+        };
+    }
+});
+</script>
+{% endblock %}

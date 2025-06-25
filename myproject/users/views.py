@@ -257,3 +257,27 @@ def inline_edit_todo(request, todo_id):
     except Exception as e:
         # Log the exception e
         return JsonResponse({'success': False, 'error': 'An unexpected error occurred.'}, status=500)
+
+@login_required
+def profile_view(request):
+    # UserProfile is automatically created for each User by a signal
+    # So, request.user.profile should exist.
+    # If it might not (e.g., if profiles are optional or created differently),
+    # you might use: profile, created = UserProfile.objects.get_or_create(user=request.user)
+    profile = request.user.profile
+    return render(request, 'profile/profile.html', {'profile': profile})
+
+from .forms import UserProfileForm # Import UserProfileForm
+
+@login_required
+def edit_profile_view(request):
+    profile = request.user.profile
+    if request.method == 'POST':
+        form = UserProfileForm(request.POST, request.FILES, instance=profile)
+        if form.is_valid():
+            form.save()
+            return redirect('profile_view') # Redirect to the profile view page
+    else:
+        form = UserProfileForm(instance=profile)
+
+    return render(request, 'profile/edit_profile.html', {'form': form})
