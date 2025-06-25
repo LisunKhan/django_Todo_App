@@ -38,4 +38,11 @@ class UserProfile(models.Model):
 def create_or_update_user_profile(sender, instance, created, **kwargs):
     if created:
         UserProfile.objects.create(user=instance)
-    instance.profile.save()
+    else:
+        # For existing users, ensure their profile exists, creating if necessary.
+        # Then save it (e.g., to update auto_now fields on the profile if any).
+        profile, _ = UserProfile.objects.get_or_create(user=instance)
+        # If UserProfile has auto_now or auto_now_add fields, or other logic
+        # in its save() method that should run when the User is saved,
+        # then saving the profile here is important.
+        profile.save()

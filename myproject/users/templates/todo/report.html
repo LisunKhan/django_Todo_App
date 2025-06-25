@@ -5,7 +5,12 @@
 {% block content %}
 <h1>Task Report</h1>
 
-<h2>Total Time Spent on All Tasks: {{ total_time_spent_hours|floatformat:2 }} hour(s)</h2>
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h2>Total Time Spent on All Tasks: {{ total_time_spent_hours|floatformat:2 }} hour(s)</h2>
+    <a href="{% url 'download_csv_report' %}" class="btn btn-success">
+        <i class="fas fa-download"></i> Download Report (CSV)
+    </a>
+</div>
 
 <!-- Search Form -->
 <form method="get" action="{% url 'task_report' %}" class="my-3">

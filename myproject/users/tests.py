@@ -163,20 +163,25 @@ class TodoViewTests(TestCase):
         self.assertEqual(response.status_code, 200)
 
         # Check total time in context (more robust than checking raw HTML)
-        self.assertAlmostEqual(response.context['total_time_spent_hours'], 1.25, places=2) # 75 minutes / 60
+        # Total time should be based on ALL tasks for the user, regardless of whether they are shown in the paginated list.
+        # User has tasks with 50 mins, 25 mins, and 0 mins. Total = 75 mins = 1.25 hours.
+        self.assertAlmostEqual(response.context['total_time_spent_hours'], 1.25, places=2)
 
-        # Check tasks in context (via page_obj)
-        self.assertEqual(len(response.context['page_obj'].object_list), 3)
+        # Check tasks in context (via page_obj) - this list is filtered by time_spent > 0
+        # So, only 'Report Task 1' (50 mins) and 'Report Task 2' (25 mins) should be here.
+        self.assertEqual(len(response.context['page_obj'].object_list), 2)
 
-        # Check content in HTML
+        # Check content in HTML for displayed tasks
         self.assertContains(response, 'Report Task 1')
-        # Time is displayed in hours, e.g., 50/60 = 0.83h
-        self.assertContains(response, '0.83h') # 50 mins
+        self.assertContains(response, '0.83h') # 50 mins / 60
         self.assertContains(response, 'Report Task 2')
-        self.assertContains(response, '0.42h') # 25 mins
-        self.assertContains(response, 'Report Task 3')
-        self.assertContains(response, '0.00h') # 0 mins
-        self.assertContains(response, 'Total Time Spent on All Tasks: 1.25 hour(s)')
+        self.assertContains(response, '0.42h') # 25 mins / 60
+
+        # 'Report Task 3' (0 time_spent) should NOT be in the list of tasks displayed on the report page itself.
+        self.assertNotContains(response, 'Report Task 3')
+        # self.assertNotContains(response, '0.00h') # This might be too broad if other elements have "0.00h"
+
+        self.assertContains(response, 'Total Time Spent on All Tasks: 1.25 hour(s)') # This sum is correct.
 
         # Ensure other user's task is not present
         self.assertNotContains(response, 'Other User Task')
@@ -471,3 +476,186 @@ class UserProfileTests(TestCase):
         response = self.client.post(url, {'bio': 'Attempted update'}) # Test POST
         self.assertEqual(response.status_code, 302)
         self.assertTrue(response.url.startswith(reverse('login')))
+
+import csv
+from io import StringIO
+from django.utils import timezone
+
+class CSVReportTests(TestCase):
+    def setUp(self):
+        self.client = Client()
+        self.user = User.objects.create_user(username='csvuser', password='password123', email='csv@example.com')
+        # UserProfile is created by signal
+        self.user.profile.bio = "Test bio for CSV export."
+        self.user.profile.save()
+
+        self.todo1_date = timezone.now().date()
+        self.todo2_date = timezone.now().date() - timezone.timedelta(days=1)
+
+        self.todo1 = TodoItem.objects.create(
+            user=self.user,
+            title='CSV Todo 1',
+            description='Description for CSV 1',
+            completed=True,
+            time_spent=60, # 1 hour
+            task_date=self.todo1_date
+        )
+        # Manually set created_at and updated_at for predictable testing if necessary
+        # For this test, auto_now_add and auto_now should be fine.
+
+        self.todo2 = TodoItem.objects.create(
+            user=self.user,
+            title='CSV Todo 2',
+            description='Description for CSV 2',
+            completed=False,
+            time_spent=30, # 0.5 hours
+            task_date=self.todo2_date
+        )
+        self.url = reverse('download_csv_report')
+
+    def test_download_csv_report_login_required(self):
+        """Test that the CSV download view requires login."""
+        self.client.logout()
+        response = self.client.get(self.url)
+        self.assertEqual(response.status_code, 302)
+        self.assertTrue(response.url.startswith(reverse('login')))
+
+    def test_download_csv_report_headers_and_structure(self):
+        """Test CSV headers and basic structure with data."""
+        self.client.login(username='csvuser', password='password123')
+        response = self.client.get(self.url)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response['Content-Type'], 'text/csv')
+        self.assertEqual(response['Content-Disposition'], 'attachment; filename="todo_report.csv"')
+
+        content = response.content.decode('utf-8')
+        reader = csv.reader(StringIO(content))
+
+        header = next(reader)
+        expected_header = [
+            'Username', 'Email', 'Bio',
+            'Todo Title', 'Todo Description', 'Completed',
+            'Time Spent (hours)', 'Created At', 'Updated At', 'Task Date'
+        ]
+        self.assertEqual(header, expected_header)
+
+        rows = list(reader)
+        self.assertEqual(len(rows), 2) # For todo1 and todo2
+
+        # Check data for the first todo item (order might vary based on default model ordering or view query ordering)
+        # To make this robust, you might want to order TodoItems in the view or sort rows here.
+        # For now, assume default ordering by ID or creation time is consistent enough for test.
+        # Or, fetch them from DB and compare, assuming they are returned in the same order.
+
+        # Let's find todo1 in the rows, assuming title is unique for this test setup
+        row1_data = None
+        for row in rows:
+            if row[3] == self.todo1.title: # Todo Title is the 4th column (index 3)
+                row1_data = row
+                break
+        self.assertIsNotNone(row1_data, "Todo1 not found in CSV output")
+
+        self.assertEqual(row1_data[0], self.user.username)
+        self.assertEqual(row1_data[1], self.user.email)
+        self.assertEqual(row1_data[2], self.user.profile.bio)
+        self.assertEqual(row1_data[3], self.todo1.title)
+        self.assertEqual(row1_data[4], self.todo1.description)
+        self.assertEqual(row1_data[5], str(self.todo1.completed)) # CSV stores bools as 'True'/'False'
+        self.assertEqual(float(row1_data[6]), self.todo1.time_spent_hours)
+        self.assertIn(self.todo1.created_at.strftime('%Y-%m-%d'), row1_data[7]) # Check date part
+        self.assertIn(self.todo1.updated_at.strftime('%Y-%m-%d'), row1_data[8]) # Check date part
+        self.assertEqual(row1_data[9], self.todo1.task_date.strftime('%Y-%m-%d'))
+
+
+    def test_download_csv_report_no_todos(self):
+        """Test CSV output when the user has no todo items."""
+        self.client.login(username='csvuser', password='password123')
+        TodoItem.objects.filter(user=self.user).delete() # Remove existing todos
+
+        response = self.client.get(self.url)
+        self.assertEqual(response.status_code, 200)
+        content = response.content.decode('utf-8')
+        reader = csv.reader(StringIO(content))
+
+        header = next(reader) # Skip header
+
+        data_row = next(reader)
+        self.assertEqual(data_row[0], self.user.username)
+        self.assertEqual(data_row[1], self.user.email)
+        self.assertEqual(data_row[2], self.user.profile.bio)
+        for i in range(3, 10): # Todo specific fields
+            self.assertEqual(data_row[i], 'N/A')
+
+        with self.assertRaises(StopIteration):
+            next(reader) # No more rows
+
+    def test_download_csv_report_without_profile_bio(self):
+        """Test CSV output when user profile bio is empty."""
+        self.user.profile.bio = ""
+        self.user.profile.save()
+        self.client.login(username='csvuser', password='password123')
+
+        # Keep only one todo for simplicity
+        TodoItem.objects.filter(user=self.user).exclude(pk=self.todo1.pk).delete()
+
+        response = self.client.get(self.url)
+        self.assertEqual(response.status_code, 200)
+        content = response.content.decode('utf-8')
+        reader = csv.reader(StringIO(content))
+        next(reader) # Skip header
+        data_row = next(reader)
+
+        self.assertEqual(data_row[2], "") # Bio column should be empty string
+
+    def test_download_csv_report_date_formats(self):
+        """Test the formatting of date and datetime fields."""
+        self.client.login(username='csvuser', password='password123')
+        # Use only todo1 for this test for simplicity
+        TodoItem.objects.filter(user=self.user, pk=self.todo2.pk).delete()
+
+        response = self.client.get(self.url)
+        self.assertEqual(response.status_code, 200)
+        content = response.content.decode('utf-8')
+        reader = csv.reader(StringIO(content))
+        next(reader) # Skip header
+        row = next(reader)
+
+        # created_at and updated_at are datetime objects
+        # Example format: '2023-10-26 10:30:00'
+        self.assertEqual(row[7], self.todo1.created_at.strftime('%Y-%m-%d %H:%M:%S'))
+        self.assertEqual(row[8], self.todo1.updated_at.strftime('%Y-%m-%d %H:%M:%S'))
+
+        # task_date is a date object
+        # Example format: '2023-10-26'
+        self.assertEqual(row[9], self.todo1.task_date.strftime('%Y-%m-%d'))
+
+    def test_download_csv_report_user_profile_does_not_exist_gracefully(self):
+        """Test CSV output when user.profile does not exist (e.g., if signal failed or profile deleted)."""
+        # This scenario is a bit tricky to set up if signals are robust.
+        # We can simulate it by temporarily deleting the profile.
+        self.user.profile.delete()
+        self.user.refresh_from_db() # Ensure user object doesn't hold cached profile
+
+        self.client.login(username='csvuser', password='password123')
+        response = self.client.get(self.url)
+        self.assertEqual(response.status_code, 200)
+        content = response.content.decode('utf-8')
+        reader = csv.reader(StringIO(content))
+        next(reader) # Skip header
+        data_row = next(reader) # Get the first data row
+
+        self.assertEqual(data_row[0], self.user.username)
+        self.assertEqual(data_row[1], self.user.email)
+        self.assertEqual(data_row[2], "") # Bio should be empty if profile is missing
+
+        # The signal create_or_update_user_profile should have recreated the profile
+        # when self.client.login() was called, or during other user model saves.
+        # So, explicit recreation here is not needed and can cause issues if
+        # the profile already exists due to the signal.
+        # If we want to ensure it's in a certain state for subsequent tests (though usually tests are isolated),
+        # we'd fetch and update, or be mindful of test execution order if TestCases share state (not ideal).
+        # For now, removing this explicit creation.
+        self.assertTrue(UserProfile.objects.filter(user=self.user).exists(), "Profile should have been recreated by signal.")
+        profile = UserProfile.objects.get(user=self.user)
+        profile.bio = "Recreated bio for subsequent tests if any" # Example update
+        profile.save()

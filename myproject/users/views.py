@@ -2,7 +2,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import login
 from .forms import CustomUserCreationForm, CustomAuthenticationForm
 from django.contrib.auth.decorators import login_required
-from .models import TodoItem
+from .models import TodoItem, UserProfile
 from .forms import TodoForm
 from django.db.models import Sum, Q
 from django.urls import reverse
@@ -281,3 +281,52 @@ def edit_profile_view(request):
         form = UserProfileForm(instance=profile)
 
     return render(request, 'profile/edit_profile.html', {'form': form})
+
+import csv
+from django.http import HttpResponse
+
+@login_required
+def download_csv_report(request):
+    user = request.user
+    try:
+        profile = user.profile
+        user_bio = profile.bio if profile else ""
+    except UserProfile.DoesNotExist: # Django raises User.profile.RelatedObjectDoesNotExist if profile doesn't exist
+        user_bio = ""
+
+    todo_items = TodoItem.objects.filter(user=user, time_spent__gt=0) # Only include todos with time spent
+
+    response = HttpResponse(content_type='text/csv')
+    response['Content-Disposition'] = 'attachment; filename="todo_report.csv"'
+
+    writer = csv.writer(response)
+
+    # Write header row
+    writer.writerow([
+        'Username', 'Email', 'Bio',
+        'Todo Title', 'Todo Description', 'Completed',
+        'Time Spent (hours)', 'Created At', 'Updated At', 'Task Date'
+    ])
+
+    if not todo_items.exists():
+        # Write a row with user info even if there are no todos
+        writer.writerow([
+            user.username, user.email, user_bio,
+            'N/A', 'N/A', 'N/A', 'N/A', 'N/A', 'N/A', 'N/A'
+        ])
+    else:
+        for item in todo_items:
+            writer.writerow([
+                user.username,
+                user.email,
+                user_bio,
+                item.title,
+                item.description,
+                item.completed,
+                item.time_spent_hours, # Using the property
+                item.created_at.strftime('%Y-%m-%d %H:%M:%S') if item.created_at else '',
+                item.updated_at.strftime('%Y-%m-%d %H:%M:%S') if item.updated_at else '',
+                item.task_date.strftime('%Y-%m-%d') if item.task_date else ''
+            ])
+
+    return response
