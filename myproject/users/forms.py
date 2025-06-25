@@ -41,10 +41,11 @@ class CustomAuthenticationForm(AuthenticationForm):
 
 class TodoForm(forms.ModelForm):
     time_spent_hours = forms.FloatField(label="Time Spent (hours)", required=False)
+    task_date = forms.DateField(widget=forms.DateInput(attrs={'type': 'date'}), required=False)
 
     class Meta:
         model = TodoItem
-        fields = ['title', 'description', 'completed', 'time_spent_hours']
+        fields = ['title', 'description', 'completed', 'task_date', 'time_spent_hours']
         # We'll handle 'time_spent' (minutes) separately
 
     def __init__(self, *args, **kwargs):

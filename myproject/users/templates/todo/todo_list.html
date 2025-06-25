@@ -13,6 +13,7 @@
             <th>Title</th>
             <th>Description</th>
             <th>Time Spent (hours)</th>
+            <th>Task Date</th>
             <th>Status</th>
             <th>Actions</th>
         </tr>
@@ -23,6 +24,7 @@
             <td data-field="title"><b><a href="{% url 'todo_detail' todo.id %}">{{ todo.title }}</a></b></td>
             <td data-field="description">{{ todo.description }}</td>
             <td data-field="time_spent">{{ todo.time_spent_hours|floatformat:2 }}h</td>
+            <td data-field="task_date">{{ todo.task_date|date:"Y-m-d"|default:"N/A" }}</td>
             <td data-field="status">
                 {% if todo.completed %}
                     <span class="badge bg-success" data-value="true">Completed</span>
@@ -38,7 +40,7 @@
         </tr>
         {% empty %}
         <tr>
-            <td colspan="5" class="text-center text-muted">
+            <td colspan="6" class="text-center text-muted">
                 You have no tasks yet. <a href="{% url 'add_todo' %}">Add one!</a>
             </td>
         </tr>
@@ -99,6 +101,15 @@ document.addEventListener('DOMContentLoaded', function () {
         row.dataset.originalHtmlTime = timeCell.innerHTML;
         timeCell.innerHTML = `<input type="number" step="0.1" class="form-control form-control-sm" value="${currentTime}">`;
 
+        // Task Date
+        const taskDateCell = row.querySelector('td[data-field="task_date"]');
+        const currentTaskDate = taskDateCell.textContent.trim();
+        // Ensure the value is in YYYY-MM-DD for the input type="date"
+        // The existing display format is "Y-m-d", which is compatible.
+        const taskDateForInput = currentTaskDate === "N/A" ? "" : currentTaskDate;
+        row.dataset.originalHtmlTaskDate = taskDateCell.innerHTML;
+        taskDateCell.innerHTML = `<input type="date" class="form-control form-control-sm" value="${taskDateForInput}">`;
+
         // Status
         const statusCell = row.querySelector('td[data-field="status"]');
         const statusSpan = statusCell.querySelector('span.badge');
@@ -145,6 +156,16 @@ document.addEventListener('DOMContentLoaded', function () {
         const timeCell = row.querySelector('td[data-field="time_spent"]');
         timeCell.textContent = `${parseFloat(newValues.time_spent_hours).toFixed(2)}h`;
 
+        // Task Date
+        const taskDateCell = row.querySelector('td[data-field="task_date"]');
+        // Format date as YYYY-MM-DD or show N/A
+        let displayTaskDate = "N/A";
+        if (newValues.task_date) {
+            // Assuming newValues.task_date is in 'YYYY-MM-DD' format from the server
+            displayTaskDate = newValues.task_date;
+        }
+        taskDateCell.textContent = displayTaskDate;
+
         // Status
         const statusCell = row.querySelector('td[data-field="status"]');
         const completed = newValues.completed === true || newValues.completed === 'true';
@@ -162,6 +183,7 @@ document.addEventListener('DOMContentLoaded', function () {
         delete row.dataset.originalHtmlTitle;
         delete row.dataset.originalHtmlDescription;
         delete row.dataset.originalHtmlTime;
+        delete row.dataset.originalHtmlTaskDate; // Clean up task_date
         delete row.dataset.originalHtmlStatus;
         delete row.dataset.originalHtmlActions;
     }
@@ -172,6 +194,7 @@ document.addEventListener('DOMContentLoaded', function () {
         row.querySelector('td[data-field="title"]').innerHTML = row.dataset.originalHtmlTitle;
         row.querySelector('td[data-field="description"]').innerHTML = row.dataset.originalHtmlDescription;
         row.querySelector('td[data-field="time_spent"]').innerHTML = row.dataset.originalHtmlTime;
+        row.querySelector('td[data-field="task_date"]').innerHTML = row.dataset.originalHtmlTaskDate; // Restore task_date
         row.querySelector('td[data-field="status"]').innerHTML = row.dataset.originalHtmlStatus;
         row.querySelector('td:last-child').innerHTML = row.dataset.originalHtmlActions; // Action buttons
 
@@ -179,6 +202,7 @@ document.addEventListener('DOMContentLoaded', function () {
         delete row.dataset.originalHtmlTitle;
         delete row.dataset.originalHtmlDescription;
         delete row.dataset.originalHtmlTime;
+        delete row.dataset.originalHtmlTaskDate; // Clean up task_date
         delete row.dataset.originalHtmlStatus;
         delete row.dataset.originalHtmlActions;
     }
@@ -187,12 +211,18 @@ document.addEventListener('DOMContentLoaded', function () {
         const title = row.querySelector('td[data-field="title"] input').value;
         const description = row.querySelector('td[data-field="description"] textarea').value;
         const time_spent_hours = parseFloat(row.querySelector('td[data-field="time_spent"] input').value);
+        const task_date_input = row.querySelector('td[data-field="task_date"] input').value;
+        // Send null if date is empty, otherwise send the date string.
+        // The backend (Django ModelForm/DateField) will handle conversion to None if appropriate.
+        const task_date = task_date_input ? task_date_input : null;
         const completed = row.querySelector('td[data-field="status"] select').value === 'true';
+
 
         const data = {
             title: title,
             description: description,
             time_spent_hours: time_spent_hours,
+            task_date: task_date,
             completed: completed,
         };
 
