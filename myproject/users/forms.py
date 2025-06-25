@@ -47,7 +47,7 @@ class TodoForm(forms.ModelForm):
         model = TodoItem
         # Include all model fields that the form should handle directly or indirectly.
         # 'time_spent' is the actual model field.
-        fields = ['title', 'description', 'completed', 'task_date', 'time_spent']
+        fields = ['title', 'description', 'completed', 'status', 'task_date', 'time_spent']
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs) # Populates self.initial for fields in Meta.fields

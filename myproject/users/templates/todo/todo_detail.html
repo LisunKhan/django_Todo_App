@@ -9,10 +9,12 @@
         <div class="card shadow-sm">
             <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
                 <h1 class="h4 mb-0">Task: {{ todo.title }}</h1>
-                {% if todo.completed %}
-                    <span class="badge bg-success">Completed</span>
+                {% if todo.status == 'done' %}
+                    <span class="badge bg-success">{{ todo.get_status_display }}</span>
+                {% elif todo.status == 'inprogress' %}
+                    <span class="badge bg-primary">{{ todo.get_status_display }}</span>
                 {% else %}
-                    <span class="badge bg-warning text-dark">Pending</span>
+                    <span class="badge bg-warning text-dark">{{ todo.get_status_display }}</span>
                 {% endif %}
             </div>
             <div class="card-body">
@@ -31,11 +33,7 @@
 
                     <dt class="col-sm-4">Status</dt>
                     <dd class="col-sm-8">
-                        {% if todo.completed %}
-                            Completed
-                        {% else %}
-                            Pending
-                        {% endif %}
+                        {{ todo.get_status_display }}
                     </dd>
 
                     <dt class="col-sm-4 text-muted">Created At</dt>
