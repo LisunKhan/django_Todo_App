@@ -12,26 +12,27 @@
         <tr>
             <th>Title</th>
             <th>Description</th>
-            <th>Time Spent (min)</th>
+            <th>Time Spent (hours)</th>
             <th>Status</th>
             <th>Actions</th>
         </tr>
     </thead>
     <tbody>
         {% for todo in todos %}
-        <tr>
-            <td><b><a href="{% url 'todo_detail' todo.id %}">{{ todo.title }}</a></b></td>
-            <td>{{ todo.description }}</td>
-            <td>{{ todo.time_spent }}</td>
-            <td>
+        <tr data-id="{{ todo.id }}">
+            <td data-field="title"><b><a href="{% url 'todo_detail' todo.id %}">{{ todo.title }}</a></b></td>
+            <td data-field="description">{{ todo.description }}</td>
+            <td data-field="time_spent">{{ todo.time_spent_hours|floatformat:2 }}h</td>
+            <td data-field="status">
                 {% if todo.completed %}
-                    <span class="badge bg-success">Completed</span>
+                    <span class="badge bg-success" data-value="true">Completed</span>
                 {% else %}
-                    <span class="badge bg-warning text-dark">Pending</span>
+                    <span class="badge bg-warning text-dark" data-value="false">Pending</span>
                 {% endif %}
             </td>
             <td>
-                <a href="{% url 'edit_todo' todo.id %}" class="btn btn-sm btn-outline-secondary">Edit</a>
+                <button type="button" class="btn btn-sm btn-outline-primary me-1 inline-edit-btn">Inline Edit</button>
+                <a href="{% url 'edit_todo' todo.id %}" class="btn btn-sm btn-outline-secondary">Edit Page</a>
                 <a href="{% url 'delete_todo' todo.id %}" class="btn btn-sm btn-danger" >Delete</a>
             </td>
         </tr>
@@ -44,4 +45,190 @@
         {% endfor %}
     </tbody>
 </table>
+
+{% csrf_token %} {# For AJAX POST requests #}
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const tableBody = document.querySelector('.table tbody');
+    const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+
+    tableBody.addEventListener('click', function (event) {
+        const target = event.target;
+        const row = target.closest('tr');
+        if (!row || !row.dataset.id) return; // Not a relevant click or row
+
+        const todoId = row.dataset.id;
+
+        // Handle "Inline Edit" button click
+        if (target.classList.contains('inline-edit-btn')) {
+            if (row.classList.contains('editing')) return; // Already editing this row
+            enterEditMode(row, target);
+        }
+        // Handle "Save" button click
+        else if (target.classList.contains('save-btn')) {
+            saveChanges(row, todoId);
+        }
+        // Handle "Cancel" button click
+        else if (target.classList.contains('cancel-btn')) {
+            cancelEditMode(row);
+        }
+    });
+
+    function enterEditMode(row, editButton) {
+        row.classList.add('editing');
+        row.dataset.originalHtml = {}; // Store original values for cancel
+
+        // Title
+        const titleCell = row.querySelector('td[data-field="title"]');
+        const titleLink = titleCell.querySelector('a');
+        const currentTitle = titleLink ? titleLink.textContent : titleCell.textContent.trim();
+        row.dataset.originalHtmlTitle = titleCell.innerHTML;
+        titleCell.innerHTML = `<input type="text" class="form-control form-control-sm" value="${currentTitle}">`;
+
+        // Description
+        const descriptionCell = row.querySelector('td[data-field="description"]');
+        const currentDescription = descriptionCell.textContent.trim();
+        row.dataset.originalHtmlDescription = descriptionCell.innerHTML;
+        descriptionCell.innerHTML = `<textarea class="form-control form-control-sm">${currentDescription}</textarea>`;
+
+        // Time Spent (hours)
+        const timeCell = row.querySelector('td[data-field="time_spent"]');
+        const currentTimeText = timeCell.textContent.trim().replace('h', '');
+        const currentTime = parseFloat(currentTimeText) || 0;
+        row.dataset.originalHtmlTime = timeCell.innerHTML;
+        timeCell.innerHTML = `<input type="number" step="0.1" class="form-control form-control-sm" value="${currentTime}">`;
+
+        // Status
+        const statusCell = row.querySelector('td[data-field="status"]');
+        const statusSpan = statusCell.querySelector('span.badge');
+        const currentStatus = statusSpan.dataset.value === 'true'; // true for Completed, false for Pending
+        row.dataset.originalHtmlStatus = statusCell.innerHTML;
+        statusCell.innerHTML = `
+            <select class="form-select form-select-sm">
+                <option value="false" ${!currentStatus ? 'selected' : ''}>Pending</option>
+                <option value="true" ${currentStatus ? 'selected' : ''}>Completed</option>
+            </select>`;
+
+        // Change buttons
+        const actionsCell = editButton.closest('td');
+        row.dataset.originalHtmlActions = actionsCell.innerHTML;
+        actionsCell.innerHTML = `
+            <button type="button" class="btn btn-sm btn-success me-1 save-btn">Save</button>
+            <button type="button" class="btn btn-sm btn-warning cancel-btn">Cancel</button>
+        `;
+    }
+
+    function exitEditMode(row, newValues) {
+        row.classList.remove('editing');
+
+        // Title
+        const titleCell = row.querySelector('td[data-field="title"]');
+        // Retain link structure if it was there
+        const originalTitleHTML = row.dataset.originalHtmlTitle;
+        if (originalTitleHTML && originalTitleHTML.includes('<a href')) {
+            const link = document.createElement('a');
+            link.href = originalTitleHTML.match(/href="([^"]*)"/)[1]; // Extract href
+            link.innerHTML = `<b>${newValues.title}</b>`;
+            titleCell.innerHTML = ''; // Clear existing input
+            titleCell.appendChild(link);
+        } else {
+            titleCell.innerHTML = `<b>${newValues.title}</b>`;
+        }
+
+
+        // Description
+        const descriptionCell = row.querySelector('td[data-field="description"]');
+        descriptionCell.textContent = newValues.description;
+
+        // Time Spent
+        const timeCell = row.querySelector('td[data-field="time_spent"]');
+        timeCell.textContent = `${parseFloat(newValues.time_spent_hours).toFixed(2)}h`;
+
+        // Status
+        const statusCell = row.querySelector('td[data-field="status"]');
+        const completed = newValues.completed === true || newValues.completed === 'true';
+        if (completed) {
+            statusCell.innerHTML = `<span class="badge bg-success" data-value="true">Completed</span>`;
+        } else {
+            statusCell.innerHTML = `<span class="badge bg-warning text-dark" data-value="false">Pending</span>`;
+        }
+
+        // Restore original action buttons
+        const actionsCell = row.querySelector('td:last-child'); // Assuming actions are always last
+        actionsCell.innerHTML = row.dataset.originalHtmlActions;
+
+        // Clean up stored original HTML
+        delete row.dataset.originalHtmlTitle;
+        delete row.dataset.originalHtmlDescription;
+        delete row.dataset.originalHtmlTime;
+        delete row.dataset.originalHtmlStatus;
+        delete row.dataset.originalHtmlActions;
+    }
+
+    function cancelEditMode(row) {
+        row.classList.remove('editing');
+        // Restore original HTML content for each cell
+        row.querySelector('td[data-field="title"]').innerHTML = row.dataset.originalHtmlTitle;
+        row.querySelector('td[data-field="description"]').innerHTML = row.dataset.originalHtmlDescription;
+        row.querySelector('td[data-field="time_spent"]').innerHTML = row.dataset.originalHtmlTime;
+        row.querySelector('td[data-field="status"]').innerHTML = row.dataset.originalHtmlStatus;
+        row.querySelector('td:last-child').innerHTML = row.dataset.originalHtmlActions; // Action buttons
+
+        // Clean up stored original HTML
+        delete row.dataset.originalHtmlTitle;
+        delete row.dataset.originalHtmlDescription;
+        delete row.dataset.originalHtmlTime;
+        delete row.dataset.originalHtmlStatus;
+        delete row.dataset.originalHtmlActions;
+    }
+
+    function saveChanges(row, todoId) {
+        const title = row.querySelector('td[data-field="title"] input').value;
+        const description = row.querySelector('td[data-field="description"] textarea').value;
+        const time_spent_hours = parseFloat(row.querySelector('td[data-field="time_spent"] input').value);
+        const completed = row.querySelector('td[data-field="status"] select').value === 'true';
+
+        const data = {
+            title: title,
+            description: description,
+            time_spent_hours: time_spent_hours,
+            completed: completed,
+        };
+
+        fetch(`/todo/inline_edit/${todoId}/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrfToken,
+            },
+            body: JSON.stringify(data),
+        })
+        .then(response => {
+            if (!response.ok) {
+                // Try to get error message from server if JSON, otherwise use status text
+                return response.json().then(errData => {
+                    throw new Error(errData.error || response.statusText);
+                }).catch(() => { // Catch if response.json() fails (not JSON error)
+                    throw new Error(`Server error: ${response.status} ${response.statusText}`);
+                });
+            }
+            return response.json();
+        })
+        .then(result => {
+            if (result.success) {
+                // The server should return the processed data, including time_spent_hours
+                exitEditMode(row, result.todo);
+            } else {
+                alert('Error saving changes: ' + (result.error || 'Unknown error'));
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Failed to save changes: ' + error.message);
+            // Optionally, revert to original values or keep inputs for user to retry
+        });
+    }
+});
+</script>
 {% endblock %}
