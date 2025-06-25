@@ -6,6 +6,55 @@
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h1>Todo List</h1>
     <a href="{% url 'task_report' %}" class="btn btn-info">View Task Report</a>
+    <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createTaskModal">
+        Create Task
+    </button>
+</div>
+
+<!-- Create Task Modal -->
+<div class="modal fade" id="createTaskModal" tabindex="-1" aria-labelledby="createTaskModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="createTaskModalLabel">Create New Task</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="createTaskForm">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label for="id_title_modal" class="form-label">Title</label>
+                        <input type="text" name="title" class="form-control" id="id_title_modal" required>
+                        <div class="invalid-feedback" id="error_title_modal"></div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="id_description_modal" class="form-label">Description</label>
+                        <textarea name="description" class="form-control" id="id_description_modal" rows="3"></textarea>
+                        <div class="invalid-feedback" id="error_description_modal"></div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="id_task_date_modal" class="form-label">Task Date</label>
+                        <input type="date" name="task_date" class="form-control" id="id_task_date_modal">
+                        <div class="invalid-feedback" id="error_task_date_modal"></div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="id_time_spent_hours_modal" class="form-label">Time Spent (hours)</label>
+                        <input type="number" step="0.1" name="time_spent_hours" class="form-control" id="id_time_spent_hours_modal" placeholder="e.g., 1.5">
+                        <div class="invalid-feedback" id="error_time_spent_hours_modal"></div>
+                    </div>
+                    <div class="mb-3 form-check">
+                        <input type="checkbox" name="completed" class="form-check-input" id="id_completed_modal">
+                        <label class="form-check-label" for="id_completed_modal">Completed</label>
+                        <div class="invalid-feedback" id="error_completed_modal"></div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                        <button type="submit" class="btn btn-primary">Save Task</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
 </div>
 
 <!-- Search Form -->
@@ -97,7 +146,143 @@
 <script>
 document.addEventListener('DOMContentLoaded', function () {
     const tableBody = document.querySelector('.table tbody');
-    const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+    const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value; // General CSRF for inline edit
+
+    // --- Create Task Modal Logic ---
+    const createTaskModal = new bootstrap.Modal(document.getElementById('createTaskModal'));
+    const createTaskForm = document.getElementById('createTaskForm');
+    const createCsrfToken = createTaskForm.querySelector('[name=csrfmiddlewaretoken]').value; // CSRF for create form
+
+    createTaskForm.addEventListener('submit', function(event) {
+        event.preventDefault();
+        clearCreateFormErrors();
+
+        const formData = new FormData(createTaskForm);
+        // FormData doesn't include unchecked checkboxes, so handle 'completed' manually
+        const completed = createTaskForm.querySelector('#id_completed_modal').checked;
+        formData.set('completed', completed ? 'true' : 'false'); // Send as string 'true'/'false'
+
+        // Convert FormData to a plain object for JSON stringification
+        const data = {};
+        formData.forEach((value, key) => {
+            // Skip CSRF token as it's sent in headers or not needed if same-origin policy is strict
+            if (key === 'csrfmiddlewaretoken') return;
+
+            if (key === 'completed') {
+                data[key] = value === 'true'; // Convert to boolean for JSON
+            } else if (key === 'time_spent_hours') {
+                data[key] = value ? parseFloat(value) : null; // Ensure number or null
+            } else if (key === 'task_date') {
+                 data[key] = value ? value : null; // Ensure empty string becomes null for backend
+            }
+            else {
+                data[key] = value;
+            }
+        });
+
+
+        fetch("{% url 'add_todo' %}", {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': createCsrfToken, // Use the token from the create form
+                'X-Requested-With': 'XMLHttpRequest' // To help Django identify AJAX
+            },
+            body: JSON.stringify(data)
+        })
+        .then(response => {
+            if (!response.ok) {
+                return response.json().then(errData => {
+                    throw { status: response.status, data: errData };
+                });
+            }
+            return response.json();
+        })
+        .then(result => {
+            if (result.success) {
+                addTodoToTable(result.todo);
+                createTaskModal.hide();
+                createTaskForm.reset();
+                // Optionally, show a success message (e.g., using a toast)
+            } else if (result.errors) {
+                // This case should be caught by the !response.ok check if status is 400
+                displayCreateFormErrors(result.errors);
+            }
+        })
+        .catch(errorInfo => {
+            console.error('Error creating task:', errorInfo);
+            if (errorInfo.status === 400 && errorInfo.data && errorInfo.data.errors) {
+                const errors = JSON.parse(errorInfo.data.errors); // errors are JSON string
+                displayCreateFormErrors(errors);
+            } else if (errorInfo.data && errorInfo.data.error) {
+                 // Generic error from server not related to form fields
+                alert('Error: ' + errorInfo.data.error);
+            }
+            else {
+                alert('An unexpected error occurred while creating the task. Please try again.');
+            }
+        });
+    });
+
+    function clearCreateFormErrors() {
+        createTaskForm.querySelectorAll('.invalid-feedback').forEach(el => el.textContent = '');
+        createTaskForm.querySelectorAll('.form-control, .form-check-input').forEach(el => el.classList.remove('is-invalid'));
+    }
+
+    function displayCreateFormErrors(errors) {
+        for (const fieldName in errors) {
+            const errorMessages = errors[fieldName].map(e => e.message).join(', ');
+            const field = createTaskForm.querySelector(`[name="${fieldName}"]`);
+            const errorDiv = createTaskForm.querySelector(`#error_${fieldName}_modal`); // e.g. #error_title_modal
+
+            if (field) {
+                field.classList.add('is-invalid');
+            }
+            if (errorDiv) {
+                errorDiv.textContent = errorMessages;
+            } else {
+                // Fallback if a specific error div isn't found for a field (e.g. non_field_errors)
+                // Or display a general error message at the top of the modal
+                const generalErrorDiv = createTaskForm.querySelector('#general_create_errors_modal'); // You'd need to add this div to the modal
+                if (generalErrorDiv) generalErrorDiv.textContent += `${fieldName}: ${errorMessages}\n`;
+                else alert(`Error for ${fieldName}: ${errorMessages}`); // Fallback
+            }
+        }
+    }
+
+    function addTodoToTable(todo) {
+        const newRow = tableBody.insertRow(0); // Insert at the top or use appendRow for bottom
+        newRow.dataset.id = todo.id;
+
+        const titleHtml = `<b><a href="/todo_detail/${todo.id}/">${todo.title}</a></b>`;
+        const statusHtml = todo.completed
+            ? `<span class="badge bg-success" data-value="true">Completed</span>`
+            : `<span class="badge bg-warning text-dark" data-value="false">Pending</span>`;
+        const taskDateDisplay = todo.task_date ? new Date(todo.task_date + 'T00:00:00').toLocaleDateString('en-CA') : "N/A"; // Format to YYYY-MM-DD or N/A
+        const timeSpentDisplay = todo.time_spent_hours != null ? `${parseFloat(todo.time_spent_hours).toFixed(2)}h` : "0.00h";
+
+
+        newRow.innerHTML = `
+            <td data-field="title">${titleHtml}</td>
+            <td data-field="description">${todo.description || ''}</td>
+            <td data-field="time_spent">${timeSpentDisplay}</td>
+            <td data-field="task_date">${taskDateDisplay}</td>
+            <td data-field="status">${statusHtml}</td>
+            <td>
+                <button type="button" class="btn btn-sm btn-outline-primary me-1 inline-edit-btn">Inline Edit</button>
+                <a href="/todo/${todo.id}/edit/" class="btn btn-sm btn-outline-secondary">Edit Page</a>
+                <a href="/delete_todo/${todo.id}/" class="btn btn-sm btn-danger">Delete</a>
+            </td>
+        `;
+        // If there's an "empty" message row, remove it
+        const emptyRow = tableBody.querySelector('tr td[colspan="6"]');
+        if (emptyRow) {
+            emptyRow.parentElement.remove();
+        }
+    }
+
+    // --- End Create Task Modal Logic ---
+
 
     tableBody.addEventListener('click', function (event) {
         const target = event.target;

@@ -7,6 +7,8 @@ from .forms import TodoForm
 from django.db.models import Sum, Q
 from django.urls import reverse
 from django.core.paginator import Paginator
+from django.http import JsonResponse
+import json
 
 def register(request):
     if request.method == 'POST':
@@ -83,16 +85,51 @@ def todo_list(request):
 
 @login_required
 def add_todo(request):
+    is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
+
     if request.method == 'POST':
-        form = TodoForm(request.POST)
+        if is_ajax:
+            try:
+                data = json.loads(request.body)
+                form = TodoForm(data) # Pass data to form
+            except json.JSONDecodeError:
+                return JsonResponse({'success': False, 'error': 'Invalid JSON.'}, status=400)
+        else:
+            form = TodoForm(request.POST)
+
         if form.is_valid():
             todo = form.save(commit=False)
             todo.user = request.user
             todo.save()
-            return redirect('todo_list')
-    else:
+
+            if is_ajax:
+                # Serialize necessary fields for the frontend
+                serialized_todo = {
+                    'id': todo.id,
+                    'title': todo.title,
+                    'description': todo.description,
+                    'completed': todo.completed,
+                    'task_date': todo.task_date.strftime('%Y-%m-%d') if todo.task_date else None,
+                    'time_spent_hours': todo.time_spent_hours, # Using the property
+                }
+                return JsonResponse({'success': True, 'todo': serialized_todo})
+            else:
+                return redirect('todo_list')
+        else: # Form is invalid
+            if is_ajax:
+                # form.errors.as_json() returns a JSON string of errors by field
+                return JsonResponse({'success': False, 'errors': form.errors.as_json()}, status=400)
+            else:
+                # For non-AJAX, re-render the page with form and errors
+                return render(request, 'todo/add_todo.html', {'form': form})
+    else: # GET request
         form = TodoForm()
-    return render(request, 'todo/add_todo.html', {'form': form})
+        if is_ajax:
+            # Typically, a GET to an 'add' endpoint via AJAX might not be standard,
+            # but if needed, could return form structure or similar.
+            # For now, let's assume GET AJAX calls are not expected for this view or return an error.
+            return JsonResponse({'error': 'GET request not supported for AJAX here'}, status=405) # Method Not Allowed
+        return render(request, 'todo/add_todo.html', {'form': form})
 
 @login_required
 def delete_todo(request, todo_id):
