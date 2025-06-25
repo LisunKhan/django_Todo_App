@@ -145,6 +145,7 @@ def inline_edit_todo(request, todo_id):
                 return JsonResponse({'success': False, 'error': 'Invalid time format.'}, status=400)
 
         todo.save()
+        todo.refresh_from_db() # Ensure all fields are loaded with correct types
 
         return JsonResponse({
             'success': True,
