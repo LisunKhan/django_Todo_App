@@ -15,17 +15,8 @@
                     {% for field in form %}
                         <div class="mb-3">
                             <label for="{{ field.id_for_label }}" class="form-label">{{ field.label }}</label>
-                            {% if field.name == 'completed' %}
-                                <div class="form-check">
-                                    {{ field }}
-                                    <label class="form-check-label" for="{{ field.id_for_label }}">
-                                        {{ field.help_text|default:"" }}
-                                    </label>
-                                </div>
-                            {% else %}
-                                {{ field }}
-                            {% endif %}
-                            {% if field.help_text and field.name != 'completed' %}
+                            {{ field }}
+                            {% if field.help_text %}
                                 <small class="form-text text-muted">{{ field.help_text }}</small>
                             {% endif %}
                             {% for error in field.errors %}

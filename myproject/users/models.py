@@ -7,7 +7,6 @@ class TodoItem(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, default=1)
     title = models.CharField(max_length=100)
     description = models.TextField()
-    completed = models.BooleanField(default=False)
     time_spent = models.IntegerField(default=0)  # Stored in minutes
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

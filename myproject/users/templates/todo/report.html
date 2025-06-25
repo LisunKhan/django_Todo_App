@@ -60,8 +60,8 @@
                 </a>
             </th>
             <th>
-                <a href="?order_by={% if request.GET.order_by == 'completed' %}-completed{% else %}completed{% endif %}&q={{ request.GET.q | default:'' }}&status={{ selected_status|default:'' }}&start_date={{ selected_start_date|default:'' }}&end_date={{ selected_end_date|default:'' }}">
-                    Status {% if request.GET.order_by == 'completed' %}▲{% elif request.GET.order_by == '-completed' %}▼{% endif %}
+                <a href="?order_by={% if request.GET.order_by == 'status' %}-status{% else %}status{% endif %}&q={{ request.GET.q | default:'' }}&status={{ selected_status|default:'' }}&start_date={{ selected_start_date|default:'' }}&end_date={{ selected_end_date|default:'' }}">
+                    Status {% if request.GET.order_by == 'status' %}▲{% elif request.GET.order_by == '-status' %}▼{% endif %}
                 </a>
             </th>
             <th>
@@ -77,7 +77,15 @@
             <td><a href="{% url 'todo_detail' task.id %}">{{ task.title }}</a></td>
             <td>{{ task.description }}</td>
             <td>{{ task.task_date|date:"Y-m-d"|default:"N/A" }}</td>
-            <td>{% if task.completed %}Completed{% else %}Pending{% endif %}</td>
+            <td>
+                {% if task.status == 'done' %}
+                    <span class="badge bg-success">{{ task.get_status_display }}</span>
+                {% elif task.status == 'inprogress' %}
+                    <span class="badge bg-primary">{{ task.get_status_display }}</span>
+                {% else %}
+                    <span class="badge bg-warning text-dark">{{ task.get_status_display }}</span>
+                {% endif %}
+            </td>
             <td>{{ task.time_spent_hours|floatformat:2 }}h</td>
         </tr>
         {% empty %}

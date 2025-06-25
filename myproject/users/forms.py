@@ -47,7 +47,7 @@ class TodoForm(forms.ModelForm):
         model = TodoItem
         # Include all model fields that the form should handle directly or indirectly.
         # 'time_spent' is the actual model field.
-        fields = ['title', 'description', 'completed', 'status', 'task_date', 'time_spent']
+        fields = ['title', 'description', 'status', 'task_date']
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs) # Populates self.initial for fields in Meta.fields
@@ -58,13 +58,6 @@ class TodoForm(forms.ModelForm):
         else:
             # Provide a default for time_spent_hours if no instance or time_spent is None
             self.initial['time_spent_hours'] = self.fields['time_spent_hours'].initial if self.fields['time_spent_hours'].initial is not None else 0
-
-
-        # Make the actual model field 'time_spent' not required and hidden.
-        if 'time_spent' in self.fields:
-            self.fields['time_spent'].required = False
-            self.fields['time_spent'].widget = forms.HiddenInput()
-
 
     def clean_time_spent_hours(self):
         hours = self.cleaned_data.get('time_spent_hours')

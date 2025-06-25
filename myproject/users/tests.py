@@ -49,8 +49,6 @@ class UserModelTests(TestCase):
         todo.save()
         self.assertEqual(todo.status, 'done')
         self.assertEqual(todo.get_status_display(), 'Done')
-        # Test that completed is updated when status is 'done'
-        self.assertTrue(todo.completed)
 
         todo.status = 'todo'
         todo.save()
@@ -121,8 +119,6 @@ class TodoFormTests(TestCase):
         todo_item = form.save(commit=False)
         self.assertEqual(todo_item.time_spent, 60) # Check minutes in model
         self.assertEqual(todo_item.status, 'done')
-        # If model/form syncs 'completed' based on 'status':
-        # self.assertTrue(todo_item.completed)
 
 
     def test_todo_form_fields_default_values_on_save(self):
@@ -387,7 +383,6 @@ class TodoViewTests(TestCase):
         self.assertEqual(task.description, 'Updated Desc')
         self.assertEqual(task.time_spent, 88) # Check minutes
         self.assertEqual(task.status, 'done') # Verify status
-        # self.assertTrue(task.completed) # If completed is synced from status
 
 
     def test_edit_todo_post_invalid_data(self):
@@ -416,8 +411,8 @@ class TodoViewTests(TestCase):
         """
         Test that the todo_list page correctly displays the status of tasks.
         """
-        TodoItem.objects.create(user=self.user, title='Completed Task', description='This task is done', completed=True)
-        TodoItem.objects.create(user=self.user, title='Pending Task', description='This task is not done', completed=False)
+        TodoItem.objects.create(user=self.user, title='Completed Task', description='This task is done', status='done')
+        TodoItem.objects.create(user=self.user, title='Pending Task', description='This task is not done', status='todo')
 
         url = reverse('todo_list')
         response = self.client.get(url)
@@ -464,7 +459,6 @@ class TodoViewTests(TestCase):
 
         task.refresh_from_db()
         self.assertEqual(task.status, 'done')
-        # self.assertTrue(task.completed) # If completed is synced from status
 
 import json # Make sure json is imported for inline_edit_todo tests
 
@@ -611,7 +605,7 @@ class CSVReportTests(TestCase):
             user=self.user,
             title='CSV Todo 1',
             description='Description for CSV 1',
-            completed=True,
+            status='done',
             time_spent=60, # 1 hour
             task_date=self.todo1_date
         )
@@ -622,7 +616,7 @@ class CSVReportTests(TestCase):
             user=self.user,
             title='CSV Todo 2',
             description='Description for CSV 2',
-            completed=False,
+            status='todo',
             time_spent=30, # 0.5 hours
             task_date=self.todo2_date
         )
@@ -649,7 +643,7 @@ class CSVReportTests(TestCase):
         header = next(reader)
         expected_header = [
             'Username', 'Email', 'Bio',
-            'Todo Title', 'Todo Description', 'Completed',
+            'Todo Title', 'Todo Description', 'Status',
             'Time Spent (hours)', 'Created At', 'Updated At', 'Task Date'
         ]
         self.assertEqual(header, expected_header)
@@ -675,7 +669,7 @@ class CSVReportTests(TestCase):
         self.assertEqual(row1_data[2], self.user.profile.bio)
         self.assertEqual(row1_data[3], self.todo1.title)
         self.assertEqual(row1_data[4], self.todo1.description)
-        self.assertEqual(row1_data[5], str(self.todo1.completed)) # CSV stores bools as 'True'/'False'
+        self.assertEqual(row1_data[5], self.todo1.get_status_display())
         self.assertEqual(float(row1_data[6]), self.todo1.time_spent_hours)
         self.assertIn(self.todo1.created_at.strftime('%Y-%m-%d'), row1_data[7]) # Check date part
         self.assertIn(self.todo1.updated_at.strftime('%Y-%m-%d'), row1_data[8]) # Check date part
