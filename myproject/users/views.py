@@ -125,6 +125,16 @@ def inline_edit_todo(request, todo_id):
         todo.description = data.get('description', todo.description)
         todo.completed = data.get('completed', todo.completed)
 
+        task_date_str = data.get('task_date')
+        if task_date_str:
+            try:
+                todo.task_date = task_date_str # Django's DateField can parse 'YYYY-MM-DD'
+            except ValueError:
+                return JsonResponse({'success': False, 'error': 'Invalid date format for task_date. Use YYYY-MM-DD.'}, status=400)
+        else:
+            todo.task_date = None
+
+
         if 'time_spent_hours' in data:
             try:
                 hours = float(data['time_spent_hours'])
@@ -143,6 +153,7 @@ def inline_edit_todo(request, todo_id):
                 'title': todo.title,
                 'description': todo.description,
                 'completed': todo.completed,
+                'task_date': todo.task_date.strftime('%Y-%m-%d') if todo.task_date else None,
                 'time_spent_hours': todo.time_spent_hours, # Use the property for the response
             }
         })

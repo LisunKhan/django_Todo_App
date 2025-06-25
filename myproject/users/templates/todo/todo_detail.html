@@ -7,8 +7,11 @@
 <h1>Todo Item Detail</h1>
 <p>Title: {{ todo.title }}</p>
 <p>Description: {{ todo.description }}</p>
-<p>Time Spent (min): {{ todo.time_spent }}</p>
-<p>Completed: {% if todo.completed %}Yes{% else %}No{% endif %}</p>
+<p>Task Date: {{ todo.task_date|date:"Y-m-d"|default:"Not set" }}</p>
+<p>Time Spent (min): {{ todo.time_spent }} ({{ todo.time_spent_hours|floatformat:2 }}h)</p>
+<p>Status: {% if todo.completed %}Completed{% else %}Pending{% endif %}</p>
+<p>Created At: {{ todo.created_at|date:"Y-m-d H:i" }}</p>
+<p>Last Updated: {{ todo.updated_at|date:"Y-m-d H:i" }}</p>
 <a href="{% url 'edit_todo' todo.id %}" class="btn btn-secondary">Edit Task</a>
 <a href="{% url 'todo_list' %}" class="btn btn-info">Back to Todo List</a>
 {% endblock %}

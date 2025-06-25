@@ -3,24 +3,12 @@
 
 {% block content %}
 <h1>Add Todo</h1>
-<table class="table">
-    <form method="post">
-        {% csrf_token %}
-        <tr>
-            <td><label for="title">Title:</label></td>
-            <td><input type="text" name="title" id="title" required></td>
-        </tr>
-        <tr>
-            <td><label for="description">Description:</label></td>
-            <td><textarea name="description" id="description" rows="3" ></textarea></td>
-        </tr>
-        <tr>
-            <td><button type="submit" class="btn btn-primary">Add</button> </td>
-            <td><a href="{% url 'todo_list' %}" class="btn btn-secondary">Back to Todo List</a>
-            </td>
-        </tr>
-    </form>
-</table>
+<form method="post">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <button type="submit" class="btn btn-primary">Add</button>
+    <a href="{% url 'todo_list' %}" class="btn btn-secondary">Back to Todo List</a>
+</form>
 {% endblock %}
 
 {% comment %} {% extends 'todo/base.html' %}
