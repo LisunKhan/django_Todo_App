@@ -118,6 +118,17 @@ document.addEventListener('DOMContentLoaded', () => {
                     taskCard.setAttribute('data-task-date', result.todo.task_date || '');
                     taskCard.setAttribute('data-time-spent', String(result.todo.time_spent_hours || '0'));
 
+                    // Update the status badge
+                    const statusBadge = taskCard.querySelector('.task-status-badge');
+                    if (statusBadge) {
+                        const newStatus = result.todo.status;
+                        statusBadge.textContent = newStatus.charAt(0).toUpperCase() + newStatus.slice(1);
+                        // Remove old status classes (be specific to avoid removing task-status-badge)
+                        statusBadge.classList.remove('status-todo', 'status-inprogress', 'status-in-progress', 'status-done');
+                        // Add new status class
+                        statusBadge.classList.add(`status-${newStatus.toLowerCase().replace(/\s+/g, '-')}`);
+                    }
+
                     // Check if the card is in the correct column according to the server response
                     const targetColumnId = `${result.todo.status}-tasks`;
                     if (taskCard.parentElement.id !== targetColumnId) {
