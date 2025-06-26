@@ -1,4 +1,22 @@
-const API_BASE_URL = '/api/tasks'; // Example placeholder for API endpoints
+const API_BASE_URL = '/api/tasks'; // Placeholder, will be adjusted or URLs constructed directly
+
+// Helper function to get CSRF token from cookies
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            // Does this cookie string begin with the name we want?
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+const CSRF_TOKEN = getCookie('csrftoken');
 
 document.addEventListener('DOMContentLoaded', () => {
     console.log('Kanban board HTML and CSS loaded. JavaScript is active.');
@@ -28,59 +46,199 @@ document.addEventListener('DOMContentLoaded', () => {
         //     console.error('Error creating task:', error);
         //     // Handle error, maybe remove the optimistic UI update or notify user
         // }
-        return { ...taskData, id: Date.now() }; // Simulate returning task with ID for now
+        // return { ...taskData, id: Date.now() }; // Simulate returning task with ID for now - OLD
+        try {
+            const response = await fetch('/add_todo/', { // URL for creating tasks
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': CSRF_TOKEN,
+                    'X-Requested-With': 'XMLHttpRequest' // Backend expects this for JSON handling
+                },
+                body: JSON.stringify(taskData) // taskData should include title, description, status
+            });
+
+            if (!response.ok) {
+                // Try to parse error if backend sends JSON error response
+                let errorData;
+                try {
+                    errorData = await response.json();
+                } catch (e) {
+                    // Not a JSON error response
+                    errorData = { error: `HTTP error! status: ${response.status}` };
+                }
+                console.error('Error creating task:', errorData);
+                throw new Error(errorData.error || `Failed to create task. Status: ${response.status}`);
+            }
+
+            const result = await response.json();
+            if (result.success && result.todo) {
+                return result.todo; // Return the full task object from the server, including its new ID
+            } else {
+                console.error('Failed to create task, server response:', result);
+                throw new Error(result.errors || 'Task creation was not successful.');
+            }
+        } catch (error) { // This catches network errors or errors thrown from response.ok check
+            console.error('Error in createTaskAPI:', error.message);
+            alert(`Error creating task: ${error.message}\nPlease try again.`);
+            return null; // Indicate failure
+        }
     }
 
-    async function updateTaskStatusAPI(taskId, newStatus) {
-        console.log(`API CALL (Drag-Drop): Update task ${taskId} to status ${newStatus}`);
-        // Actual fetch call would be:
-        // try {
-        //     const response = await fetch(`${API_BASE_URL}/${taskId}/status`, {
-        //         method: 'PATCH', // or PUT
-        //         headers: { 'Content-Type': 'application/json' },
-        //         body: JSON.stringify({ status: newStatus })
-        //     });
-        //     if (!response.ok) throw new Error(`Failed to update status: ${response.statusText}`);
-        //     const updatedTask = await response.json();
-        //     console.log('Status updated successfully:', updatedTask);
-        //     // Optionally update the task card's data attributes or re-render if needed
-        // } catch (error) {
-        //     console.error('Error updating task status:', error);
-        //     // Revert UI change if API call fails (more complex UI handling)
-        // }
+    async function updateTaskStatusAPI(taskId, newStatus) { // Called on drag-and-drop
+        console.log(`Attempting to update task ${taskId} to status ${newStatus}`);
+        const payload = { status: newStatus };
+        try {
+            const response = await fetch(`/todo/inline_edit/${taskId}/`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': CSRF_TOKEN,
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: JSON.stringify(payload)
+            });
+
+            if (!response.ok) {
+                let errorData;
+                try { errorData = await response.json(); } catch (e) { errorData = { error: `HTTP error! status: ${response.status}` }; }
+                console.error('Error updating task status:', errorData);
+                throw new Error(errorData.error || `Failed to update status. Status: ${response.status}`);
+            }
+
+            const result = await response.json();
+            if (result.success && result.todo) {
+                console.log('Task status updated successfully:', result.todo);
+                const taskCard = document.querySelector(`.task-card[data-task-id="${taskId}"]`);
+                if (taskCard) {
+                    taskCard.setAttribute('data-status', result.todo.status);
+                    // Update other relevant data attributes if the server could have changed them
+                    taskCard.setAttribute('data-title', result.todo.title);
+                    taskCard.setAttribute('data-description', result.todo.description || '');
+                    taskCard.setAttribute('data-task-date', result.todo.task_date || '');
+                    taskCard.setAttribute('data-time-spent', String(result.todo.time_spent_hours || '0'));
+
+                    // Check if the card is in the correct column according to the server response
+                    const targetColumnId = `${result.todo.status}-tasks`;
+                    if (taskCard.parentElement.id !== targetColumnId) {
+                        console.warn(`Task ${taskId} moved to ${newStatus} optimistically, but server returned status ${result.todo.status}. Moving to correct column.`);
+                        const targetColumnElement = document.getElementById(targetColumnId);
+                        if (targetColumnElement) {
+                            targetColumnElement.appendChild(taskCard);
+                        } else {
+                            console.error(`Target column ${targetColumnId} not found for task ${taskId}.`);
+                        }
+                    }
+                }
+            } else {
+                console.error('Failed to update task status, server response:', result);
+                throw new Error(result.errors || 'Task status update was not successful.');
+            }
+        } catch (error) {
+            console.error('Error in updateTaskStatusAPI:', error.message);
+            alert(`Error updating task status: ${error.message}\nThe task may not have moved to the correct status on the server. Please refresh or try moving again.`);
+            // TODO: Consider reverting the drag-and-drop move in the UI if API call fails.
+            // This requires access to evt.from from SortableJS, which might mean moving this logic
+            // directly into the onEnd handler or passing more context. For now, the card might be in the wrong column visually.
+        }
     }
 
-    async function updateTaskDetailsAPI(taskId, data) {
-        console.log(`API CALL (Edit): Update task ${taskId} with data:`, data);
-        // Actual fetch call would be:
-        // try {
-        //     const response = await fetch(`${API_BASE_URL}/${taskId}`, {
-        //         method: 'PATCH', // or PUT
-        //         headers: { 'Content-Type': 'application/json' },
-        //         body: JSON.stringify(data)
-        //     });
-        //     if (!response.ok) throw new Error(`Failed to update task: ${response.statusText}`);
-        //     const updatedTask = await response.json();
-        //     console.log('Task updated successfully:', updatedTask);
-        // } catch (error) {
-        //     console.error('Error updating task details:', error);
-        //     // Revert UI changes or notify user
-        // }
+    async function updateTaskDetailsAPI(taskId, updateData) { // Called on inline edit save
+        console.log(`Attempting to update task ${taskId} with data:`, updateData); // {title, description}
+        try {
+            const response = await fetch(`/todo/inline_edit/${taskId}/`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': CSRF_TOKEN,
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: JSON.stringify(updateData)
+            });
+
+            if (!response.ok) {
+                let errorData;
+                try { errorData = await response.json(); } catch (e) { errorData = { error: `HTTP error! status: ${response.status}` }; }
+                console.error('Error updating task details:', errorData);
+                throw new Error(errorData.error || `Failed to update details. Status: ${response.status}`);
+            }
+
+            const result = await response.json();
+            if (result.success && result.todo) {
+                console.log('Task details updated successfully:', result.todo);
+                const taskCard = document.querySelector(`.task-card[data-task-id="${taskId}"]`);
+                if (taskCard) {
+                    // Update data attributes with server response
+                    taskCard.setAttribute('data-title', result.todo.title);
+                    taskCard.setAttribute('data-description', result.todo.description || '');
+                    taskCard.setAttribute('data-status', result.todo.status); // Status might change if API allows
+                    taskCard.setAttribute('data-task-date', result.todo.task_date || '');
+                    taskCard.setAttribute('data-time-spent', String(result.todo.time_spent_hours || '0'));
+
+                    // Update visible text content from server response
+                    const titleElement = taskCard.querySelector('h3');
+                    const descriptionElement = taskCard.querySelector('p');
+                    if (titleElement) titleElement.textContent = result.todo.title;
+                    if (descriptionElement) descriptionElement.textContent = result.todo.description || '';
+
+                    // If status changed via this endpoint (though not primary intent of this func)
+                    // ensure card is in correct column
+                    const targetColumnId = `${result.todo.status}-tasks`;
+                    if (taskCard.parentElement.id !== targetColumnId) {
+                        console.warn(`Task ${taskId} status changed via details update to ${result.todo.status}. Moving to correct column.`);
+                        const targetColumnElement = document.getElementById(targetColumnId);
+                        if (targetColumnElement) {
+                            targetColumnElement.appendChild(taskCard);
+                        }
+                    }
+                }
+            } else {
+                console.error('Failed to update task details, server response:', result);
+                throw new Error(result.errors || 'Task details update was not successful.');
+            }
+        } catch (error) {
+            console.error('Error in updateTaskDetailsAPI:', error.message);
+            alert(`Error updating task details: ${error.message}\nYour changes might not have been saved. Please refresh and try again.`);
+            // TODO: Consider reverting UI changes if API call fails. This would mean
+            // the saveChanges function in enableEditMode would need to know about the original values,
+            // and then reset the h3/p textContent and data-* attributes.
+        }
     }
 
     async function deleteTaskAPI(taskId) {
-        console.log(`API CALL (Delete): Delete task ${taskId}`);
-        // Actual fetch call would be:
-        // try {
-        //     const response = await fetch(`${API_BASE_URL}/${taskId}`, {
-        //         method: 'DELETE'
-        //     });
-        //     if (!response.ok) throw new Error(`Failed to delete task: ${response.statusText}`);
-        //     console.log(`Task ${taskId} deleted successfully from backend.`);
-        // } catch (error) {
-        //     console.error('Error deleting task:', error);
-        //     // If deletion fails, maybe re-add the card to the UI or notify user
-        // }
+        console.log(`Attempting to delete task ${taskId}`);
+        try {
+            const response = await fetch(`/delete_todo/${taskId}/`, { // URL for deleting tasks
+                method: 'POST', // Your backend expects POST for AJAX deletion
+                headers: {
+                    'X-CSRFToken': CSRF_TOKEN,
+                    'X-Requested-With': 'XMLHttpRequest' // Backend expects this for AJAX handling
+                }
+                // No body is needed for this specific delete endpoint as per typical Django patterns
+            });
+
+            if (!response.ok) {
+                let errorData;
+                try { errorData = await response.json(); } catch (e) { errorData = { error: `HTTP error! status: ${response.status}` }; }
+                console.error('Error deleting task:', errorData);
+                throw new Error(errorData.error || `Failed to delete task. Status: ${response.status}`);
+            }
+
+            const result = await response.json();
+            if (result.success) {
+                console.log(`Task ${taskId} deleted successfully from backend.`);
+                // UI is already optimistically updated (card removed).
+            } else {
+                console.error('Failed to delete task, server response:', result);
+                throw new Error(result.errors || 'Task deletion was not successful.');
+            }
+        } catch (error) {
+            console.error('Error in deleteTaskAPI:', error.message);
+            alert(`Error deleting task: ${error.message}\nThe task might not have been deleted from the server. Please refresh.`);
+            // TODO: If deletion fails, re-add the card to the UI. This would mean not removing it
+            // from the DOM until after successful API response, or having a mechanism to re-render it.
+            // For now, the card remains removed optimistically.
+        }
     }
     // --- End API Placeholder Functions ---
 
@@ -148,7 +306,11 @@ document.addEventListener('DOMContentLoaded', () => {
         taskCard.className = 'task-card';
         taskCard.setAttribute('data-task-id', task.id);
         taskCard.setAttribute('data-title', task.title);
-        taskCard.setAttribute('data-description', task.description);
+        taskCard.setAttribute('data-description', task.description || ''); // Ensure not undefined
+        taskCard.setAttribute('data-status', task.status);
+        taskCard.setAttribute('data-task-date', task.task_date || '');
+        taskCard.setAttribute('data-time-spent', String(task.time_spent_hours || '0'));
+
 
         const titleElement = document.createElement('h3');
         titleElement.textContent = task.title;
@@ -198,18 +360,45 @@ document.addEventListener('DOMContentLoaded', () => {
     //     });
     // };
     // Example: if initialTasks is populated by Django template into a JS variable:
-     if (typeof initialKanbanTasks !== 'undefined' && Array.isArray(initialKanbanTasks)) {
-        initialKanbanTasks.forEach(task => {
-            const card = renderTask(task);
-            if (task.status === 'todo' && todoTasks) {
-                todoTasks.appendChild(card);
-            } else if (task.status === 'inprogress' && inprogressTasks) {
-                inprogressTasks.appendChild(card);
-            } else if (task.status === 'done' && doneTasks) {
-                doneTasks.appendChild(card);
+    //  if (typeof initialKanbanTasks !== 'undefined' && Array.isArray(initialKanbanTasks)) {
+    //     initialKanbanTasks.forEach(task => {
+    //         const card = renderTask(task);
+    //         if (task.status === 'todo' && todoTasks) {
+    //             todoTasks.appendChild(card);
+    //         } else if (task.status === 'inprogress' && inprogressTasks) {
+    //             inprogressTasks.appendChild(card);
+    //         } else if (task.status === 'done' && doneTasks) {
+    //             doneTasks.appendChild(card);
+    //         }
+    //     });
+    // }
+
+    async function fetchAndRenderInitialTasks() {
+        try {
+            // Adjust the URL if your users app is namespaced in Django URLs, e.g., /users/api/kanban_tasks/
+            const response = await fetch('/api/kanban_tasks/');
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
             }
-        });
+            const tasks = await response.json();
+
+            tasks.forEach(task => {
+                const card = renderTask(task);
+                if (task.status === 'todo' && todoTasks) {
+                    todoTasks.appendChild(card);
+                } else if (task.status === 'inprogress' && inprogressTasks) {
+                    inprogressTasks.appendChild(card);
+                } else if (task.status === 'done' && doneTasks) {
+                    doneTasks.appendChild(card);
+                }
+            });
+        } catch (error) {
+            console.error("Error fetching initial tasks:", error.message);
+            alert("Failed to load tasks. Please check the console for more details or try refreshing the page.");
+        }
     }
+
+    fetchAndRenderInitialTasks(); // Call this function when DOM is loaded
 
 
     function deleteTask(taskCard) {
