@@ -23,17 +23,6 @@
             <h2>To Do</h2>
             <div class="task-list" id="todo-tasks">
                 <!-- Tasks will be dynamically added by kanban.js -->
-                {# Example of how tasks could be passed from Django view if needed initially #}
-                {# {% for task in todo_tasks %}
-                <div class="task-card" data-task-id="{{ task.id }}" data-title="{{ task.title }}" data-description="{{ task.description }}">
-                    <h3>{{ task.title }}</h3>
-                    <p>{{ task.description }}</p>
-                    <div class="actions">
-                        <button class="edit-btn" title="Edit task">✏️</button>
-                        <button class="delete-btn" title="Delete task">🗑️</button>
-                    </div>
-                </div>
-                {% endfor %} #}
             </div>
             <button class="add-task-btn">+ Add New Task</button>
         </div>
@@ -56,17 +45,4 @@
     </div>
 </div>
 
-{# If initial tasks need to be loaded by JS from Django context: #}
-{# <script>
-    const initialKanbanTasks = [
-        {% for task in all_tasks %} // Assuming 'all_tasks' is a combined list from context
-        {
-            id: "{{ task.id }}",
-            title: "{{ task.title|escapejs }}",
-            description: "{{ task.description|escapejs }}",
-            status: "{{ task.status }}"
-        },
-        {% endfor %}
-    ];
-</script> #}
 {% endblock content %}
