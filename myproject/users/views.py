@@ -139,10 +139,19 @@ def add_todo(request):
 @login_required
 def delete_todo(request, todo_id):
     todo = get_object_or_404(TodoItem, id=todo_id, user=request.user)
+    is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
+
     if request.method == 'POST':
         todo.delete()
-        return redirect('todo_list')
+        if is_ajax:
+            return JsonResponse({'success': True})
+        else:
+            # Fallback for non-AJAX POST, though primarily expecting AJAX now
+            return redirect('todo_list')
 
+    # For GET requests, or if not POST (though delete should be POST)
+    # This part will be less used if all deletes are via AJAX on the list page.
+    # If a user somehow navigates to the delete URL directly via GET.
     return render(request, 'todo/delete_todo.html', {'todo': todo})
 
 # @login_required

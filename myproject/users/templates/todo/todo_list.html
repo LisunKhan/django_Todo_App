@@ -113,7 +113,7 @@
             <td>
                 <button type="button" class="btn btn-sm btn-outline-primary me-1 inline-edit-btn">Inline Edit</button>
                 <a href="{% url 'edit_todo' todo.id %}" class="btn btn-sm btn-outline-secondary">Edit Page</a>
-                <a href="{% url 'delete_todo' todo.id %}" class="btn btn-sm btn-danger" >Delete</a>
+                <button class="btn btn-sm btn-danger delete-todo-btn" data-todo-id="{{ todo.id }}" data-delete-url="{% url 'delete_todo' todo.id %}">Delete</button>
             </td>
         </tr>
         {% empty %}
@@ -323,17 +323,76 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // --- End Create Task Modal Logic ---
 
-
+    // Combined event listener for table body
     tableBody.addEventListener('click', function (event) {
         const target = event.target;
         const row = target.closest('tr');
-        if (!row || !row.dataset.id) return; // Not a relevant click or row
 
+        if (!row || !row.dataset.id) { // Check if click is on a valid row
+             // Handle delete button click specifically, as it might be the only button on the row
+            if (target.classList.contains('delete-todo-btn')) {
+                event.preventDefault();
+                const todoId = target.dataset.todoId;
+                const deleteUrl = target.dataset.deleteUrl;
+                const specificRowToRemove = target.closest('tr'); // a more specific row for removal
+
+                Swal.fire({
+                    title: 'Are you sure?',
+                    text: "You won't be able to revert this!",
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: '#d33',
+                    cancelButtonColor: '#3085d6',
+                    confirmButtonText: 'Yes, delete it!'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        fetch(deleteUrl, {
+                            method: 'POST',
+                            headers: {
+                                'X-CSRFToken': csrfToken, // Defined above
+                                'X-Requested-With': 'XMLHttpRequest'
+                            }
+                        })
+                        .then(response => {
+                            if (!response.ok) {
+                                return response.json().then(err => { throw err; });
+                            }
+                            return response.json();
+                        })
+                        .then(data => {
+                            if (data.success) {
+                                if (specificRowToRemove) specificRowToRemove.remove();
+                                Swal.fire('Deleted!','Your task has been deleted.','success');
+                                if (tableBody.querySelectorAll('tr').length === 0) {
+                                    const emptyMessageHtml = `
+                                        <tr>
+                                            <td colspan="6" class="text-center text-muted">
+                                                You have no tasks yet. <a href="{% url 'add_todo' %}">Add one!</a>
+                                            </td>
+                                        </tr>`;
+                                    tableBody.innerHTML = emptyMessageHtml;
+                                }
+                            } else {
+                                Swal.fire('Failed!', data.error || 'Could not delete the task.', 'error');
+                            }
+                        })
+                        .catch(error => {
+                            console.error('Error deleting task:', error);
+                            Swal.fire('Error!', error.error || 'An unexpected error occurred.', 'error');
+                        });
+                    }
+                });
+            } // End of delete button logic
+            return; // If not on a valid row and not delete button, do nothing
+        }
+
+
+        // If we are on a valid row (row && row.dataset.id is true)
         const todoId = row.dataset.id;
 
         // Handle "Inline Edit" button click
         if (target.classList.contains('inline-edit-btn')) {
-            if (row.classList.contains('editing')) return; // Already editing this row
+            if (row.classList.contains('editing')) return; // Already editing
             enterEditMode(row, target);
         }
         // Handle "Save" button click
@@ -343,6 +402,54 @@ document.addEventListener('DOMContentLoaded', function () {
         // Handle "Cancel" button click
         else if (target.classList.contains('cancel-btn')) {
             cancelEditMode(row);
+        }
+        // Handle "Delete" button click (if missed by the above specific check, e.g. if row.dataset.id was initially null but button is valid)
+        // This is a fallback, the primary check for delete is above.
+        else if (target.classList.contains('delete-todo-btn')) {
+             event.preventDefault();
+            const deleteUrl = target.dataset.deleteUrl;
+            // const specificRowToRemove = target.closest('tr'); // Already have 'row'
+
+            Swal.fire({
+                title: 'Are you sure?',
+                text: "You won't be able to revert this!",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                cancelButtonColor: '#3085d6',
+                confirmButtonText: 'Yes, delete it!'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    fetch(deleteUrl, {
+                        method: 'POST',
+                        headers: {
+                            'X-CSRFToken': csrfToken,
+                            'X-Requested-With': 'XMLHttpRequest'
+                        }
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            if (row) row.remove(); // Use current row
+                            Swal.fire('Deleted!','Your task has been deleted.','success');
+                             if (tableBody.querySelectorAll('tr').length === 0) {
+                                const emptyMessageHtml = `
+                                    <tr>
+                                        <td colspan="6" class="text-center text-muted">
+                                            You have no tasks yet. <a href="{% url 'add_todo' %}">Add one!</a>
+                                        </td>
+                                    </tr>`;
+                                tableBody.innerHTML = emptyMessageHtml;
+                            }
+                        } else {
+                            Swal.fire('Failed!', data.error || 'Could not delete the task.', 'error');
+                        }
+                    })
+                    .catch(error => {
+                        Swal.fire('Error!', 'An unexpected error occurred.', 'error');
+                    });
+                }
+            });
         }
     });
 
