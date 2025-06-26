@@ -3,13 +3,6 @@
 
 {% block title %}Kanban Task Board{% endblock title %}
 
-{% block extra_head %}
-    <link rel="stylesheet" href="{% static 'css/kanban.css' %}">
-    <!-- SortableJS via CDN -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js" defer></script>
-    <script src="{% static 'js/kanban.js' %}" defer></script>
-{% endblock extra_head %}
-
 {% block content %}
 <div class="container-fluid mt-4"> {# Assuming Bootstrap container might be useful from base #}
     <div class="row mb-3">
@@ -45,4 +38,8 @@
     </div>
 </div>
 
+    <link rel="stylesheet" href="{% static 'css/kanban.css' %}">
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js" defer></script>
+<script src="{% static 'js/kanban.js' %}"></script>
 {% endblock content %}
