@@ -324,7 +324,14 @@ def edit_profile_view(request):
     else:
         form = UserProfileForm(instance=profile)
 
-    return render(request, 'profile/edit_profile.html', {'form': form})
+    return render(
+        request, 'profile/edit_profile.html',
+        {
+        'form': form,
+        'profile': profile,
+        'profile_picture_url': profile.profile_picture.url if profile.profile_picture else None
+        }
+    )
 
 import csv
 from django.http import HttpResponse
