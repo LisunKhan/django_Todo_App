@@ -9,14 +9,14 @@ body {
     /* margin-top: 56px; /* Adjusted: This was causing double padding with body's padding-top */
     /* Ensure it starts below the fixed top navbar */
     padding-top: 0; /* Body already has padding-top */
-    height: calc(100vh - 56px - 56px); /* Full viewport height minus navbar and footer height */
-    overflow-y: hidden; /* Prevent double scrollbars, individual panes will scroll */
+    height: calc(100vh - 56px); /* Full viewport height minus navbar height */
+    /* overflow-y: hidden; /* Removed to allow main content to scroll properly */
 }
 
 #sidebarMenu {
     position: fixed;
     top: 56px; /* Align below the fixed navbar */
-    bottom: 56px; /* Align above the fixed footer */
+    bottom: 0; /* Extend to the bottom of the viewport */
     left: 0;
     z-index: 100; /* Behind the navbar (1030) but above default content */
     padding: 0; /* Reset padding */
@@ -58,21 +58,18 @@ main.flex-shrink-0 {
     /* This is the main content block in base.html */
     /* margin-left will be handled by Bootstrap's col-md-9 ms-sm-auto col-lg-10 */
     padding-top: 1rem; /* Space below the page_title header */
+    padding-bottom: 1rem; /* Reset padding, just some basic spacing at the bottom */
     height: 100%; /* Full height of its container (.layout-container row) */
     overflow-y: auto; /* Allow main content to scroll if it overflows */
 }
 
-
-/* Footer adjustments */
-.footer.fixed-bottom {
-   z-index: 1020; /* Ensure footer is above sidebar if they overlap due to limited viewport height */
-}
+/* Footer adjustments (Removed) */
 
 /* Responsive adjustments for smaller screens (Bootstrap's 'md' breakpoint is 768px) */
 @media (max-width: 767.98px) {
     body {
         padding-top: 56px; /* Navbar height, no change here */
-        padding-bottom: 0; /* Footer won't be fixed */
+        /* padding-bottom: 0; Footer removed */
     }
 
     .layout-container {
@@ -120,7 +117,5 @@ main.flex-shrink-0 {
         overflow-y: visible;
     }
 
-    .footer.fixed-bottom {
-        position: static; /* Footer is not fixed on small screens */
-    }
+    /* Footer related responsive styles removed */
 }
