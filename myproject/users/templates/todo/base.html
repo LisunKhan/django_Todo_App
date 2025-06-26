@@ -50,44 +50,38 @@
             <div class="position-sticky pt-3">
                 <ul class="nav flex-column">
                     <li class="nav-item">
-                        <a class="nav-link active" aria-current="page" href="{% url 'todo_list' %}">
-                            <i class="fas fa-home"></i>
-                            Dashboard
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="{% url 'todo_list' %}">
+                        <a class="nav-link {% if request.resolver_match.url_name == 'todo_list' %}active{% endif %}" aria-current="page" href="{% url 'todo_list' %}">
                             <i class="fas fa-list-ul"></i>
                             Todo List
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="{% url 'add_todo' %}">
+                        <a class="nav-link {% if request.resolver_match.url_name == 'add_todo' %}active{% endif %}" href="{% url 'add_todo' %}">
                             <i class="fas fa-plus-square"></i>
                             Add Todo
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="{% url 'kanban_board' %}">
+                        <a class="nav-link {% if request.resolver_match.url_name == 'kanban_board' %}active{% endif %}" href="{% url 'kanban_board' %}">
                             <i class="fas fa-columns"></i> {# Or fas fa-clipboard-list, fas fa-tasks #}
                             Task Board
                         </a>
                     </li>
                     {% if user.is_authenticated %}
                     <li class="nav-item">
-                        <a class="nav-link" href="{% url 'task_report' %}">
+                        <a class="nav-link {% if request.resolver_match.url_name == 'task_report' %}active{% endif %}" href="{% url 'task_report' %}">
                             <i class="fas fa-chart-line"></i>
                             Task Report
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="{% url 'profile_view' %}">
+                        <a class="nav-link {% if request.resolver_match.url_name == 'profile_view' %}active{% endif %}" href="{% url 'profile_view' %}">
                             <i class="fas fa-user"></i>
                             View Profile
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="{% url 'edit_profile_view' %}">
+                        <a class="nav-link {% if request.resolver_match.url_name == 'edit_profile_view' %}active{% endif %}" href="{% url 'edit_profile_view' %}">
                             <i class="fas fa-user-edit"></i>
                             Edit Profile
                         </a>
