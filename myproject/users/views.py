@@ -374,3 +374,52 @@ def download_csv_report(request):
             ])
 
     return response
+
+
+# Kanban Board View
+# Note: serializers might be needed if passing complex data initially
+# from django.core import serializers
+
+@login_required
+def kanban_board_view(request):
+    """
+    View to render the Kanban board page.
+    Initially, it just renders the template.
+    Could be extended to pass initial task data (e.g., from TodoItem model).
+    """
+    # Example: Fetch tasks from database if you want to populate them via Django context
+    # user_tasks = TodoItem.objects.filter(user=request.user)
+    # context = {
+    #    'initial_kanban_tasks_json': serializers.serialize('json', user_tasks)
+    # }
+    # return render(request, 'users/kanban_board.html', context)
+
+    # For now, just render the template. The JS will handle task creation/display.
+    return render(request, 'users/kanban_board.html')
+
+
+from django.http import JsonResponse
+# Make sure TodoItem is imported if not already:
+# from .models import TodoItem
+
+@login_required
+def api_get_kanban_tasks(request):
+    """
+    API endpoint to fetch all tasks for the logged-in user,
+    formatted for the Kanban board.
+    """
+    user_tasks = TodoItem.objects.filter(user=request.user).order_by('created_at') # Or any preferred order
+
+    tasks_data = []
+    for task in user_tasks:
+        tasks_data.append({
+            "id": task.id,
+            "title": task.title,
+            "description": task.description,
+            "status": task.status, # e.g., 'todo', 'inprogress', 'done'
+            "get_status_display": task.get_status_display(), # User-friendly status
+            "task_date": task.task_date.strftime('%Y-%m-%d') if task.task_date else None,
+            "time_spent_hours": task.time_spent_hours # Assuming this is a property or method on TodoItem
+        })
+
+    return JsonResponse(tasks_data, safe=False) # safe=False because we are sending a list

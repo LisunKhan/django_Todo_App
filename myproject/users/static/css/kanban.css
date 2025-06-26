@@ -1,0 +1,245 @@
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; /* System fonts for modern look */
+    background-color: #f4f7f9; /* Slightly lighter, cleaner background */
+    margin: 0;
+    padding: 20px;
+    display: flex;
+    justify-content: center;
+    color: #172b4d; /* Default text color (Jira-like dark blue/grey) */
+}
+
+.kanban-board {
+    display: flex;
+    gap: 15px; /* Reduced gap between columns */
+    width: 100%;
+    max-width: 1200px; /* Max width of the board */
+}
+
+.column {
+    background-color: #f0f2f5; /* Lighter column background (Jira uses #F4F5F7) */
+    border-radius: 5px; /* Softer radius */
+    padding: 10px;
+    width: 33.33%; /* Equal width columns */
+    display: flex;
+    flex-direction: column;
+    /* Subtle shadow for columns - less prominent than cards */
+    /* box-shadow: 0 1px 2px rgba(0,0,0,0.05); */
+}
+
+.column h2 {
+    text-align: left;
+    padding: 5px 8px; /* Padding for column title */
+    margin-top: 0;
+    color: #5e6c84; /* Jira-like grey for column titles */
+    font-size: 0.85em; /* Smaller column titles */
+    font-weight: 600;
+    text-transform: uppercase;
+    margin-bottom: 10px;
+}
+
+.task-list {
+    background-color: transparent; /* Task list itself is transparent, cards provide bg */
+    border-radius: 4px;
+    padding: 5px; /* Minimal padding, card margins will create space */
+    min-height: 300px;
+    flex-grow: 1;
+    margin-bottom: 0; /* Remove margin, add task btn will have its own */
+    /* overflow-y: auto; */ /* Add if columns might get too long */
+}
+
+.task-card {
+    background-color: #ffffff;
+    border: 1px solid #dfe1e6; /* Jira-like border color for cards */
+    border-radius: 3px; /* Sharper radius, common in Jira */
+    padding: 10px 12px;
+    margin-bottom: 8px; /* Space between cards */
+    box-shadow: 0 1px 1px rgba(9,30,66,.13); /* Jira's subtle card shadow */
+    cursor: grab;
+    transition: background-color 0.1s ease, box-shadow 0.1s ease;
+}
+
+.task-card:hover {
+    background-color: #f7f8f9; /* Very subtle hover background for card */
+    border-color: #c1c7d0; /* Slightly darker border on hover */
+}
+
+.task-card:last-child {
+    margin-bottom: 0;
+}
+
+.task-card h3 {
+    margin-top: 0;
+    font-size: 0.95em; /* Jira task title size */
+    margin-bottom: 6px;
+    font-weight: 500; /* Medium weight for title */
+    color: #172b4d;
+    line-height: 1.3;
+}
+
+.task-card p {
+    font-size: 0.875em; /* Jira task description size */
+    margin-bottom: 10px;
+    color: #42526e;
+    line-height: 1.45;
+    white-space: pre-wrap; /* Preserve line breaks in description */
+    word-wrap: break-word; /* Ensure long words don't overflow */
+}
+
+.task-card .actions {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 4px;
+    opacity: 0; /* Hide actions by default */
+    transition: opacity 0.15s ease-in-out;
+    height: 20px; /* Reserve space even when hidden to prevent jump */
+}
+
+.task-card:hover .actions {
+    opacity: 1; /* Show actions on card hover */
+}
+
+.task-card .actions button {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 0.9em; /* Icon size */
+    padding: 4px;
+    color: #5e6c84;
+    border-radius: 3px;
+}
+
+.task-card .actions button:hover {
+    background-color: #e9ecef; /* Subtle background on icon hover */
+    color: #0052cc;
+}
+
+.task-card .actions .delete-btn:hover {
+    background-color: #ffebe6; /* Light red background for delete hover */
+    color: #bf2600; /* Jira's dark red for delete action */
+}
+
+/* Add New Task Button & Form */
+.add-task-btn {
+    background-color: transparent;
+    color: #5e6c84;
+    border: none;
+    border-radius: 3px;
+    padding: 8px 10px;
+    cursor: pointer;
+    width: calc(100% - 10px); /* Full width within task-list padding */
+    margin: 8px 5px 5px 5px; /* Margin around the button */
+    text-align: left;
+    font-size: 0.9em;
+    transition: background-color 0.2s ease, color 0.2s ease;
+}
+.add-task-btn:hover {
+    background-color: #e2e4e9;
+    color: #172b4d;
+}
+
+.new-task-form { /* The form itself, styled like a card */
+    background-color: #ffffff;
+    border: 1px solid #dfe1e6;
+    border-radius: 3px;
+    padding: 10px;
+    margin-bottom: 8px;
+    box-shadow: 0 1px 1px rgba(9,30,66,.13);
+}
+
+.new-task-form input[type="text"],
+.new-task-form textarea {
+    width: 100%;
+    margin-bottom: 8px;
+    padding: 8px;
+    border: 1px solid #c1c7d0; /* Standard border */
+    border-radius: 3px;
+    box-sizing: border-box;
+    font-size: 0.9em;
+    color: #172b4d;
+}
+.new-task-form input[type="text"]:focus,
+.new-task-form textarea:focus {
+    border-color: #0052cc; /* Jira's blue focus color */
+    box-shadow: 0 0 0 1px #0052cc; /* Focus ring */
+    outline: none;
+}
+
+.new-task-form .form-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 5px;
+}
+
+.new-task-form .save-new-task-btn,
+.new-task-form .cancel-new-task-btn {
+    border: none;
+    border-radius: 3px;
+    padding: 8px 12px;
+    cursor: pointer;
+    font-size: 0.9em;
+    font-weight: 500;
+    transition: background-color 0.2s ease;
+}
+
+.new-task-form .save-new-task-btn {
+    background-color: #0065ff; /* Jira's primary blue */
+    color: white;
+}
+.new-task-form .save-new-task-btn:hover {
+    background-color: #0052cc; /* Darker blue */
+}
+
+.new-task-form .cancel-new-task-btn {
+    background-color: #f0f2f5; /* Light grey, less prominent */
+    color: #42526e;
+}
+.new-task-form .cancel-new-task-btn:hover {
+    background-color: #e2e4e9; /* Slightly darker grey */
+}
+
+
+/* Inline Editing fields on actual task cards */
+.task-card input[type="text"], /* Title editing */
+.task-card textarea {          /* Description editing */
+    width: 100%;
+    margin-bottom: 8px;
+    padding: 7px 6px; /* Slightly less padding than form inputs to fit card */
+    border: 2px solid #0052cc !important; /* Prominent blue border when editing */
+    border-radius: 3px;
+    box-sizing: border-box;
+    font-size: inherit;
+    color: #172b4d;
+    background-color: #f4f7f9; /* Slight background to indicate edit mode */
+}
+.task-card input[type="text"] { /* Title specific */
+    font-weight: 500; /* Match h3 style */
+    font-size: 0.95em;
+    line-height: 1.3;
+}
+.task-card textarea { /* Description specific */
+    resize: vertical;
+    min-height: 70px; /* Slightly more min-height */
+    line-height: 1.45;
+    font-size: 0.875em; /* Match p style */
+}
+
+/* SortableJS helper classes styling */
+.sortable-ghost { /* The placeholder for the dragged item */
+    background-color: #e6fcff; /* A light, distinct color for the ghost */
+    border: 1px dashed #007bff;
+    border-radius: 3px;
+    opacity: 0.7;
+    /* Ensure ghost takes up card's original margin space */
+    margin-bottom: 8px;
+}
+
+.sortable-chosen { /* The item being dragged */
+    box-shadow: 0 3px 7px rgba(9,30,66,.20) !important; /* More pronounced shadow */
+    transform: rotate(1.5deg); /* Slight tilt for chosen item */
+    background-color: #f0f8ff; /* Light blue tint for chosen */
+}
+
+.sortable-drag { /* The item being dragged by SortableJS (usually same as chosen) */
+    opacity: 0.95;
+}

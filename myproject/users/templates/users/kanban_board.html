@@ -1,0 +1,45 @@
+{% extends 'todo/base.html' %}
+{% load static %}
+
+{% block title %}Kanban Task Board{% endblock title %}
+
+{% block content %}
+<div class="container-fluid mt-4"> {# Assuming Bootstrap container might be useful from base #}
+    <div class="row mb-3">
+        <div class="col">
+            <h1>Task Board</h1>
+        </div>
+    </div>
+
+    <div class="kanban-board">
+        <div class="column" id="todo">
+            <h2>To Do</h2>
+            <div class="task-list" id="todo-tasks">
+                <!-- Tasks will be dynamically added by kanban.js -->
+            </div>
+            <button class="add-task-btn">+ Add New Task</button>
+        </div>
+
+        <div class="column" id="inprogress">
+            <h2>In Progress</h2>
+            <div class="task-list" id="inprogress-tasks">
+                <!-- Tasks will be dynamically added by kanban.js -->
+            </div>
+            <button class="add-task-btn">+ Add New Task</button>
+        </div>
+
+        <div class="column" id="done">
+            <h2>Done</h2>
+            <div class="task-list" id="done-tasks">
+                <!-- Tasks will be dynamically added by kanban.js -->
+            </div>
+            <button class="add-task-btn">+ Add New Task</button>
+        </div>
+    </div>
+</div>
+
+    <link rel="stylesheet" href="{% static 'css/kanban.css' %}">
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js" defer></script>
+<script src="{% static 'js/kanban.js' %}"></script>
+{% endblock content %}
