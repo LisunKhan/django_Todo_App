@@ -55,7 +55,7 @@ body {
     margin-bottom: 8px; /* Space between cards */
     box-shadow: 0 1px 1px rgba(9,30,66,.13); /* Jira's subtle card shadow */
     cursor: grab;
-    transition: background-color 0.1s ease, box-shadow 0.1s ease;
+    transition: background-color 0.1s ease, box-shadow 0.1s ease, border-color 0.1s ease; /* Added border-color transition */
 }
 
 .task-card:hover {
@@ -83,7 +83,43 @@ body {
     line-height: 1.45;
     white-space: pre-wrap; /* Preserve line breaks in description */
     word-wrap: break-word; /* Ensure long words don't overflow */
+    margin-bottom: 12px; /* Increased margin if meta data is present */
 }
+
+/* New styles for task meta-data (date and time spent) */
+.task-card .task-meta {
+    font-size: 0.8em; /* Smaller font for meta data */
+    color: #5e6c84;   /* Muted color, similar to column titles */
+    display: flex;
+    flex-wrap: wrap; /* Allow wrapping if space is tight */
+    gap: 10px;        /* Space between date and time spent */
+    margin-bottom: 10px; /* Space before actions */
+    align-items: center;
+}
+
+.task-card .task-meta > div { /* Each item in meta (date, time) */
+    display: flex;
+    align-items: center;
+    gap: 4px; /* Space between icon/label and value */
+}
+
+.task-card .task-meta strong {
+    font-weight: 600; /* Slightly bolder labels */
+}
+
+/* Optional: Unicode icons as placeholders - consider a proper icon font/SVG for real use */
+/* .task-card .task-date::before {
+    content: "📅";
+    margin-right: 4px;
+    font-size: 0.9em;
+}
+
+.task-card .task-time-spent::before {
+    content: "⏱️";
+    margin-right: 4px;
+    font-size: 0.9em;
+} */
+/* End of new meta-data styles */
 
 .task-card .actions {
     display: flex;
@@ -200,8 +236,10 @@ body {
 
 
 /* Inline Editing fields on actual task cards */
-.task-card input[type="text"], /* Title editing */
-.task-card textarea {          /* Description editing */
+.task-card.editing input[type="text"], /* More specific selector when card is in edit mode for title */
+.task-card.editing textarea,          /* More specific selector for description */
+.task-card.editing input[type="date"],    /* For date input */
+.task-card.editing input[type="number"] { /* For number input */
     width: 100%;
     margin-bottom: 8px;
     padding: 7px 6px; /* Slightly less padding than form inputs to fit card */
@@ -211,18 +249,44 @@ body {
     font-size: inherit;
     color: #172b4d;
     background-color: #f4f7f9; /* Slight background to indicate edit mode */
+    /* Ensure consistent height for better alignment if needed, though 'padding' usually suffices */
+    /* height: 34px; */ /* Example: explicit height, adjust padding accordingly */
 }
-.task-card input[type="text"] { /* Title specific */
+
+/* Specifics for different input types during inline edit */
+.task-card.editing input[type="text"] { /* Title specific */
     font-weight: 500; /* Match h3 style */
-    font-size: 0.95em;
-    line-height: 1.3;
+    font-size: 0.95em; /* Match h3 style */
+    line-height: 1.3; /* Match h3 style */
 }
-.task-card textarea { /* Description specific */
+
+.task-card.editing textarea { /* Description specific */
     resize: vertical;
-    min-height: 70px; /* Slightly more min-height */
-    line-height: 1.45;
+    min-height: 70px;
+    line-height: 1.45; /* Match p style */
     font-size: 0.875em; /* Match p style */
 }
+
+.task-card.editing input[type="date"],
+.task-card.editing input[type="number"] {
+    font-size: 0.875em; /* Match description/meta font size for consistency */
+    /* Date and Number inputs often have different baseline padding/heights */
+    /* Adjust padding if they look too different from text/textarea */
+    padding: 6px 7px; /* Slightly adjusted padding for date/number if needed */
+}
+
+.task-card.editing input[type="number"] {
+    /* Number input can sometimes be narrower than 100% if not explicitly managed by browser/css */
+    /* width: 100% is already set by the common rule, should be fine */
+}
+
+/* Focus state for inline edit inputs (if not covered by browser default with the blue border) */
+.task-card.editing input:focus,
+.task-card.editing textarea:focus {
+    outline: none; /* The border itself provides focus indication */
+    box-shadow: 0 0 3px 1px rgba(0, 82, 204, 0.3); /* Optional: subtle outer glow on focus */
+}
+
 
 /* SortableJS helper classes styling */
 .sortable-ghost { /* The placeholder for the dragged item */
