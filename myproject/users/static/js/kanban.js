@@ -337,6 +337,11 @@ document.addEventListener('DOMContentLoaded', () => {
         taskCard.setAttribute('data-task-date', task.task_date || '');
         taskCard.setAttribute('data-time-spent', String(task.time_spent_hours || '0'));
 
+        // Create and add status badge
+        const statusBadge = document.createElement('div');
+        statusBadge.className = `task-status-badge status-${task.status.toLowerCase().replace(/\s+/g, '-')}`;
+        statusBadge.textContent = task.status.charAt(0).toUpperCase() + task.status.slice(1); // Capitalize first letter
+        taskCard.appendChild(statusBadge); // Append, CSS will handle positioning
 
         const titleElement = document.createElement('h3');
         titleElement.textContent = task.title;
