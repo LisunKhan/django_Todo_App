@@ -4,34 +4,101 @@
 {% block title %}Edit Profile{% endblock %}
 
 {% block content %}
-<div class="container mt-4">
-    <h2>Edit Profile</h2>
-    <div class="card">
-        <div class="card-body">
-            <form method="post" enctype="multipart/form-data">
-                {% csrf_token %}
-                {{ form|crispy }}
-                <button type="submit" class="btn btn-success">Save Changes</button>
-                <a href="{% url 'profile_view' %}" class="btn btn-secondary">Cancel</a>
-            </form>
+<div class="container mt-5 mb-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8 col-lg-6">
+            <h2 class="text-center mb-4">Edit Your Profile</h2>
+            <div class="card shadow-sm">
+                <div class="card-body p-4">
+                    <form method="post" enctype="multipart/form-data">
+                        {% csrf_token %}
+
+                        {# Profile Picture Preview #}
+                        <div class="mb-3 text-center">
+                            <img id="profile_pic_preview" src="{{ profile_picture_url | default:'https://placehold.co/150' }}"
+                                 alt="Profile Preview" class="img-fluid rounded-circle mb-2"
+                                 style="width: 150px; height: 150px; object-fit: cover; border: 3px solid #eee;">
+                        </div>
+
+                        {# {{ form|crispy }} #} {# We will render fields manually for more control over profile pic #}
+
+                        {% for field in form %}
+                            {% if field.name == 'profile_picture' %}
+                                <div class="mb-3 text-center"> {# Centering the change picture button #}
+                                    <label for="id_profile_picture" class="btn btn-outline-info btn-sm">
+                                        <i class="fas fa-camera" aria-hidden="true"></i> Change Profile Picture
+                                    </label>
+                                    {{ field }} {# This will be hidden via CSS #}
+                                    {% if field.errors %}
+                                        <div class="invalid-feedback d-block">
+                                            {% for error in field.errors %}
+                                                <span>{{ error }}</span>
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
+                                    <small class="form-text text-muted d-block mt-1">Max file size: 2MB. Allowed types: JPG, PNG.</small> {# Example help text #}
+                                </div>
+                            {% elif field.name == 'bio' %}
+                                <div class="mb-3">
+                                    {{ field|as_crispy_field }}
+                                </div>
+                            {% else %}
+                                {{ field|as_crispy_field }}
+                            {% endif %}
+                        {% endfor %}
+
+                        <div class="mt-4 d-grid gap-2 d-sm-flex justify-content-sm-end">
+                            <a href="{% url 'profile_view' %}" class="btn btn-outline-secondary me-sm-2">
+                                <i class="fas fa-times" aria-hidden="true"></i> Cancel
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save" aria-hidden="true"></i> Save Changes
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
         </div>
     </div>
 </div>
 
+<style>
+    /* Hide the default file input */
+    #id_profile_picture {
+        display: none;
+    }
+    /* Style for the profile picture preview */
+    #profile_pic_preview {
+        width: 150px;
+        height: 150px;
+        object-fit: cover;
+        border: 3px solid #eee;
+        /* margin-bottom: 10px; /* Already has mb-2 class */
+    }
+</style>
+
 <script>
-// Optional: Add some JavaScript for image preview if you like
 document.addEventListener('DOMContentLoaded', function() {
-    var profilePicInput = document.getElementById('id_profile_picture');
-    if (profilePicInput) {
+    var profilePicInput = document.getElementById('id_profile_picture'); // Default ID by Django for form field
+    var profilePicPreview = document.getElementById('profile_pic_preview');
+
+    // Set initial preview if a picture already exists and the form field might not be populated by default
+    // (e.g. if the form doesn't set initial value for image URL for preview)
+    // The src is already set in the HTML, this is more for when a new file is selected.
+
+    if (profilePicInput && profilePicPreview) {
         profilePicInput.onchange = function(event) {
-            var reader = new FileReader();
-            reader.onload = function(){
-                var output = document.getElementById('profile_pic_preview'); // Assume you add an <img> tag with this ID
-                if (output) {
-                    output.src = reader.result;
-                }
-            };
-            reader.readAsDataURL(event.target.files[0]);
+            if (event.target.files && event.target.files[0]) {
+                var reader = new FileReader();
+                reader.onload = function(e) {
+                    profilePicPreview.src = e.target.result;
+                };
+                reader.readAsDataURL(event.target.files[0]);
+            } else {
+                // If no file is selected (e.g., user cancels file dialog),
+                // you might want to revert to original or a default placeholder.
+                // For now, we do nothing, leaving the current preview (new or old).
+            }
         };
     }
 });
