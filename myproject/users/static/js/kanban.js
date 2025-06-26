@@ -85,56 +85,64 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- End API Placeholder Functions ---
 
     // Initialize SortableJS for each task list
-    new Sortable(todoTasks, {
-        group: 'shared', // set both lists to same group
-        animation: 150,
-        ghostClass: 'sortable-ghost', // Class name for the drop placeholder
-        chosenClass: 'sortable-chosen', // Class name for the chosen item
-        dragClass: 'sortable-drag', // Class name for the dragging item
-        onEnd: function (evt) {
-            console.log('Task moved:', evt.item, 'to', evt.to.id, 'from', evt.from.id);
-            const taskId = evt.item.dataset.taskId;
-            const newStatus = evt.to.id.replace('-tasks', ''); // e.g., 'todo', 'inprogress', 'done'
-            updateTaskStatusAPI(taskId, newStatus);
-        }
-    });
+    if (todoTasks && inprogressTasks && doneTasks) { // Ensure elements exist before init
+        new Sortable(todoTasks, {
+            group: 'shared', // set both lists to same group
+            animation: 150,
+            ghostClass: 'sortable-ghost', // Class name for the drop placeholder
+            chosenClass: 'sortable-chosen', // Class name for the chosen item
+            dragClass: 'sortable-drag', // Class name for the dragging item
+            onEnd: function (evt) {
+                console.log('Task moved:', evt.item, 'to', evt.to.id, 'from', evt.from.id);
+                const taskId = evt.item.dataset.taskId;
+                const newStatus = evt.to.id.replace('-tasks', ''); // e.g., 'todo', 'inprogress', 'done'
+                updateTaskStatusAPI(taskId, newStatus);
+            }
+        });
 
-    new Sortable(inprogressTasks, {
-        group: 'shared',
-        animation: 150,
-        ghostClass: 'sortable-ghost',
-        chosenClass: 'sortable-chosen',
-        dragClass: 'sortable-drag',
-        onEnd: function (evt) {
-            console.log('Task moved:', evt.item, 'to', evt.to.id, 'from', evt.from.id);
-            const taskId = evt.item.dataset.taskId;
-            const newStatus = evt.to.id.replace('-tasks', '');
-            updateTaskStatusAPI(taskId, newStatus);
-        }
-    });
+        new Sortable(inprogressTasks, {
+            group: 'shared',
+            animation: 150,
+            ghostClass: 'sortable-ghost',
+            chosenClass: 'sortable-chosen',
+            dragClass: 'sortable-drag',
+            onEnd: function (evt) {
+                console.log('Task moved:', evt.item, 'to', evt.to.id, 'from', evt.from.id);
+                const taskId = evt.item.dataset.taskId;
+                const newStatus = evt.to.id.replace('-tasks', '');
+                updateTaskStatusAPI(taskId, newStatus);
+            }
+        });
 
-    new Sortable(doneTasks, {
-        group: 'shared',
-        animation: 150,
-        ghostClass: 'sortable-ghost',
-        chosenClass: 'sortable-chosen',
-        dragClass: 'sortable-drag',
-        onEnd: function (evt) {
-            console.log('Task moved:', evt.item, 'to', evt.to.id, 'from', evt.from.id);
-            const taskId = evt.item.dataset.taskId;
-            const newStatus = evt.to.id.replace('-tasks', '');
-            updateTaskStatusAPI(taskId, newStatus);
-        }
-    });
+        new Sortable(doneTasks, {
+            group: 'shared',
+            animation: 150,
+            ghostClass: 'sortable-ghost',
+            chosenClass: 'sortable-chosen',
+            dragClass: 'sortable-drag',
+            onEnd: function (evt) {
+                console.log('Task moved:', evt.item, 'to', evt.to.id, 'from', evt.from.id);
+                const taskId = evt.item.dataset.taskId;
+                const newStatus = evt.to.id.replace('-tasks', '');
+                updateTaskStatusAPI(taskId, newStatus);
+            }
+        });
+    } else {
+        console.warn('One or more task list elements not found. SortableJS not initialized.');
+    }
 
-    // Example Task data to make drag and drop testable
+
+    // Example Task data to make drag and drop testable - This should ideally come from Django context
     const initialTasks = [
-        { id: 1, title: 'Task 1: Design UI', description: 'Design the main dashboard UI elements.', status: 'todo' },
-        { id: 2, title: 'Task 2: Setup Project', description: 'Initialize project structure and dependencies.', status: 'todo' },
-        { id: 3, title: 'Task 3: Develop API', description: 'Develop backend API for tasks.', status: 'inprogress' },
-        { id: 4, title: 'Task 4: Write Tests', description: 'Write unit and integration tests.', status: 'done' },
+        // { id: 1, title: 'Task 1: Design UI', description: 'Design the main dashboard UI elements.', status: 'todo' },
+        // { id: 2, title: 'Task 2: Setup Project', description: 'Initialize project structure and dependencies.', status: 'todo' },
+        // { id: 3, title: 'Task 3: Develop API', description: 'Develop backend API for tasks.', status: 'inprogress' },
+        // { id: 4, title: 'Task 4: Write Tests', description: 'Write unit and integration tests.', status: 'done' },
     ];
 
+    // Function to render tasks if they are passed via a global variable or fetched by an initial API call
+    // For now, we assume tasks might be embedded or fetched separately in a Django context.
+    // This function will be used by "Add New Task" and potentially by an initial load function.
     function renderTask(task) {
         const taskCard = document.createElement('div');
         taskCard.className = 'task-card';
@@ -169,29 +177,58 @@ document.addEventListener('DOMContentLoaded', () => {
         taskCard.appendChild(actionsDiv);
 
         editButton.addEventListener('click', () => enableEditMode(taskCard, titleElement, descriptionElement, editButton));
-        // Double click on title or description to edit
         titleElement.addEventListener('dblclick', () => enableEditMode(taskCard, titleElement, descriptionElement, editButton));
         descriptionElement.addEventListener('dblclick', () => enableEditMode(taskCard, titleElement, descriptionElement, editButton));
-
         deleteButton.addEventListener('click', () => deleteTask(taskCard));
 
         return taskCard;
     }
 
+    // Function to initially populate the board if tasks are provided (e.g. from Django context)
+    // window.loadInitialTasks = function(tasks) {
+    //     tasks.forEach(task => {
+    //         const card = renderTask(task);
+    //         if (task.status === 'todo' && todoTasks) {
+    //             todoTasks.appendChild(card);
+    //         } else if (task.status === 'inprogress' && inprogressTasks) {
+    //             inprogressTasks.appendChild(card);
+    //         } else if (task.status === 'done' && doneTasks) {
+    //             doneTasks.appendChild(card);
+    //         }
+    //     });
+    // };
+    // Example: if initialTasks is populated by Django template into a JS variable:
+     if (typeof initialKanbanTasks !== 'undefined' && Array.isArray(initialKanbanTasks)) {
+        initialKanbanTasks.forEach(task => {
+            const card = renderTask(task);
+            if (task.status === 'todo' && todoTasks) {
+                todoTasks.appendChild(card);
+            } else if (task.status === 'inprogress' && inprogressTasks) {
+                inprogressTasks.appendChild(card);
+            } else if (task.status === 'done' && doneTasks) {
+                doneTasks.appendChild(card);
+            }
+        });
+    }
+
+
     function deleteTask(taskCard) {
         const taskId = taskCard.dataset.taskId;
-        const taskTitle = taskCard.dataset.title; // Ensure this is up-to-date if title can change
+        const taskTitle = taskCard.dataset.title;
 
         if (confirm(`Are you sure you want to delete task "${taskTitle}"?`)) {
             taskCard.remove();
             console.log(`Task ${taskId} (${taskTitle}) deleted from UI.`);
-            deleteTaskAPI(taskId); // Call API placeholder
+            deleteTaskAPI(taskId);
         } else {
             console.log(`Deletion of task ${taskId} cancelled.`);
         }
     }
 
     function enableEditMode(taskCard, titleElement, descriptionElement, editButton) {
+        if (taskCard.classList.contains('editing')) return; // Prevent multiple edit modes
+        taskCard.classList.add('editing');
+
         const originalTitle = titleElement.textContent;
         const originalDescription = descriptionElement.textContent;
 
@@ -209,10 +246,24 @@ document.addEventListener('DOMContentLoaded', () => {
         editButton.innerHTML = '💾';
         editButton.title = 'Save task';
 
+        const tempSaveListener = () => {
+            saveChanges();
+            newEditButton.removeEventListener('click', tempSaveListener); // Clean up self
+        };
+
+        const tempKeyListener = (e) => {
+            if (e.key === 'Enter' && e.target === titleInput) {
+                e.preventDefault();
+                saveChanges();
+                titleInput.removeEventListener('keypress', tempKeyListener); // Clean up self
+            }
+        };
+
         const newEditButton = editButton.cloneNode(true);
         editButton.parentNode.replaceChild(newEditButton, editButton);
 
         function saveChanges() {
+            taskCard.classList.remove('editing');
             const newTitle = titleInput.value.trim();
             const newDescription = descriptionTextarea.value.trim();
 
@@ -229,55 +280,47 @@ document.addEventListener('DOMContentLoaded', () => {
             newEditButton.innerHTML = '✏️';
             newEditButton.title = 'Edit task';
 
+            // Re-attach original edit listener logic by replacing the button again
             const finalEditButton = newEditButton.cloneNode(true);
             newEditButton.parentNode.replaceChild(finalEditButton, newEditButton);
             finalEditButton.addEventListener('click', () => enableEditMode(taskCard, titleElement, descriptionElement, finalEditButton));
+            // Also re-attach dblclick to title/desc for the new elements if needed, though current structure reuses original titleElement/descriptionElement
 
             console.log(`Task ${taskCard.dataset.taskId} updated:`, { title: newTitle, description: newDescription });
-            updateTaskDetailsAPI(taskCard.dataset.taskId, { title: newTitle, description: newDescription }); // Call API placeholder
+            updateTaskDetailsAPI(taskCard.dataset.taskId, { title: newTitle, description: newDescription });
+
+            // Clean up listeners attached to input fields if any beyond this scope
+            titleInput.removeEventListener('keypress', tempKeyListener);
         }
 
-        newEditButton.addEventListener('click', saveChanges);
+        newEditButton.addEventListener('click', tempSaveListener);
+        titleInput.addEventListener('keypress', tempKeyListener);
+        titleInput.focus(); // Focus title input
+    }
 
-        titleInput.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') {
-                e.preventDefault();
-                saveChanges();
-            }
+    // --- Add New Task Functionality ---
+    if (addTaskBtns) {
+        addTaskBtns.forEach(button => {
+            button.addEventListener('click', () => {
+                const column = button.closest('.column');
+                const taskList = column.querySelector('.task-list');
+                const status = column.id;
+                showNewTaskForm(taskList, status, button);
+                button.style.display = 'none';
+            });
         });
     }
 
-    initialTasks.forEach(task => {
-        const card = renderTask(task);
-        if (task.status === 'todo') {
-            todoTasks.appendChild(card);
-        } else if (task.status === 'inprogress') {
-            inprogressTasks.appendChild(card);
-        } else if (task.status === 'done') {
-            doneTasks.appendChild(card);
-        }
-    });
-
-    // --- Add New Task Functionality ---
-    addTaskBtns.forEach(button => {
-        button.addEventListener('click', () => {
-            const column = button.closest('.column');
-            const taskList = column.querySelector('.task-list');
-            const status = column.id; // 'todo', 'inprogress', or 'done'
-            showNewTaskForm(taskList, status, button);
-            button.style.display = 'none'; // Hide the "Add New Task" button
-        });
-    });
 
     function showNewTaskForm(taskList, status, originalAddButton) {
-        // Remove any existing form first
         const existingForm = taskList.querySelector('.new-task-form');
         if (existingForm) {
             existingForm.remove();
+            if(originalAddButton) originalAddButton.style.display = ''; // Show button if form was already open
         }
 
         const form = document.createElement('div');
-        form.className = 'new-task-form task-card'; // Use task-card style for consistency
+        form.className = 'new-task-form task-card';
         form.innerHTML = `
             <input type="text" placeholder="Task Title" class="new-task-title">
             <textarea placeholder="Task Description" class="new-task-description"></textarea>
@@ -287,7 +330,6 @@ document.addEventListener('DOMContentLoaded', () => {
             </div>
         `;
 
-        // Prepend to the task list so it appears at the top
         taskList.prepend(form);
         form.querySelector('.new-task-title').focus();
 
@@ -296,34 +338,39 @@ document.addEventListener('DOMContentLoaded', () => {
         const titleInput = form.querySelector('.new-task-title');
         const descriptionInput = form.querySelector('.new-task-description');
 
-        saveBtn.addEventListener('click', async () => {
+        const saveNewTaskHandler = async () => {
             const title = titleInput.value.trim();
             const description = descriptionInput.value.trim();
 
             if (title) {
-                const newTaskData = {
-                    title,
-                    description,
-                    status
-                    // id will be assigned by backend, or temporarily by createTaskAPI
-                };
-
-                const createdTask = await createTaskAPI(newTaskData); // Call API
-
-                if (createdTask) { // If API call was (simulated) successful
+                const newTaskData = { title, description, status };
+                const createdTask = await createTaskAPI(newTaskData);
+                if (createdTask) {
                     const taskCard = renderTask(createdTask);
-                    taskList.appendChild(taskCard); // Add to the bottom of the list
+                    // Decide where to add: current logic is append, maybe prepend?
+                    taskList.appendChild(taskCard); // Or taskList.prepend(taskCard) for top
                 }
-                form.remove(); // Remove the form
-                originalAddButton.style.display = ''; // Show the "Add New Task" button again
+                form.remove();
+                if(originalAddButton) originalAddButton.style.display = '';
             } else {
                 alert('Task title cannot be empty!');
             }
-        });
+        };
 
-        cancelBtn.addEventListener('click', () => {
+        const cancelNewTaskHandler = () => {
             form.remove();
-            originalAddButton.style.display = ''; // Show the "Add New Task" button again
-        });
+            if(originalAddButton) originalAddButton.style.display = '';
+        };
+
+        const titleKeyPressHandler = (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                saveNewTaskHandler();
+            }
+        };
+
+        saveBtn.addEventListener('click', saveNewTaskHandler);
+        cancelBtn.addEventListener('click', cancelNewTaskHandler);
+        titleInput.addEventListener('keypress', titleKeyPressHandler);
     }
 });

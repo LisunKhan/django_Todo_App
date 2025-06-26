@@ -1,0 +1,72 @@
+{% extends 'todo/base.html' %}
+{% load static %}
+
+{% block title %}Kanban Task Board{% endblock title %}
+
+{% block extra_head %}
+    <link rel="stylesheet" href="{% static 'css/kanban.css' %}">
+    <!-- SortableJS via CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js" defer></script>
+    <script src="{% static 'js/kanban.js' %}" defer></script>
+{% endblock extra_head %}
+
+{% block content %}
+<div class="container-fluid mt-4"> {# Assuming Bootstrap container might be useful from base #}
+    <div class="row mb-3">
+        <div class="col">
+            <h1>Task Board</h1>
+        </div>
+    </div>
+
+    <div class="kanban-board">
+        <div class="column" id="todo">
+            <h2>To Do</h2>
+            <div class="task-list" id="todo-tasks">
+                <!-- Tasks will be dynamically added by kanban.js -->
+                {# Example of how tasks could be passed from Django view if needed initially #}
+                {# {% for task in todo_tasks %}
+                <div class="task-card" data-task-id="{{ task.id }}" data-title="{{ task.title }}" data-description="{{ task.description }}">
+                    <h3>{{ task.title }}</h3>
+                    <p>{{ task.description }}</p>
+                    <div class="actions">
+                        <button class="edit-btn" title="Edit task">✏️</button>
+                        <button class="delete-btn" title="Delete task">🗑️</button>
+                    </div>
+                </div>
+                {% endfor %} #}
+            </div>
+            <button class="add-task-btn">+ Add New Task</button>
+        </div>
+
+        <div class="column" id="inprogress">
+            <h2>In Progress</h2>
+            <div class="task-list" id="inprogress-tasks">
+                <!-- Tasks will be dynamically added by kanban.js -->
+            </div>
+            <button class="add-task-btn">+ Add New Task</button>
+        </div>
+
+        <div class="column" id="done">
+            <h2>Done</h2>
+            <div class="task-list" id="done-tasks">
+                <!-- Tasks will be dynamically added by kanban.js -->
+            </div>
+            <button class="add-task-btn">+ Add New Task</button>
+        </div>
+    </div>
+</div>
+
+{# If initial tasks need to be loaded by JS from Django context: #}
+{# <script>
+    const initialKanbanTasks = [
+        {% for task in all_tasks %} // Assuming 'all_tasks' is a combined list from context
+        {
+            id: "{{ task.id }}",
+            title: "{{ task.title|escapejs }}",
+            description: "{{ task.description|escapejs }}",
+            status: "{{ task.status }}"
+        },
+        {% endfor %}
+    ];
+</script> #}
+{% endblock content %}

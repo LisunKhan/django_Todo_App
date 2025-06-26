@@ -374,3 +374,25 @@ def download_csv_report(request):
             ])
 
     return response
+
+
+# Kanban Board View
+# Note: serializers might be needed if passing complex data initially
+# from django.core import serializers
+
+@login_required
+def kanban_board_view(request):
+    """
+    View to render the Kanban board page.
+    Initially, it just renders the template.
+    Could be extended to pass initial task data (e.g., from TodoItem model).
+    """
+    # Example: Fetch tasks from database if you want to populate them via Django context
+    # user_tasks = TodoItem.objects.filter(user=request.user)
+    # context = {
+    #    'initial_kanban_tasks_json': serializers.serialize('json', user_tasks)
+    # }
+    # return render(request, 'users/kanban_board.html', context)
+
+    # For now, just render the template. The JS will handle task creation/display.
+    return render(request, 'users/kanban_board.html')

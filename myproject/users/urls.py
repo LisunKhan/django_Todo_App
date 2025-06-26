@@ -16,4 +16,6 @@ urlpatterns = [
     path('profile/', views.profile_view, name='profile_view'),
     path('profile/edit/', views.edit_profile_view, name='edit_profile_view'),
     path('download_csv_report/', views.download_csv_report, name='download_csv_report'),
+    # Kanban Board URL
+    path('kanban/', views.kanban_board_view, name='kanban_board'),
 ]
