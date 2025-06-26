@@ -59,6 +59,14 @@ class TodoForm(forms.ModelForm):
             # Provide a default for time_spent_hours if no instance or time_spent is None
             self.initial['time_spent_hours'] = self.fields['time_spent_hours'].initial if self.fields['time_spent_hours'].initial is not None else 0
 
+        # Make status not required in the form, model default will be used
+        self.fields['status'].required = False
+        # Set initial for status if it's a new form and status is not already in initial data
+        # This helps the form display the default value even before saving.
+        if not self.initial.get('status') and not (self.instance and self.instance.pk):
+            self.initial['status'] = 'todo' # Corresponds to model default
+
+
     def clean_time_spent_hours(self):
         hours = self.cleaned_data.get('time_spent_hours')
         if hours is None:
