@@ -181,6 +181,32 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (titleElement) titleElement.textContent = result.todo.title;
                     if (descriptionElement) descriptionElement.textContent = result.todo.description || '';
 
+                    // Update visual date and time from server response for consistency
+                    const taskDateDisplayElement = taskCard.querySelector('.task-date .date-value');
+                    if (taskDateDisplayElement) {
+                        let displayDate = 'Not set';
+                        if (result.todo.task_date) { // Assuming result.todo.task_date is YYYY-MM-DD
+                            const dateParts = result.todo.task_date.split('-');
+                            if (dateParts.length === 3) {
+                                const localDate = new Date(parseInt(dateParts[0]), parseInt(dateParts[1]) - 1, parseInt(dateParts[2]), 12,0,0); // Noon
+                                if (!isNaN(localDate.getTime())) {
+                                    displayDate = localDate.toLocaleDateString();
+                                }
+                            } else { // Handle other potential date string from server if not YYYY-MM-DD
+                                const genericDate = new Date(result.todo.task_date);
+                                if(!isNaN(genericDate.getTime())){
+                                    displayDate = genericDate.toLocaleDateString();
+                                }
+                            }
+                        }
+                        taskDateDisplayElement.textContent = displayDate;
+                    }
+
+                    const timeSpentDisplayElement = taskCard.querySelector('.task-time-spent .time-value');
+                    if (timeSpentDisplayElement) {
+                        timeSpentDisplayElement.textContent = String(result.todo.time_spent_hours || '0');
+                    }
+
                     // If status changed via this endpoint (though not primary intent of this func)
                     // ensure card is in correct column
                     const targetColumnId = `${result.todo.status}-tasks`;
@@ -318,6 +344,24 @@ document.addEventListener('DOMContentLoaded', () => {
         const descriptionElement = document.createElement('p');
         descriptionElement.textContent = task.description;
 
+        // New elements for Task Date and Time Spent
+        const taskDateElement = document.createElement('div');
+        taskDateElement.className = 'task-meta task-date';
+        // Display user-friendly date, or "Not set"
+        let displayDate = 'Not set';
+        if (task.task_date) {
+            const dateObj = new Date(task.task_date);
+            // Check if date is valid before formatting
+            if (!isNaN(dateObj.getTime())) {
+                displayDate = dateObj.toLocaleDateString();
+            }
+        }
+        taskDateElement.innerHTML = `<strong>Date:</strong> <span class="date-value">${displayDate}</span>`;
+
+        const timeSpentElement = document.createElement('div');
+        timeSpentElement.className = 'task-meta task-time-spent';
+        timeSpentElement.innerHTML = `<strong>Time Spent:</strong> <span class="time-value">${task.time_spent_hours || '0'}</span> hours`;
+
         const actionsDiv = document.createElement('div');
         actionsDiv.className = 'actions';
 
@@ -336,11 +380,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
         taskCard.appendChild(titleElement);
         taskCard.appendChild(descriptionElement);
+        taskCard.appendChild(taskDateElement); // Add new element
+        taskCard.appendChild(timeSpentElement); // Add new element
         taskCard.appendChild(actionsDiv);
 
-        editButton.addEventListener('click', () => enableEditMode(taskCard, titleElement, descriptionElement, editButton));
-        titleElement.addEventListener('dblclick', () => enableEditMode(taskCard, titleElement, descriptionElement, editButton));
-        descriptionElement.addEventListener('dblclick', () => enableEditMode(taskCard, titleElement, descriptionElement, editButton));
+        editButton.addEventListener('click', () => enableEditMode(taskCard, titleElement, descriptionElement, taskDateElement, timeSpentElement, editButton));
+        titleElement.addEventListener('dblclick', () => enableEditMode(taskCard, titleElement, descriptionElement, taskDateElement, timeSpentElement, editButton));
+        descriptionElement.addEventListener('dblclick', () => enableEditMode(taskCard, titleElement, descriptionElement, taskDateElement, timeSpentElement, editButton));
         deleteButton.addEventListener('click', () => deleteTask(taskCard));
 
         return taskCard;
@@ -414,12 +460,14 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    function enableEditMode(taskCard, titleElement, descriptionElement, editButton) {
+    function enableEditMode(taskCard, titleElement, descriptionElement, taskDateElement, timeSpentElement, editButton) {
         if (taskCard.classList.contains('editing')) return; // Prevent multiple edit modes
         taskCard.classList.add('editing');
 
-        const originalTitle = titleElement.textContent;
-        const originalDescription = descriptionElement.textContent;
+        const originalTitle = taskCard.dataset.title; // Use data attribute for original value
+        const originalDescription = taskCard.dataset.description; // Use data attribute
+        const originalTaskDate = taskCard.dataset.taskDate;
+        const originalTimeSpent = taskCard.dataset.timeSpent;
 
         const titleInput = document.createElement('input');
         titleInput.type = 'text';
@@ -432,18 +480,54 @@ document.addEventListener('DOMContentLoaded', () => {
         taskCard.insertBefore(descriptionTextarea, descriptionElement);
         descriptionElement.style.display = 'none';
 
+        // Create and setup Task Date input
+        const taskDateInput = document.createElement('input');
+        taskDateInput.type = 'date';
+        let initialDateForInput = '';
+        if (originalTaskDate) {
+            if (originalTaskDate.includes('T')) { // If it's a full ISO string like "2023-10-26T10:00:00Z"
+                initialDateForInput = originalTaskDate.split('T')[0];
+            } else if (originalTaskDate.match(/^\d{4}-\d{2}-\d{2}$/)) { // If it's already YYYY-MM-DD
+                initialDateForInput = originalTaskDate;
+            } else {
+                // Attempt to parse other date formats (e.g., "October 26, 2023")
+                const d = new Date(originalTaskDate);
+                if (!isNaN(d.getTime())) {
+                    // Format to YYYY-MM-DD for the input field from local date parts
+                    const year = d.getFullYear();
+                    const month = String(d.getMonth() + 1).padStart(2, '0');
+                    const day = String(d.getDate()).padStart(2, '0');
+                    initialDateForInput = `${year}-${month}-${day}`;
+                }
+            }
+        }
+        taskDateInput.value = initialDateForInput;
+        taskCard.insertBefore(taskDateInput, taskDateElement);
+        taskDateElement.style.display = 'none';
+
+        // Create and setup Time Spent input
+        const timeSpentInput = document.createElement('input');
+        timeSpentInput.type = 'number';
+        timeSpentInput.value = originalTimeSpent || '0';
+        timeSpentInput.min = '0'; // Optional: prevent negative numbers
+        timeSpentInput.step = '0.1'; // Optional: allow decimal hours
+        taskCard.insertBefore(timeSpentInput, timeSpentElement);
+        timeSpentElement.style.display = 'none';
+
         editButton.innerHTML = '💾';
         editButton.title = 'Save task';
 
+        // Forward new input elements to saveChanges
         const tempSaveListener = () => {
-            saveChanges();
+            saveChanges(titleInput, descriptionTextarea, taskDateInput, timeSpentInput); // Pass inputs
             newEditButton.removeEventListener('click', tempSaveListener); // Clean up self
         };
 
         const tempKeyListener = (e) => {
             if (e.key === 'Enter' && e.target === titleInput) {
                 e.preventDefault();
-                saveChanges();
+                // Call saveChanges with the input elements it needs
+                saveChanges(titleInput, descriptionTextarea, taskDateInput, timeSpentInput);
                 titleInput.removeEventListener('keypress', tempKeyListener); // Clean up self
             }
         };
@@ -451,38 +535,95 @@ document.addEventListener('DOMContentLoaded', () => {
         const newEditButton = editButton.cloneNode(true);
         editButton.parentNode.replaceChild(newEditButton, editButton);
 
-        function saveChanges() {
+        // Definition of the nested saveChanges function
+        // It uses variables from enableEditMode's scope: taskCard, titleElement, descriptionElement, taskDateElement, timeSpentElement, newEditButton, titleInput (for removing keylistener), tempKeyListener
+        function saveChanges(currentTitleInput, currentDescriptionTextarea, currentTaskDateInput, currentTimeSpentInput) {
             taskCard.classList.remove('editing');
-            const newTitle = titleInput.value.trim();
-            const newDescription = descriptionTextarea.value.trim();
+            const newTitle = currentTitleInput.value.trim();
+            const newDescription = currentDescriptionTextarea.value.trim();
+            const newTaskDate = currentTaskDateInput.value; // This will be YYYY-MM-DD from the date input
+            const newTimeSpent = currentTimeSpentInput.value.trim() || '0'; // Default to '0' if empty
 
+            // Update display elements (text content)
             titleElement.textContent = newTitle;
             descriptionElement.textContent = newDescription;
+
+            // Update date display: format YYYY-MM-DD to locale string, or "Not set"
+            let displayDate = 'Not set';
+            if (newTaskDate) { // newTaskDate is 'YYYY-MM-DD'
+                // Create date object assuming input is local date.
+                // Adding time component to avoid potential off-by-one day issues with UTC conversion by toLocaleDateString
+                const dateParts = newTaskDate.split('-');
+                const localDate = new Date(parseInt(dateParts[0]), parseInt(dateParts[1]) - 1, parseInt(dateParts[2]), 12, 0, 0); // Noon to be safe
+                if (!isNaN(localDate.getTime())) {
+                    displayDate = localDate.toLocaleDateString();
+                }
+            }
+            taskDateElement.querySelector('.date-value').textContent = displayDate;
+            timeSpentElement.querySelector('.time-value').textContent = newTimeSpent; // Already string '0' or valid number
+
+            // Update data attributes on the task card
             taskCard.setAttribute('data-title', newTitle);
             taskCard.setAttribute('data-description', newDescription);
+            taskCard.setAttribute('data-task-date', newTaskDate); // Store as YYYY-MM-DD
+            taskCard.setAttribute('data-time-spent', newTimeSpent);
 
-            taskCard.removeChild(titleInput);
-            taskCard.removeChild(descriptionTextarea);
+            // Remove input fields from the DOM
+            if (currentTitleInput.parentNode === taskCard) taskCard.removeChild(currentTitleInput);
+            if (currentDescriptionTextarea.parentNode === taskCard) taskCard.removeChild(currentDescriptionTextarea);
+            if (currentTaskDateInput.parentNode === taskCard) taskCard.removeChild(currentTaskDateInput);
+            if (currentTimeSpentInput.parentNode === taskCard) taskCard.removeChild(currentTimeSpentInput);
+
+            // Restore display of original static elements
             titleElement.style.display = '';
             descriptionElement.style.display = '';
+            taskDateElement.style.display = '';
+            timeSpentElement.style.display = '';
 
+            // Reset the save button to an edit button
             newEditButton.innerHTML = '✏️';
             newEditButton.title = 'Edit task';
 
-            // Re-attach original edit listener logic by replacing the button again
-            const finalEditButton = newEditButton.cloneNode(true);
-            newEditButton.parentNode.replaceChild(finalEditButton, newEditButton);
-            finalEditButton.addEventListener('click', () => enableEditMode(taskCard, titleElement, descriptionElement, finalEditButton));
-            // Also re-attach dblclick to title/desc for the new elements if needed, though current structure reuses original titleElement/descriptionElement
+            // Re-attach the edit listener to the button.
+            // Need to clone the button *again* to effectively replace it and its listeners,
+            // then add the new 'enableEditMode' listener to this fresh button.
+            const finalEditButton = newEditButton.cloneNode(true); // Clone the button (which is currently the save button)
+            newEditButton.parentNode.replaceChild(finalEditButton, newEditButton); // Replace the save button with the clone
 
-            console.log(`Task ${taskCard.dataset.taskId} updated:`, { title: newTitle, description: newDescription });
-            updateTaskDetailsAPI(taskCard.dataset.taskId, { title: newTitle, description: newDescription });
+            // The event listener for 'click' on newEditButton (which was clickSaveListener) is now gone from finalEditButton.
+            // Add the listener to make it an edit button again.
+            finalEditButton.addEventListener('click', () => {
+                enableEditMode(taskCard, titleElement, descriptionElement, taskDateElement, timeSpentElement, finalEditButton);
+            });
+            // Note: The original `newEditButton` variable in `enableEditMode` scope still refers to the button *before* this save.
+            // This part is tricky with listener management. The key is that `finalEditButton` is the one now in the DOM.
 
-            // Clean up listeners attached to input fields if any beyond this scope
-            titleInput.removeEventListener('keypress', tempKeyListener);
+            // Prepare data for the API call
+            const updateData = {
+                title: newTitle,
+                description: newDescription,
+                task_date: newTaskDate, // Send YYYY-MM-DD string
+                time_spent_hours: parseFloat(newTimeSpent) // Convert to float for API
+            };
+            console.log(`Task ${taskCard.dataset.taskId} updated with data:`, updateData);
+            updateTaskDetailsAPI(taskCard.dataset.taskId, updateData);
+
+            // Clean up the keypress listener attached to the original titleInput
+            // (currentTitleInput is the same as titleInput in this context)
+            currentTitleInput.removeEventListener('keypress', tempKeyListener);
         }
 
-        newEditButton.addEventListener('click', tempSaveListener);
+        // This is the listener for the save button.
+        const clickSaveListener = () => {
+            saveChanges(titleInput, descriptionTextarea, taskDateInput, timeSpentInput);
+            // The listener itself should be removed from newEditButton.
+            // This is complex because newEditButton is replaced inside saveChanges.
+            // The most robust way is that saveChanges replaces newEditButton with finalEditButton,
+            // which implicitly removes the clickSaveListener.
+            // No explicit removeEventListener(clickSaveListener) needed here if button is replaced.
+        };
+
+        newEditButton.addEventListener('click', clickSaveListener); // This listener is on `newEditButton`
         titleInput.addEventListener('keypress', tempKeyListener);
         titleInput.focus(); // Focus title input
     }
