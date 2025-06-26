@@ -1,19 +1,121 @@
-/* General body styling (example) */
+/* Add your custom CSS styles here */
+
 body {
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    line-height: 1.6;
-    /* background-color: #f4f4f4; */ /* Optional: A very light gray background */
-    /* color: #333; */ /* Optional: Default text color */
+    padding-top: 56px; /* Height of the fixed navbar */
 }
 
-/* Navbar custom styling (example) */
-.navbar-brand {
-    font-weight: bold;
+.layout-container {
+    /* This container wraps sidebar and main content */
+    /* margin-top: 56px; /* Adjusted: This was causing double padding with body's padding-top */
+    /* Ensure it starts below the fixed top navbar */
+    padding-top: 0; /* Body already has padding-top */
+    height: calc(100vh - 56px); /* Full viewport height minus navbar height */
+    /* overflow-y: hidden; /* Removed to allow main content to scroll properly */
 }
 
-/* Footer custom styling (example) */
-.footer {
-    font-size: 0.9em;
+#sidebarMenu {
+    position: fixed;
+    top: 56px; /* Align below the fixed navbar */
+    bottom: 0; /* Extend to the bottom of the viewport */
+    left: 0;
+    z-index: 100; /* Behind the navbar (1030) but above default content */
+    padding: 0; /* Reset padding */
+    box-shadow: inset -1px 0 0 rgba(0, 0, 0, .1);
+    overflow-y: auto; /* Enable scrolling for a long sidebar */
 }
 
-/* Add more specific styles as needed */
+/* Styling for the content within the sidebar's sticky div */
+#sidebarMenu .position-sticky {
+    height: 100%; /* Make sticky div take full height of sidebar */
+    padding-top: .5rem; /* Add some padding at the top of the links list */
+}
+
+/* Sidebar navigation links */
+.sidebar .nav-link {
+    font-weight: 500;
+    color: #333; /* Dark grey text */
+    padding: .65rem 1rem; /* Vertical and horizontal padding */
+}
+
+.sidebar .nav-link .fas {
+    width: 20px; /* Fixed width for icons */
+    text-align: center;
+    margin-right: 10px; /* Space between icon and text */
+}
+
+.sidebar .nav-link:hover {
+    color: #007bff; /* Bootstrap primary blue on hover */
+    background-color: #e9ecef; /* Light grey background on hover */
+}
+
+.sidebar .nav-link.active {
+    color: #007bff; /* Active link color */
+    background-color: #cfe2ff; /* Lighter blue for active background */
+}
+
+/* Main content area adjustments */
+main.flex-shrink-0 {
+    /* This is the main content block in base.html */
+    /* margin-left will be handled by Bootstrap's col-md-9 ms-sm-auto col-lg-10 */
+    padding-top: 1rem; /* Space below the page_title header */
+    padding-bottom: 1rem; /* Reset padding, just some basic spacing at the bottom */
+    height: 100%; /* Full height of its container (.layout-container row) */
+    overflow-y: auto; /* Allow main content to scroll if it overflows */
+}
+
+/* Footer adjustments (Removed) */
+
+/* Responsive adjustments for smaller screens (Bootstrap's 'md' breakpoint is 768px) */
+@media (max-width: 767.98px) {
+    body {
+        padding-top: 56px; /* Navbar height, no change here */
+        /* padding-bottom: 0; Footer removed */
+    }
+
+    .layout-container {
+        margin-top: 0; /* Reset margin */
+        height: auto; /* Allow content to determine height */
+        overflow-y: visible; /* Reset overflow */
+    }
+
+    #sidebarMenu {
+        position: static; /* Sidebar stacks normally */
+        top: auto;
+        bottom: auto;
+        height: auto; /* Auto height */
+        width: 100%;
+        box-shadow: none; /* Remove shadow when stacked */
+        margin-bottom: 1rem; /* Space below stacked sidebar */
+        /* .collapse is handled by Bootstrap JS for the navbar-toggler,
+           which now also controls the sidebar visibility on small screens
+           if its ID is targeted by the toggler's data-bs-target.
+           The `d-md-block` class hides it on small screens unless .show is added.
+           The top navbar's toggler (data-bs-target="#navbarNav") is for top nav items.
+           We need to ensure the sidebar can be toggled.
+           The `d-md-block` hides it below md, `collapse` makes it collapsible.
+           A separate button or making the existing navbar-toggler control *both*
+           the top nav and sidebar would be needed. For now, Bootstrap's default
+           behavior for `d-md-block collapse` will make it hidden on <md screens
+           and shown on >=md. If we want it toggleable on small screens,
+           the `data-bs-target` of a toggler button should point to `#sidebarMenu`.
+        */
+    }
+
+    /* Ensure the sidebar is toggleable if using Bootstrap's collapse functionality */
+    #sidebarMenu.collapse:not(.show) {
+        /* This is correct for a collapsible element that should be hidden */
+    }
+     #sidebarMenu.show {
+        /* This is correct for a collapsible element that should be shown */
+    }
+
+
+    main.col-md-9 {
+        width: 100%;
+        margin-left: 0 !important; /* Override Bootstrap's ms-sm-auto */
+        height: auto;
+        overflow-y: visible;
+    }
+
+    /* Footer related responsive styles removed */
+}
