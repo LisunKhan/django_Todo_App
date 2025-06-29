@@ -2,7 +2,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import login
 from .forms import CustomUserCreationForm, CustomAuthenticationForm
 from django.contrib.auth.decorators import login_required
-from .models import TodoItem, UserProfile
+from .models import TodoItem, UserProfile, Project
 from .forms import TodoForm
 from django.db.models import Sum, Q
 from django.urls import reverse
