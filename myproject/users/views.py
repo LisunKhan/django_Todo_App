@@ -112,10 +112,12 @@ def add_todo(request):
                     'id': todo.id,
                     'title': todo.title,
                     'description': todo.description,
-                    'status': todo.status, # Add status
-                    'get_status_display': todo.get_status_display(), # Add display for status
+                    'status': todo.status,
+                    'get_status_display': todo.get_status_display(),
                     'task_date': todo.task_date.strftime('%Y-%m-%d') if todo.task_date else None,
-                    'time_spent_hours': todo.time_spent_hours, # Using the property
+                    'time_spent_hours': todo.time_spent_hours,
+                    'project_id': todo.project.id if todo.project else None,
+                    'project_name': todo.project.name if todo.project else None,
                 }
                 return JsonResponse({'success': True, 'todo': serialized_todo})
             else:
@@ -257,32 +259,60 @@ def inline_edit_todo(request, todo_id):
         todo.title = data.get('title', todo.title)
         todo.description = data.get('description', todo.description)
 
-        # Handle status and derive completed if necessary
+        # Handle status
         new_status = data.get('status', todo.status)
         if new_status in [choice[0] for choice in TodoItem.STATUS_CHOICES]:
             todo.status = new_status
 
+        # Handle project
+        if 'project_id' in data: # Check if project_id key is in the payload
+            project_id_val = data['project_id']
+            if project_id_val is None or str(project_id_val).lower() == 'null' or str(project_id_val) == '':
+                todo.project = None
+            else:
+                try:
+                    project_id_int = int(project_id_val)
+                    # Optional: Check if project exists and user has access
+                    # from .models import Project
+                    # project_instance = Project.objects.get(id=project_id_int)
+                    # if not request.user.is_superuser and request.user not in project_instance.members.all():
+                    #    return JsonResponse({'success': False, 'error': 'User does not have access to this project.'}, status=403)
+                    todo.project_id = project_id_int
+                except ValueError:
+                    return JsonResponse({'success': False, 'error': 'Invalid project_id format.'}, status=400)
+                # except Project.DoesNotExist:
+                #     return JsonResponse({'success': False, 'error': 'Project not found.'}, status=404)
+                except Exception as e:
+                    # Log error e for server-side inspection
+                    return JsonResponse({'success': False, 'error': f'Could not assign project: {str(e)}'}, status=400)
+        # If 'project_id' is not in data, todo.project remains unchanged by this block.
+
         task_date_str = data.get('task_date')
-        if task_date_str:
-            try:
-                todo.task_date = task_date_str # Django's DateField can parse 'YYYY-MM-DD'
-            except ValueError:
-                return JsonResponse({'success': False, 'error': 'Invalid date format for task_date. Use YYYY-MM-DD.'}, status=400)
-        else:
+        if 'task_date' in data: # Check if task_date key is in the payload
+            if task_date_str: # Correctly indented
+                try:
+                    todo.task_date = task_date_str # Django's DateField can parse 'YYYY-MM-DD'
+                except ValueError:
+                    return JsonResponse({'success': False, 'error': 'Invalid date format for task_date. Use YYYY-MM-DD.'}, status=400)
+        elif 'task_date' in data and task_date_str is None: # Explicitly setting task_date to null
             todo.task_date = None
 
 
         if 'time_spent_hours' in data:
             try:
-                hours = float(data['time_spent_hours'])
-                if hours < 0:
-                    return JsonResponse({'success': False, 'error': 'Time spent cannot be negative.'}, status=400)
-                todo.time_spent = int(hours * 60)
+                hours_str = data['time_spent_hours']
+                if hours_str is None or str(hours_str).strip() == '': # Handle null or empty string for time_spent
+                    todo.time_spent = 0 # Or None, depending on model definition for time_spent (it's IntegerField default 0)
+                else:
+                    hours = float(hours_str)
+                    if hours < 0:
+                        return JsonResponse({'success': False, 'error': 'Time spent cannot be negative.'}, status=400)
+                    todo.time_spent = int(hours * 60)
             except ValueError:
-                return JsonResponse({'success': False, 'error': 'Invalid time format.'}, status=400)
+                return JsonResponse({'success': False, 'error': 'Invalid time format for time_spent_hours.'}, status=400)
 
         todo.save()
-        todo.refresh_from_db() # Ensure all fields are loaded with correct types
+        todo.refresh_from_db()
 
         return JsonResponse({
             'success': True,
@@ -293,7 +323,9 @@ def inline_edit_todo(request, todo_id):
                 'status': todo.status,
                 'get_status_display': todo.get_status_display(),
                 'task_date': todo.task_date.strftime('%Y-%m-%d') if todo.task_date else None,
-                'time_spent_hours': todo.time_spent_hours, # Use the property for the response
+                'time_spent_hours': todo.time_spent_hours,
+                'project_id': todo.project.id if todo.project else None,
+                'project_name': todo.project.name if todo.project else None,
             }
         })
     except json.JSONDecodeError:
@@ -355,7 +387,7 @@ def download_csv_report(request):
     # Write header row
     writer.writerow([
         'Username', 'Email', 'Bio',
-        'Todo Title', 'Todo Description', 'Status',
+        'Todo Title', 'Todo Description', 'Project Name', 'Status',
         'Time Spent (hours)', 'Created At', 'Updated At', 'Task Date'
     ])
 
@@ -363,7 +395,7 @@ def download_csv_report(request):
         # Write a row with user info even if there are no todos
         writer.writerow([
             user.username, user.email, user_bio,
-            'N/A', 'N/A', 'N/A', 'N/A', 'N/A', 'N/A', 'N/A' # Matched N/A count
+            'N/A', 'N/A', 'N/A', 'N/A', 'N/A', 'N/A', 'N/A', 'N/A' # Matched N/A count
         ])
     else:
         for item in todo_items:
@@ -373,8 +405,9 @@ def download_csv_report(request):
                 user_bio,
                 item.title,
                 item.description,
+                item.project.name if item.project else 'N/A', # Project Name
                 item.get_status_display(),
-                item.time_spent_hours, # Using the property
+                item.time_spent_hours,
                 item.created_at.strftime('%Y-%m-%d %H:%M:%S') if item.created_at else '',
                 item.updated_at.strftime('%Y-%m-%d %H:%M:%S') if item.updated_at else '',
                 item.task_date.strftime('%Y-%m-%d') if item.task_date else ''
@@ -423,10 +456,12 @@ def api_get_kanban_tasks(request):
             "id": task.id,
             "title": task.title,
             "description": task.description,
-            "status": task.status, # e.g., 'todo', 'inprogress', 'done'
-            "get_status_display": task.get_status_display(), # User-friendly status
+            "status": task.status,
+            "get_status_display": task.get_status_display(),
             "task_date": task.task_date.strftime('%Y-%m-%d') if task.task_date else None,
-            "time_spent_hours": task.time_spent_hours # Assuming this is a property or method on TodoItem
+            "time_spent_hours": task.time_spent_hours,
+            "project_id": task.project.id if task.project else None,
+            "project_name": task.project.name if task.project else None,
         })
 
-    return JsonResponse(tasks_data, safe=False) # safe=False because we are sending a list
+    return JsonResponse(tasks_data, safe=False)
