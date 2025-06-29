@@ -115,7 +115,7 @@
         {% for todo in page_obj %}  {# Use page_obj here #}
         <tr data-id="{{ todo.id }}">
             <td data-field="title"><b><a href="{% url 'todo_detail' todo.id %}">{{ todo.title }}</a></b></td>
-            <td data-field="description">{{ todo.description }}</td>
+            <td data-field="description" title="{{ todo.description }}">{{ todo.description }}</td>
             <td data-field="time_spent">{{ todo.time_spent_hours|floatformat:2 }}h</td>
             <td data-field="task_date">{{ todo.task_date|date:"Y-m-d"|default:"N/A" }}</td>
             <td data-field="status" data-value="{{ todo.status }}">
@@ -131,9 +131,9 @@
             </td>
             <td data-field="project" data-project-id="{{ todo.project.id | default:'' }}">{{ todo.project.name | default:"N/A" }}</td>
             <td>
-                <button type="button" class="btn btn-sm btn-outline-primary me-1 inline-edit-btn">Inline Edit</button>
-                <a href="{% url 'edit_todo' todo.id %}" class="btn btn-sm btn-outline-secondary">Edit Page</a>
-                <button class="btn btn-sm btn-danger delete-todo-btn" data-todo-id="{{ todo.id }}" data-delete-url="{% url 'delete_todo' todo.id %}">Delete</button>
+                <button type="button" class="btn btn-sm btn-outline-primary me-1 inline-edit-btn" title="Inline Edit"><i class="fas fa-pencil-alt"></i></button>
+                <a href="{% url 'edit_todo' todo.id %}" class="btn btn-sm btn-outline-secondary me-1" title="Edit Page"><i class="fas fa-edit"></i></a>
+                <button class="btn btn-sm btn-danger delete-todo-btn" data-todo-id="{{ todo.id }}" data-delete-url="{% url 'delete_todo' todo.id %}" title="Delete"><i class="fas fa-trash-alt"></i></button>
             </td>
         </tr>
         {% empty %}
@@ -345,7 +345,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
         newRow.innerHTML = `
             <td data-field="title">${titleHtml}</td>
-            <td data-field="description">${todo.description || ''}</td>
+            <td data-field="description" title="${todo.description || ''}">${todo.description || ''}</td>
             <td data-field="time_spent">${timeSpentDisplay}</td>
             <td data-field="task_date">${taskDateDisplay}</td>
             <td data-field="status">${statusHtml}</td>

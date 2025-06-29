@@ -119,3 +119,12 @@ main.flex-shrink-0 {
 
     /* Footer related responsive styles removed */
 }
+
+/* Todo List Description Column Styling */
+.table td[data-field="description"] {
+    max-width: 250px; /* Adjust as needed */
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap; /* Prevent wrapping to ensure ellipsis works */
+    cursor: help; /* Indicate that more content is available */
+}
