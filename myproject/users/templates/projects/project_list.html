@@ -1,0 +1,25 @@
+{% extends "todo/base.html" %}
+
+{% block title %}My Projects{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>My Projects</h2>
+    {% if projects %}
+        <div class="list-group">
+            {% for project in projects %}
+                <a href="{% url 'project_detail' project.pk %}" class="list-group-item list-group-item-action">
+                    <h5 class="mb-1">{{ project.name }}</h5>
+                    <p class="mb-1">{{ project.description|truncatewords:20 }}</p>
+                    <small>Owner: {{ project.owner.username|default:"N/A" }}</small>
+                </a>
+            {% endfor %}
+        </div>
+    {% else %}
+        <p>You are not currently a member of any projects.</p>
+    {% endif %}
+    {% if request.user.is_staff or request.user.is_superuser %}
+         <p><a href="{% url 'admin:users_project_add' %}" class="btn btn-primary mt-3">Create New Project (Admin)</a></p>
+    {% endif %}
+</div>
+{% endblock %}

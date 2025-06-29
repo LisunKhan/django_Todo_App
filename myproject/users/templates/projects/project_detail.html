@@ -1,0 +1,55 @@
+{% extends "todo/base.html" %}
+
+{% block title %}{{ project.name }} Details{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="card">
+        <div class="card-header">
+            <h2>{{ project.name }}</h2>
+        </div>
+        <div class="card-body">
+            <h5 class="card-title">Project Description</h5>
+            <p class="card-text">{{ project.description|default:"No description provided." }}</p>
+
+            <h5 class="card-title mt-4">Project Owner</h5>
+            <p class="card-text">{{ project.owner.username|default:"N/A" }}</p>
+
+            <h5 class="card-title mt-4">Members</h5>
+            {% if members %}
+                <ul class="list-group">
+                    {% for member in members %}
+                        <li class="list-group-item">
+                            {{ member.username }} ({{ member.email }})
+                            {% if member.profile.phone_number %} {# Assuming you add phone_number to UserProfile later #}
+                                - {{ member.profile.phone_number }}
+                            {% endif %}
+                        </li>
+                    {% endfor %}
+                </ul>
+            {% else %}
+                <p class="card-text">No members assigned to this project yet.</p>
+            {% endif %}
+
+            {# Optionally, list tasks associated with this project #}
+            {# You would need to add 'tasks' to the context in ProjectDetailView #}
+            <h5 class="card-title mt-4">Tasks in this Project</h5>
+            {% if tasks %}
+                <ul class="list-group">
+                    {% for task in tasks %}
+                        <li class="list-group-item">{{ task.title }} ({{ task.get_status_display }})</li>
+                    {% endfor %}
+                </ul>
+            {% else %}
+                <p class="card-text">No tasks currently associated with this project.</p>
+            {% endif %}
+        </div>
+        <div class="card-footer">
+            <a href="{% url 'project_list' %}" class="btn btn-secondary">Back to Project List</a>
+            {% if request.user == project.owner or request.user.is_staff %}
+                 <a href="{% url 'admin:users_project_change' project.pk %}" class="btn btn-info">Edit Project (Admin)</a>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1058,3 +1058,96 @@ class CSVReportWithProjectTests(CSVReportTests): # Inherit to reuse setup
 
         data_row = next(reader)
         self.assertEqual(data_row[project_name_index], 'N/A')
+
+
+class ProjectViewTests(TestCase):
+    def setUp(self):
+        self.client = Client()
+        self.user1 = User.objects.create_user(username='user1_proj_view', password='password123', email='user1@example.com')
+        self.user2 = User.objects.create_user(username='user2_proj_view', password='password123', email='user2@example.com')
+
+        self.project1 = Project.objects.create(name='Project Alpha', owner=self.user1, description='Description for Alpha')
+        self.project1.members.add(self.user1)
+
+        self.project2 = Project.objects.create(name='Project Beta', owner=self.user2, description='Description for Beta')
+        self.project2.members.add(self.user1)
+        self.project2.members.add(self.user2)
+
+        self.project3 = Project.objects.create(name='Project Gamma (User2 only)', owner=self.user2, description='Description for Gamma')
+        self.project3.members.add(self.user2)
+
+        self.project_list_url = reverse('project_list')
+
+    def test_project_list_view_login_required(self):
+        """Test that the project list view requires login."""
+        response = self.client.get(self.project_list_url)
+        self.assertEqual(response.status_code, 302) # Redirect to login
+        self.assertTrue(response.url.startswith(reverse('login')))
+
+    def test_project_list_view_displays_member_projects(self):
+        """Test that the project list view only shows projects the user is a member of."""
+        self.client.login(username='user1_proj_view', password='password123')
+        response = self.client.get(self.project_list_url)
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, self.project1.name)
+        self.assertContains(response, self.project2.name)
+        self.assertNotContains(response, self.project3.name) # User1 is not a member of Project Gamma
+        self.assertEqual(len(response.context['projects']), 2)
+
+    def test_project_list_view_empty_for_non_member(self):
+        """Test that the project list is empty for a user with no projects."""
+        user3 = User.objects.create_user(username='user3_no_projects', password='password123')
+        self.client.login(username='user3_no_projects', password='password123')
+        response = self.client.get(self.project_list_url)
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "You are not currently a member of any projects.")
+        self.assertEqual(len(response.context['projects']), 0)
+
+    def test_project_detail_view_login_required(self):
+        """Test that the project detail view requires login."""
+        project_detail_url = reverse('project_detail', args=[self.project1.pk])
+        response = self.client.get(project_detail_url)
+        self.assertEqual(response.status_code, 302) # Redirect to login
+        self.assertTrue(response.url.startswith(reverse('login')))
+
+    def test_project_detail_view_member_access(self):
+        """Test that a member can access the project detail view."""
+        self.client.login(username='user1_proj_view', password='password123')
+        project_detail_url = reverse('project_detail', args=[self.project1.pk])
+        response = self.client.get(project_detail_url)
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, self.project1.name)
+        self.assertContains(response, self.project1.description)
+        self.assertContains(response, self.user1.username) # Check if owner/member is listed
+
+    def test_project_detail_view_non_member_access_denied(self):
+        """Test that a non-member cannot access the project detail view (403 Forbidden)."""
+        self.client.login(username='user1_proj_view', password='password123')
+        project_detail_url_gamma = reverse('project_detail', args=[self.project3.pk]) # User1 is not a member of Project Gamma
+        response = self.client.get(project_detail_url_gamma)
+        self.assertEqual(response.status_code, 403) # Forbidden
+
+    def test_project_detail_view_displays_members(self):
+        """Test that project detail view displays member information."""
+        self.client.login(username='user1_proj_view', password='password123')
+        project_detail_url = reverse('project_detail', args=[self.project2.pk]) # Project Beta has user1 and user2
+        response = self.client.get(project_detail_url)
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, self.project2.name)
+        self.assertContains(response, self.user1.username)
+        self.assertContains(response, self.user1.email)
+        self.assertContains(response, self.user2.username)
+        self.assertContains(response, self.user2.email)
+        self.assertEqual(response.context['project'].members.count(), 2)
+        # Check if members are in context (more robust)
+        members_in_context = [member.username for member in response.context['members']]
+        self.assertIn(self.user1.username, members_in_context)
+        self.assertIn(self.user2.username, members_in_context)
+
+    def test_project_detail_view_non_existent_project(self):
+        """Test accessing detail view for a non-existent project (should 404)."""
+        self.client.login(username='user1_proj_view', password='password123')
+        non_existent_pk = 9999
+        project_detail_url = reverse('project_detail', args=[non_existent_pk])
+        response = self.client.get(project_detail_url)
+        self.assertEqual(response.status_code, 404)

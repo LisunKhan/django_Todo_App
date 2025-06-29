@@ -471,9 +471,12 @@ def kanban_board_view(request):
     return render(request, 'users/kanban_board.html', context)
 
 
-from django.http import JsonResponse
-# Make sure TodoItem is imported if not already:
-# from .models import TodoItem
+from django.http import JsonResponse, HttpResponseForbidden
+from django.views.generic import ListView, DetailView
+from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
+from django.contrib.auth.views import redirect_to_login
+# Make sure TodoItem and Project are imported if not already:
+# from .models import TodoItem, Project
 
 @login_required
 def api_get_kanban_tasks(request):
@@ -498,3 +501,43 @@ def api_get_kanban_tasks(request):
         })
 
     return JsonResponse(tasks_data, safe=False)
+
+
+class ProjectListView(LoginRequiredMixin, ListView):
+    model = Project
+    template_name = 'projects/project_list.html'  # Specify your template name
+    context_object_name = 'projects'
+
+    def get_queryset(self):
+        # Filter projects to only those the current user is a member of
+        return Project.objects.filter(members=self.request.user).order_by('name')
+
+class ProjectDetailView(LoginRequiredMixin, UserPassesTestMixin, DetailView):
+    model = Project
+    template_name = 'projects/project_detail.html'  # Specify your template name
+    context_object_name = 'project'
+
+    def test_func(self):
+        # Check if the user is a member of the project
+        project = self.get_object()
+        return self.request.user in project.members.all()
+
+    def handle_no_permission(self):
+        if not self.request.user.is_authenticated:
+            return redirect_to_login(
+                self.request.get_full_path(),
+                self.get_login_url(),
+                self.get_redirect_field_name()
+            )
+        # For authenticated users failing test_func (UserPassesTestMixin)
+        return HttpResponseForbidden("You do not have permission to view this project.")
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        project = self.get_object()
+        # Add members to context. You might want to select specific fields
+        # e.g., project.members.select_related('profile').all() if you need profile info
+        context['members'] = project.members.all().select_related('profile')
+        # You could also add project tasks here if needed
+        # context['tasks'] = TodoItem.objects.filter(project=project)
+        return context
