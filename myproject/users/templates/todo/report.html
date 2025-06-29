@@ -64,6 +64,7 @@
                     Status {% if request.GET.order_by == 'status' %}▲{% elif request.GET.order_by == '-status' %}▼{% endif %}
                 </a>
             </th>
+            <th>Project</th> {# New Project Column #}
             <th>
                 <a href="?order_by={% if request.GET.order_by == 'time_spent' %}-time_spent{% else %}time_spent{% endif %}&q={{ request.GET.q | default:'' }}&status={{ selected_status|default:'' }}&start_date={{ selected_start_date|default:'' }}&end_date={{ selected_end_date|default:'' }}">
                     Time Spent (hours) {% if request.GET.order_by == 'time_spent' %}▲{% elif request.GET.order_by == '-time_spent' %}▼{% endif %}
@@ -86,11 +87,12 @@
                     <span class="badge bg-warning text-dark">{{ task.get_status_display }}</span>
                 {% endif %}
             </td>
+            <td>{{ task.project.name | default:"N/A" }}</td>
             <td>{{ task.time_spent_hours|floatformat:2 }}h</td>
         </tr>
         {% empty %}
         <tr>
-            <td colspan="5" class="text-center text-muted">No tasks match your criteria.</td>
+            <td colspan="6" class="text-center text-muted">No tasks match your criteria.</td> {# Incremented colspan for new Project column #}
         </tr>
         {% endfor %}
     </tbody>

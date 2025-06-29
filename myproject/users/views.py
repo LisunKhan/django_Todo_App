@@ -32,9 +32,15 @@ def user_login(request):
         form = CustomAuthenticationForm()
     return render(request, 'registration/login.html', {'form': form})
 
+from .models import Project # Make sure Project is imported
+
 @login_required
 def todo_list(request):
     todo_items = TodoItem.objects.filter(user=request.user)
+
+    # Fetch all projects for dropdowns in the template
+    projects = Project.objects.all()
+    all_projects_data = [{'id': p.id, 'name': p.name} for p in projects]
 
     # Search
     query = request.GET.get('q')
@@ -64,6 +70,7 @@ def todo_list(request):
         'page_obj': page_obj,
         'query': query,
         'current_order_by': order_by,
+        'all_projects': all_projects_data, # Pass projects to the template
     }
     return render(request, 'todo/todo_list.html', context)
 
@@ -435,7 +442,18 @@ def kanban_board_view(request):
     # return render(request, 'users/kanban_board.html', context)
 
     # For now, just render the template. The JS will handle task creation/display.
-    return render(request, 'users/kanban_board.html')
+
+    # Fetch projects for the Kanban board's new/edit task forms
+    projects = Project.objects.all()
+    # The template kanban_board.html expects 'kanban_projects_json' for the json_script,
+    # which will then be parsed into 'kanban_projects' JS array of objects.
+    kanban_projects_data = [{'id': p.id, 'name': p.name} for p in projects]
+
+    context = {
+        'kanban_projects_json': kanban_projects_data
+        # 'initial_kanban_tasks_json' could also be added here if needed
+    }
+    return render(request, 'users/kanban_board.html', context)
 
 
 from django.http import JsonResponse

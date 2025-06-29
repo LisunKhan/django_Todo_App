@@ -36,6 +36,9 @@
                         {{ todo.get_status_display }}
                     </dd>
 
+                    <dt class="col-sm-4">Project</dt>
+                    <dd class="col-sm-8">{{ todo.project.name | default:"Not assigned" }}</dd>
+
                     <dt class="col-sm-4 text-muted">Created At</dt>
                     <dd class="col-sm-8 text-muted">{{ todo.created_at|date:"F j, Y, P" }}</dd>
 
