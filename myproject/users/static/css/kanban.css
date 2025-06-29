@@ -358,6 +358,12 @@ body {
     color: #006644; /* Jira's green text */
 }
 
+/* Blocker - typically red */
+.task-status-badge.status-blocker {
+    background-color: #ffebe6; /* Light red (Jira's error/alert background) */
+    color: #bf2600; /* Dark red text (Jira's error/alert text) */
+}
+
 /* Adjust task card title if it might overlap with the badge */
 .task-card h3 {
     /* ... existing h3 styles ... */

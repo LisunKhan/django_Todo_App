@@ -4,6 +4,12 @@ from django.utils import timezone
 
 # Create your models here.
 class TodoItem(models.Model):
+    """
+    The TodoItem model (also referred to as the Task model) represents a user's task or to-do item.
+    It tracks the user, title, description, time spent (in minutes), creation and update timestamps,
+    an optional task date, and the current status (To Do, In Progress, or Done). Developers may see
+    this model referenced as either TodoItem or Task in documentation or code.
+    """
     user = models.ForeignKey(User, on_delete=models.CASCADE, default=1)
     title = models.CharField(max_length=100)
     description = models.TextField()
@@ -16,6 +22,7 @@ class TodoItem(models.Model):
         ('todo', 'To Do'),
         ('inprogress', 'In Progress'),
         ('done', 'Done'),
+        ('blocker', 'Blocker'),
     ]
     status = models.CharField(
         max_length=10,
