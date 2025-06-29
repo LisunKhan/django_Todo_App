@@ -196,7 +196,8 @@ body {
 }
 
 .new-task-form input[type="text"],
-.new-task-form textarea {
+.new-task-form textarea,
+.new-task-form select { /* Added select for project dropdown */
     width: 100%;
     margin-bottom: 8px;
     padding: 8px;
@@ -207,7 +208,8 @@ body {
     color: #172b4d;
 }
 .new-task-form input[type="text"]:focus,
-.new-task-form textarea:focus {
+.new-task-form textarea:focus,
+.new-task-form select:focus { /* Added select focus */
     border-color: #0052cc; /* Jira's blue focus color */
     box-shadow: 0 0 0 1px #0052cc; /* Focus ring */
     outline: none;
