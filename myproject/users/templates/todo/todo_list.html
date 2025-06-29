@@ -49,6 +49,7 @@
                         <select name="status" class="form-select" id="id_status_modal">
                             <option value="todo">To Do</option>
                             <option value="inprogress">In Progress</option>
+                            <option value="blocker">Blocker</option>
                             <option value="done">Done</option>
                         </select>
                         <div class="invalid-feedback" id="error_status_modal"></div>
@@ -106,7 +107,9 @@
                     <span class="badge bg-success">{{ todo.get_status_display }}</span>
                 {% elif todo.status == 'inprogress' %}
                     <span class="badge bg-primary">{{ todo.get_status_display }}</span>
-                {% else %}
+                {% elif todo.status == 'blocker' %}
+                    <span class="badge bg-danger">{{ todo.get_status_display }}</span>
+                {% else %} {# Default to 'todo' or any other status #}
                     <span class="badge bg-warning text-dark">{{ todo.get_status_display }}</span>
                 {% endif %}
             </td>
@@ -285,6 +288,7 @@ document.addEventListener('DOMContentLoaded', function () {
         const statusDisplayMap = {
             'todo': 'To Do',
             'inprogress': 'In Progress',
+            'blocker': 'Blocker',
             'done': 'Done'
         };
         statusText = statusDisplayMap[statusValue] || 'To Do';
@@ -294,6 +298,8 @@ document.addEventListener('DOMContentLoaded', function () {
             statusHtml = `<span class="badge bg-success">${statusText}</span>`;
         } else if (statusValue === 'inprogress') {
             statusHtml = `<span class="badge bg-primary">${statusText}</span>`;
+        } else if (statusValue === 'blocker') {
+            statusHtml = `<span class="badge bg-danger">${statusText}</span>`;
         } else { // todo
             statusHtml = `<span class="badge bg-warning text-dark">${statusText}</span>`;
         }
@@ -494,6 +500,7 @@ document.addEventListener('DOMContentLoaded', function () {
             <select class="form-select form-select-sm">
                 <option value="todo" ${currentStatusValue === 'todo' ? 'selected' : ''}>To Do</option>
                 <option value="inprogress" ${currentStatusValue === 'inprogress' ? 'selected' : ''}>In Progress</option>
+                <option value="blocker" ${currentStatusValue === 'blocker' ? 'selected' : ''}>Blocker</option>
                 <option value="done" ${currentStatusValue === 'done' ? 'selected' : ''}>Done</option>
             </select>`;
 
@@ -551,6 +558,7 @@ document.addEventListener('DOMContentLoaded', function () {
         const statusDisplayMap = {
             'todo': 'To Do',
             'inprogress': 'In Progress',
+            'blocker': 'Blocker',
             'done': 'Done'
         };
         const newStatusDisplay = newValues.get_status_display || statusDisplayMap[newStatusValue];
@@ -559,6 +567,8 @@ document.addEventListener('DOMContentLoaded', function () {
             statusBadgeHtml = `<span class="badge bg-success">${newStatusDisplay}</span>`;
         } else if (newStatusValue === 'inprogress') {
             statusBadgeHtml = `<span class="badge bg-primary">${newStatusDisplay}</span>`;
+        } else if (newStatusValue === 'blocker') {
+            statusBadgeHtml = `<span class="badge bg-danger">${newStatusDisplay}</span>`;
         } else { // todo
             statusBadgeHtml = `<span class="badge bg-warning text-dark">${newStatusDisplay}</span>`;
         }
