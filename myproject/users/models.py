@@ -16,6 +16,7 @@ class TodoItem(models.Model):
         ('todo', 'To Do'),
         ('inprogress', 'In Progress'),
         ('done', 'Done'),
+        ('blocker', 'Blocker'),
     ]
     status = models.CharField(
         max_length=10,

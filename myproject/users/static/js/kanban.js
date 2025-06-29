@@ -24,6 +24,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const todoTasks = document.getElementById('todo-tasks');
     const inprogressTasks = document.getElementById('inprogress-tasks');
     const doneTasks = document.getElementById('done-tasks');
+    const blockerTasks = document.getElementById('blocker-tasks'); // Added Blocker
     const addTaskBtns = document.querySelectorAll('.add-task-btn');
 
     // --- API Placeholder Functions ---
@@ -280,7 +281,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- End API Placeholder Functions ---
 
     // Initialize SortableJS for each task list
-    if (todoTasks && inprogressTasks && doneTasks) { // Ensure elements exist before init
+    if (todoTasks && inprogressTasks && doneTasks && blockerTasks) { // Ensure elements exist before init
         new Sortable(todoTasks, {
             group: 'shared', // set both lists to same group
             animation: 150,
@@ -310,6 +311,20 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         new Sortable(doneTasks, {
+            group: 'shared',
+            animation: 150,
+            ghostClass: 'sortable-ghost',
+            chosenClass: 'sortable-chosen',
+            dragClass: 'sortable-drag',
+            onEnd: function (evt) {
+                console.log('Task moved:', evt.item, 'to', evt.to.id, 'from', evt.from.id);
+                const taskId = evt.item.dataset.taskId;
+                const newStatus = evt.to.id.replace('-tasks', '');
+                updateTaskStatusAPI(taskId, newStatus);
+            }
+        });
+
+        new Sortable(blockerTasks, { // Added for Blocker
             group: 'shared',
             animation: 150,
             ghostClass: 'sortable-ghost',
@@ -450,6 +465,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     todoTasks.appendChild(card);
                 } else if (task.status === 'inprogress' && inprogressTasks) {
                     inprogressTasks.appendChild(card);
+                } else if (task.status === 'blocker' && blockerTasks) { // Added for Blocker
+                    blockerTasks.appendChild(card);
                 } else if (task.status === 'done' && doneTasks) {
                     doneTasks.appendChild(card);
                 }
