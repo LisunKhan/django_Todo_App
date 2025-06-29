@@ -10,9 +10,10 @@ class TodoItem(models.Model):
     an optional task date, and the current status (To Do, In Progress, or Done). Developers may see
     this model referenced as either TodoItem or Task in documentation or code.
     """
-    user = models.ForeignKey(User, on_delete=models.CASCADE, default=1)
+    user = models.ForeignKey(User, on_delete=models.CASCADE, default=1) # Consider if default=1 is still appropriate
     title = models.CharField(max_length=100)
     description = models.TextField()
+    project = models.ForeignKey('Project', on_delete=models.SET_NULL, null=True, blank=True, related_name='todo_items')
     time_spent = models.IntegerField(default=0)  # Stored in minutes
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -39,6 +40,30 @@ class TodoItem(models.Model):
     def __str__(self):
         return self.title
 
+# Project and ProjectMembership Models
+
+class Project(models.Model):
+    name = models.CharField(max_length=200, unique=True)
+    description = models.TextField(blank=True, null=True)
+    owner = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='owned_projects')
+    members = models.ManyToManyField(User, through='ProjectMembership', related_name='projects')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return self.name
+
+class ProjectMembership(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='project_memberships')
+    project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name='memberships')
+    date_joined = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('user', 'project')
+
+    def __str__(self):
+        return f'{self.user.username} - {self.project.name}'
+
 from django.conf import settings
 from django.db.models.signals import post_save
 from django.dispatch import receiver
@@ -58,8 +83,13 @@ def create_or_update_user_profile(sender, instance, created, **kwargs):
     else:
         # For existing users, ensure their profile exists, creating if necessary.
         # Then save it (e.g., to update auto_now fields on the profile if any).
-        profile, _ = UserProfile.objects.get_or_create(user=instance)
-        # If UserProfile has auto_now or auto_now_add fields, or other logic
-        # in its save() method that should run when the User is saved,
-        # then saving the profile here is important.
-        profile.save()
+        # This also handles the case where a User might have been created without
+        # the signal firing (e.g. loaddata, or if signal was temporarily disconnected)
+        profile, created = UserProfile.objects.get_or_create(user=instance)
+        if not created:
+            # If the profile already existed, we might want to save it if it has
+            # auto_now fields or custom save logic that needs to run.
+            # However, only save if necessary to avoid extra DB hits.
+            # For a simple UserProfile like this one, it might not be strictly needed
+            # unless there are fields on UserProfile that are updated by its save() method.
+            pass # Or profile.save() if specific conditions require it.

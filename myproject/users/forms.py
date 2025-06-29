@@ -47,9 +47,13 @@ class TodoForm(forms.ModelForm):
         model = TodoItem
         # Include all model fields that the form should handle directly or indirectly.
         # 'time_spent' is the actual model field.
-        fields = ['title', 'description', 'status', 'task_date']
+        fields = ['title', 'description', 'project', 'status', 'task_date']
 
     def __init__(self, *args, **kwargs):
+        # It's good practice to pop custom kwargs before calling super if they are not expected by the parent.
+        # However, in this case, 'user' is not a custom kwarg to __init__ but rather used later.
+        # If we were passing a 'user' kwarg to filter project choices, it would be handled here.
+        # For instance: user = kwargs.pop('user', None)
         super().__init__(*args, **kwargs) # Populates self.initial for fields in Meta.fields
 
         # Set the initial value for 'time_spent_hours' in the form's initial data dictionary.

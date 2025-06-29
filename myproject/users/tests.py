@@ -643,37 +643,47 @@ class CSVReportTests(TestCase):
         header = next(reader)
         expected_header = [
             'Username', 'Email', 'Bio',
-            'Todo Title', 'Todo Description', 'Status',
+            'Todo Title', 'Todo Description', 'Project Name', 'Status',
             'Time Spent (hours)', 'Created At', 'Updated At', 'Task Date'
         ]
         self.assertEqual(header, expected_header)
 
         rows = list(reader)
-        self.assertEqual(len(rows), 2) # For todo1 and todo2
+        # The number of rows will depend on how many todos are created in setUp
+        # For CSVReportTests, it's 2. For CSVReportWithProjectTests, it's also 2.
+        self.assertEqual(len(rows), TodoItem.objects.filter(user=self.user, time_spent__gt=0).count())
 
-        # Check data for the first todo item (order might vary based on default model ordering or view query ordering)
-        # To make this robust, you might want to order TodoItems in the view or sort rows here.
-        # For now, assume default ordering by ID or creation time is consistent enough for test.
-        # Or, fetch them from DB and compare, assuming they are returned in the same order.
 
         # Let's find todo1 in the rows, assuming title is unique for this test setup
         row1_data = None
-        for row in rows:
-            if row[3] == self.todo1.title: # Todo Title is the 4th column (index 3)
-                row1_data = row
+        for row_idx, row_content in enumerate(rows):
+            if row_content[3] == self.todo1.title: # Todo Title is the 4th column (index 3)
+                row1_data = row_content
                 break
-        self.assertIsNotNone(row1_data, "Todo1 not found in CSV output")
+        self.assertIsNotNone(row1_data, f"Todo1 (title: {self.todo1.title}) not found in CSV output. Rows: {rows}")
+
 
         self.assertEqual(row1_data[0], self.user.username)
         self.assertEqual(row1_data[1], self.user.email)
         self.assertEqual(row1_data[2], self.user.profile.bio)
         self.assertEqual(row1_data[3], self.todo1.title)
         self.assertEqual(row1_data[4], self.todo1.description)
-        self.assertEqual(row1_data[5], self.todo1.get_status_display())
-        self.assertEqual(float(row1_data[6]), self.todo1.time_spent_hours)
-        self.assertIn(self.todo1.created_at.strftime('%Y-%m-%d'), row1_data[7]) # Check date part
-        self.assertIn(self.todo1.updated_at.strftime('%Y-%m-%d'), row1_data[8]) # Check date part
-        self.assertEqual(row1_data[9], self.todo1.task_date.strftime('%Y-%m-%d'))
+        # Project Name is at index 5
+        # Status is at index 6
+        # Time Spent is at index 7
+        # Created At is at index 8
+        # Updated At is at index 9
+        # Task Date is at index 10
+        if hasattr(self, 'project_csv') and self.todo1.project: # For CSVReportWithProjectTests
+             self.assertEqual(row1_data[5], self.todo1.project.name)
+        else: # For base CSVReportTests where project might not be set on todo1
+             self.assertEqual(row1_data[5], 'N/A' if not self.todo1.project else self.todo1.project.name)
+
+        self.assertEqual(row1_data[6], self.todo1.get_status_display())
+        self.assertEqual(float(row1_data[7]), self.todo1.time_spent_hours)
+        self.assertIn(self.todo1.created_at.strftime('%Y-%m-%d'), row1_data[8])
+        self.assertIn(self.todo1.updated_at.strftime('%Y-%m-%d'), row1_data[9])
+        self.assertEqual(row1_data[10], self.todo1.task_date.strftime('%Y-%m-%d'))
 
 
     def test_download_csv_report_no_todos(self):
@@ -729,14 +739,13 @@ class CSVReportTests(TestCase):
         next(reader) # Skip header
         row = next(reader)
 
-        # created_at and updated_at are datetime objects
-        # Example format: '2023-10-26 10:30:00'
-        self.assertEqual(row[7], self.todo1.created_at.strftime('%Y-%m-%d %H:%M:%S'))
-        self.assertEqual(row[8], self.todo1.updated_at.strftime('%Y-%m-%d %H:%M:%S'))
-
-        # task_date is a date object
-        # Example format: '2023-10-26'
-        self.assertEqual(row[9], self.todo1.task_date.strftime('%Y-%m-%d'))
+        # Indices after adding 'Project Name':
+        # Created At: 8
+        # Updated At: 9
+        # Task Date: 10
+        self.assertEqual(row[8], self.todo1.created_at.strftime('%Y-%m-%d %H:%M:%S'))
+        self.assertEqual(row[9], self.todo1.updated_at.strftime('%Y-%m-%d %H:%M:%S'))
+        self.assertEqual(row[10], self.todo1.task_date.strftime('%Y-%m-%d'))
 
     def test_download_csv_report_user_profile_does_not_exist_gracefully(self):
         """Test CSV output when user.profile does not exist (e.g., if signal failed or profile deleted)."""
@@ -768,3 +777,284 @@ class CSVReportTests(TestCase):
         profile = UserProfile.objects.get(user=self.user)
         profile.bio = "Recreated bio for subsequent tests if any" # Example update
         profile.save()
+
+
+from .models import Project, ProjectMembership
+from django.contrib.auth.models import Group
+
+class ProjectModelTests(TestCase):
+    def setUp(self):
+        self.user1 = User.objects.create_user(username='user1_proj', password='password123')
+        self.user2 = User.objects.create_user(username='user2_proj', password='password123')
+
+    def test_project_creation(self):
+        project = Project.objects.create(name='Test Project Alpha', owner=self.user1, description='Alpha description')
+        self.assertEqual(project.name, 'Test Project Alpha')
+        self.assertEqual(project.owner, self.user1)
+        self.assertEqual(str(project), 'Test Project Alpha')
+
+    def test_project_add_member(self):
+        project = Project.objects.create(name='Test Project Beta', owner=self.user1)
+        ProjectMembership.objects.create(project=project, user=self.user2)
+        self.assertIn(self.user2, project.members.all())
+
+    def test_project_member_count(self):
+        project = Project.objects.create(name='Test Project Gamma', owner=self.user1)
+        ProjectMembership.objects.create(project=project, user=self.user1)
+        ProjectMembership.objects.create(project=project, user=self.user2)
+        self.assertEqual(project.members.count(), 2)
+
+from django.db import IntegrityError
+
+class ProjectModelTests(TestCase):
+    def setUp(self):
+        self.user1 = User.objects.create_user(username='user1_proj', password='password123')
+        self.user2 = User.objects.create_user(username='user2_proj', password='password123')
+
+    def test_project_creation(self):
+        project = Project.objects.create(name='Test Project Alpha', owner=self.user1, description='Alpha description')
+        self.assertEqual(project.name, 'Test Project Alpha')
+        self.assertEqual(project.owner, self.user1)
+        self.assertEqual(str(project), 'Test Project Alpha')
+
+    def test_project_add_member(self):
+        project = Project.objects.create(name='Test Project Beta', owner=self.user1)
+        ProjectMembership.objects.create(project=project, user=self.user2)
+        self.assertIn(self.user2, project.members.all())
+
+    def test_project_member_count(self):
+        project = Project.objects.create(name='Test Project Gamma', owner=self.user1)
+        ProjectMembership.objects.create(project=project, user=self.user1)
+        ProjectMembership.objects.create(project=project, user=self.user2)
+        self.assertEqual(project.members.count(), 2)
+
+    def test_project_unique_name(self):
+        Project.objects.create(name='Unique Project Name', owner=self.user1)
+        with self.assertRaises(IntegrityError):
+            Project.objects.create(name='Unique Project Name', owner=self.user2)
+
+class ProjectMembershipModelTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(username='member_user', password='password123')
+        self.project = Project.objects.create(name='Membership Test Project')
+
+    def test_unique_user_project_membership(self):
+        ProjectMembership.objects.create(project=self.project, user=self.user)
+        with self.assertRaises(IntegrityError):
+            ProjectMembership.objects.create(project=self.project, user=self.user)
+        # The following assertion will fail because the transaction is rolled back by TestCase
+        # self.assertEqual(ProjectMembership.objects.filter(project=self.project, user=self.user).count(), 1)
+        # Instead, we should verify the count *before* the operation that causes IntegrityError,
+        # or trust that assertRaises(IntegrityError) is sufficient.
+        # For now, removing the count assertion post-IntegrityError.
+
+# Update TodoItem related tests
+class TodoItemModelWithProjectTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(username='todo_proj_user', password='password123')
+        self.project = Project.objects.create(name='Project For Todos', owner=self.user)
+
+    def test_todo_item_creation_with_project(self):
+        todo = TodoItem.objects.create(
+            user=self.user,
+            title='Task with Project',
+            project=self.project
+        )
+        self.assertEqual(todo.project, self.project)
+
+    def test_todo_item_creation_without_project(self):
+        todo = TodoItem.objects.create(
+            user=self.user,
+            title='Task without Project'
+            # project is None by default (null=True)
+        )
+        self.assertIsNone(todo.project)
+
+    def test_todo_item_project_set_null_on_delete(self):
+        todo = TodoItem.objects.create(user=self.user, title='Task for Project Deletion', project=self.project)
+        self.project.delete()
+        todo.refresh_from_db()
+        self.assertIsNone(todo.project)
+
+
+class TodoFormWithProjectTests(TodoFormTests): # Inherit to reuse user setup
+    def setUp(self):
+        super().setUp()
+        self.project = Project.objects.create(name='Form Test Project', owner=self.user)
+
+    def test_todo_form_valid_with_project(self):
+        form_data = {
+            'title': 'Form Task with Project',
+            'description': 'Form Description',
+            'project': self.project.id,
+            'status': 'todo'
+        }
+        form = TodoForm(data=form_data)
+        self.assertTrue(form.is_valid(), form.errors)
+        todo = form.save(commit=False)
+        self.assertEqual(todo.project, self.project)
+
+    def test_todo_form_valid_without_project(self):
+        # This test is already in parent, but ensures it still passes (project is optional)
+        super().test_todo_form_valid_without_time_spent()
+        form_data = {'title': 'Form Task No Project', 'description': 'Desc'}
+        form = TodoForm(data=form_data)
+        self.assertTrue(form.is_valid(), form.errors)
+        todo = form.save(commit=False)
+        self.assertIsNone(todo.project)
+
+
+class TodoViewWithProjectTests(TodoViewTests): # Inherit to reuse user/client setup
+    def setUp(self):
+        super().setUp()
+        self.project = Project.objects.create(name='View Test Project', owner=self.user)
+        ProjectMembership.objects.create(project=self.project, user=self.user) # Add user to project
+
+    def test_add_todo_view_with_project(self):
+        url = reverse('add_todo')
+        post_data = {
+            'title': 'View Add Task with Project',
+            'description': 'View Add Description',
+            'project': self.project.id,
+            'status': 'inprogress'
+        }
+        response = self.client.post(url, post_data)
+        self.assertEqual(response.status_code, 302)
+        created_task = TodoItem.objects.get(user=self.user, title='View Add Task with Project')
+        self.assertEqual(created_task.project, self.project)
+
+    def test_add_todo_view_without_project(self):
+        url = reverse('add_todo')
+        post_data = {
+            'title': 'View Add Task No Project',
+            'description': 'View Add Description',
+            'status': 'todo'
+        }
+        response = self.client.post(url, post_data)
+        self.assertEqual(response.status_code, 302)
+        created_task = TodoItem.objects.get(user=self.user, title='View Add Task No Project')
+        self.assertIsNone(created_task.project)
+
+    def test_edit_todo_view_loads_and_saves_project(self):
+        task = TodoItem.objects.create(user=self.user, title='Task for Project Edit', description="Initial Description", project=self.project)
+        project2 = Project.objects.create(name='Project Two', owner=self.user)
+
+        url = reverse('edit_todo', args=[task.id])
+        # GET
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context['form'].initial['project'], self.project.id)
+
+        # POST - change project
+        post_data_change = {
+            'title': task.title,
+            'description': task.description,
+            'project': project2.id,
+            'status': task.status,
+            'task_date': task.task_date.strftime('%Y-%m-%d') if task.task_date else '',
+            'time_spent_hours': task.time_spent_hours # Use existing time_spent_hours
+        }
+        response = self.client.post(url, post_data_change)
+        self.assertEqual(response.status_code, 302, response.content.decode() if response.status_code !=302 else None) # Show form errors if any
+        task.refresh_from_db()
+        self.assertEqual(task.project, project2)
+
+        # POST - remove project
+        post_data_remove = {
+            'title': task.title,
+            'description': task.description,
+            'project': '', # Empty string to remove project
+            'status': task.status,
+            'task_date': task.task_date.strftime('%Y-%m-%d') if task.task_date else '',
+            'time_spent_hours': task.time_spent_hours
+        }
+        response = self.client.post(url, post_data_remove)
+        self.assertEqual(response.status_code, 302, response.content.decode() if response.status_code !=302 else None)
+        task.refresh_from_db()
+        self.assertIsNone(task.project)
+
+    def test_inline_edit_todo_updates_project(self):
+        task = TodoItem.objects.create(user=self.user, title='Inline Edit Project Task', project=None)
+        project2 = Project.objects.create(name='Project For Inline Edit', owner=self.user)
+        url = reverse('inline_edit_todo', args=[task.id])
+
+        # Set project
+        edit_data = {'project_id': project2.id}
+        response = self.client.post(url, json.dumps(edit_data), content_type='application/json')
+        self.assertEqual(response.status_code, 200)
+        json_response = response.json()
+        self.assertTrue(json_response['success'])
+        self.assertEqual(json_response['todo']['project_id'], project2.id)
+        self.assertEqual(json_response['todo']['project_name'], project2.name)
+        task.refresh_from_db()
+        self.assertEqual(task.project, project2)
+
+        # Unset project
+        edit_data = {'project_id': None} # or 'null' as string depending on JS client
+        response = self.client.post(url, json.dumps(edit_data), content_type='application/json')
+        self.assertEqual(response.status_code, 200)
+        json_response = response.json()
+        self.assertTrue(json_response['success'])
+        self.assertIsNone(json_response['todo']['project_id'])
+        task.refresh_from_db()
+        self.assertIsNone(task.project)
+
+    def test_api_get_kanban_tasks_includes_project(self):
+        TodoItem.objects.create(user=self.user, title='Kanban Task With Project', project=self.project)
+        TodoItem.objects.create(user=self.user, title='Kanban Task No Project')
+        url = reverse('api_kanban_tasks') # Corrected name
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, 200)
+        tasks_data = response.json()
+        self.assertEqual(len(tasks_data), 2)
+
+        task_with_project_data = next(t for t in tasks_data if t['title'] == 'Kanban Task With Project')
+        self.assertEqual(task_with_project_data['project_id'], self.project.id)
+        self.assertEqual(task_with_project_data['project_name'], self.project.name)
+
+        task_no_project_data = next(t for t in tasks_data if t['title'] == 'Kanban Task No Project')
+        self.assertIsNone(task_no_project_data['project_id'])
+        self.assertIsNone(task_no_project_data['project_name'])
+
+class CSVReportWithProjectTests(CSVReportTests): # Inherit to reuse setup
+    def setUp(self):
+        super().setUp()
+        self.project_csv = Project.objects.create(name='CSV Test Project', owner=self.user)
+        self.todo1.project = self.project_csv
+        self.todo1.save()
+        # todo2 has no project
+
+    def test_download_csv_report_includes_project_name(self):
+        self.client.login(username='csvuser', password='password123')
+        response = self.client.get(self.url)
+        self.assertEqual(response.status_code, 200)
+        content = response.content.decode('utf-8')
+        reader = csv.reader(StringIO(content))
+
+        header = next(reader)
+        self.assertIn('Project Name', header)
+        project_name_index = header.index('Project Name')
+
+        rows = list(reader)
+        self.assertEqual(len(rows), 2) # todo1 and todo2
+
+        row_todo1 = next(r for r in rows if r[3] == self.todo1.title) # Find by title
+        self.assertEqual(row_todo1[project_name_index], self.project_csv.name)
+
+        row_todo2 = next(r for r in rows if r[3] == self.todo2.title)
+        self.assertEqual(row_todo2[project_name_index], 'N/A')
+
+    def test_download_csv_report_no_todos_includes_project_header(self):
+        self.client.login(username='csvuser', password='password123')
+        TodoItem.objects.filter(user=self.user).delete()
+
+        response = self.client.get(self.url)
+        self.assertEqual(response.status_code, 200)
+        content = response.content.decode('utf-8')
+        reader = csv.reader(StringIO(content))
+        header = next(reader)
+        self.assertIn('Project Name', header)
+        project_name_index = header.index('Project Name')
+
+        data_row = next(reader)
+        self.assertEqual(data_row[project_name_index], 'N/A')
