@@ -197,7 +197,9 @@ body {
 
 .new-task-form input[type="text"],
 .new-task-form textarea,
-.new-task-form select { /* Added select for project dropdown */
+.new-task-form select,
+.new-task-form input[type="date"],
+.new-task-form input[type="number"] {
     width: 100%;
     margin-bottom: 8px;
     padding: 8px;
@@ -209,7 +211,9 @@ body {
 }
 .new-task-form input[type="text"]:focus,
 .new-task-form textarea:focus,
-.new-task-form select:focus { /* Added select focus */
+.new-task-form select:focus,
+.new-task-form input[type="date"]:focus,
+.new-task-form input[type="number"]:focus {
     border-color: #0052cc; /* Jira's blue focus color */
     box-shadow: 0 0 0 1px #0052cc; /* Focus ring */
     outline: none;
