@@ -33,7 +33,6 @@
 
             {# Optionally, list tasks associated with this project #}
             {# You would need to add 'tasks' to the context in ProjectDetailView #}
-            {#
             <h5 class="card-title mt-4">Tasks in this Project</h5>
             {% if tasks %}
                 <ul class="list-group">
@@ -44,7 +43,6 @@
             {% else %}
                 <p class="card-text">No tasks currently associated with this project.</p>
             {% endif %}
-            #}
         </div>
         <div class="card-footer">
             <a href="{% url 'project_list' %}" class="btn btn-secondary">Back to Project List</a>
