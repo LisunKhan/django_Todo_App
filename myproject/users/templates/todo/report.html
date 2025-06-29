@@ -38,6 +38,15 @@
                 {% endfor %}
             </select>
         </div>
+        <div class="col-md-3">
+            <label for="projectFilter" class="form-label">Project</label>
+            <select class="form-select" id="projectFilter" name="project">
+                <option value="">All Projects</option>
+                {% for project in project_options %}
+                    <option value="{{ project.id }}" {% if selected_project_id == project.id %}selected{% endif %}>{{ project.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
         <div class="col-md-3 d-flex align-items-end">
             <button class="btn btn-primary w-50 me-2" type="submit">Apply Filters</button>
             <a href="{% url 'task_report' %}" class="btn btn-secondary w-50">Reset Filters</a>
@@ -64,9 +73,13 @@
                     Status {% if request.GET.order_by == 'status' %}▲{% elif request.GET.order_by == '-status' %}▼{% endif %}
                 </a>
             </th>
-            <th>Project</th> {# New Project Column #}
             <th>
-                <a href="?order_by={% if request.GET.order_by == 'time_spent' %}-time_spent{% else %}time_spent{% endif %}&q={{ request.GET.q | default:'' }}&status={{ selected_status|default:'' }}&start_date={{ selected_start_date|default:'' }}&end_date={{ selected_end_date|default:'' }}">
+                <a href="?order_by={% if request.GET.order_by == 'project__name' %}-project__name{% else %}project__name{% endif %}&q={{ request.GET.q | default:'' }}&status={{ selected_status|default:'' }}&start_date={{ selected_start_date|default:'' }}&end_date={{ selected_end_date|default:'' }}&project={{ selected_project_id|default:'' }}">
+                    Project {% if request.GET.order_by == 'project__name' %}▲{% elif request.GET.order_by == '-project__name' %}▼{% endif %}
+                </a>
+            </th>
+            <th>
+                <a href="?order_by={% if request.GET.order_by == 'time_spent' %}-time_spent{% else %}time_spent{% endif %}&q={{ request.GET.q | default:'' }}&status={{ selected_status|default:'' }}&start_date={{ selected_start_date|default:'' }}&end_date={{ selected_end_date|default:'' }}&project={{ selected_project_id|default:'' }}">
                     Time Spent (hours) {% if request.GET.order_by == 'time_spent' %}▲{% elif request.GET.order_by == '-time_spent' %}▼{% endif %}
                 </a>
             </th>
@@ -102,8 +115,8 @@
 <nav aria-label="Page navigation">
     <ul class="pagination justify-content-center">
         {% if page_obj.has_previous %}
-            <li class="page-item"><a class="page-link" href="?page=1&q={{ request.GET.q | default:'' }}&order_by={{ request.GET.order_by | default:'task_date' }}&status={{ selected_status|default:'' }}&start_date={{ selected_start_date|default:'' }}&end_date={{ selected_end_date|default:'' }}">&laquo; First</a></li>
-            <li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}&q={{ request.GET.q | default:'' }}&order_by={{ request.GET.order_by | default:'task_date' }}&status={{ selected_status|default:'' }}&start_date={{ selected_start_date|default:'' }}&end_date={{ selected_end_date|default:'' }}">Previous</a></li>
+            <li class="page-item"><a class="page-link" href="?page=1&q={{ request.GET.q | default:'' }}&order_by={{ request.GET.order_by | default:'task_date' }}&status={{ selected_status|default:'' }}&start_date={{ selected_start_date|default:'' }}&end_date={{ selected_end_date|default:'' }}&project={{ selected_project_id|default:'' }}">&laquo; First</a></li>
+            <li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}&q={{ request.GET.q | default:'' }}&order_by={{ request.GET.order_by | default:'task_date' }}&status={{ selected_status|default:'' }}&start_date={{ selected_start_date|default:'' }}&end_date={{ selected_end_date|default:'' }}&project={{ selected_project_id|default:'' }}">Previous</a></li>
         {% else %}
             <li class="page-item disabled"><span class="page-link">&laquo; First</span></li>
             <li class="page-item disabled"><span class="page-link">Previous</span></li>
@@ -112,8 +125,8 @@
         <li class="page-item disabled"><span class="page-link">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span></li>
 
         {% if page_obj.has_next %}
-            <li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}&q={{ request.GET.q | default:'' }}&order_by={{ request.GET.order_by | default:'task_date' }}&status={{ selected_status|default:'' }}&start_date={{ selected_start_date|default:'' }}&end_date={{ selected_end_date|default:'' }}">Next</a></li>
-            <li class="page-item"><a class="page-link" href="?page={{ page_obj.paginator.num_pages }}&q={{ request.GET.q | default:'' }}&order_by={{ request.GET.order_by | default:'task_date' }}&status={{ selected_status|default:'' }}&start_date={{ selected_start_date|default:'' }}&end_date={{ selected_end_date|default:'' }}">Last &raquo;</a></li>
+            <li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}&q={{ request.GET.q | default:'' }}&order_by={{ request.GET.order_by | default:'task_date' }}&status={{ selected_status|default:'' }}&start_date={{ selected_start_date|default:'' }}&end_date={{ selected_end_date|default:'' }}&project={{ selected_project_id|default:'' }}">Next</a></li>
+            <li class="page-item"><a class="page-link" href="?page={{ page_obj.paginator.num_pages }}&q={{ request.GET.q | default:'' }}&order_by={{ request.GET.order_by | default:'task_date' }}&status={{ selected_status|default:'' }}&start_date={{ selected_start_date|default:'' }}&end_date={{ selected_end_date|default:'' }}&project={{ selected_project_id|default:'' }}">Last &raquo;</a></li>
         {% else %}
             <li class="page-item disabled"><span class="page-link">Next</span></li>
             <li class="page-item disabled"><span class="page-link">Last &raquo;</span></li>

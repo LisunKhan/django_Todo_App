@@ -46,13 +46,16 @@ def todo_list(request):
     query = request.GET.get('q')
     if query:
         todo_items = todo_items.filter(
-            Q(title__icontains=query) | Q(description__icontains=query)
+            Q(title__icontains=query) |
+            Q(description__icontains=query) |
+            Q(project__name__icontains=query)
         )
 
     # Ordering
     order_by = request.GET.get('order_by', 'task_date') # Default order by task_date
     # Update allowed_ordering_fields to use 'status' instead of 'completed'
-    allowed_ordering_fields = ['title', 'task_date', 'status', '-title', '-task_date', '-status']
+    allowed_ordering_fields = ['title', 'task_date', 'status', 'project__name',
+                               '-title', '-task_date', '-status', '-project__name']
     if order_by not in allowed_ordering_fields:
         order_by = 'task_date' # Fallback to default if invalid field is provided
 
@@ -192,12 +195,15 @@ def task_report(request):
     query = request.GET.get('q')
     if query:
         tasks_for_display = tasks_for_display.filter(
-            Q(title__icontains=query) | Q(description__icontains=query)
+            Q(title__icontains=query) |
+            Q(description__icontains=query) |
+            Q(project__name__icontains=query)
         )
 
     # Ordering
     order_by = request.GET.get('order_by', 'task_date') # Default order
-    allowed_ordering_fields = ['title', 'task_date', 'status', 'time_spent', '-title', '-task_date', '-status', '-time_spent']
+    allowed_ordering_fields = ['title', 'task_date', 'status', 'time_spent', 'project__name',
+                               '-title', '-task_date', '-status', '-time_spent', '-project__name']
     if order_by not in allowed_ordering_fields:
         order_by = 'task_date' # Fallback to default
 
@@ -205,6 +211,7 @@ def task_report(request):
     status_filter = request.GET.get('status', '') # This will be 'todo', 'inprogress', or 'done'
     start_date_filter = request.GET.get('start_date', '')
     end_date_filter = request.GET.get('end_date', '')
+    project_filter_id = request.GET.get('project', '')
 
     # Apply filters
     if status_filter:
@@ -214,6 +221,8 @@ def task_report(request):
         tasks_for_display = tasks_for_display.filter(task_date__gte=start_date_filter)
     if end_date_filter:
         tasks_for_display = tasks_for_display.filter(task_date__lte=end_date_filter)
+    if project_filter_id:
+        tasks_for_display = tasks_for_display.filter(project_id=project_filter_id)
 
     if order_by:
         tasks_for_display = tasks_for_display.order_by(order_by)
@@ -222,6 +231,10 @@ def task_report(request):
     # Updated to use the new status choices from the model
     status_options = [{'value': choice[0], 'display': choice[1]} for choice in TodoItem.STATUS_CHOICES]
     status_options.insert(0, {'value': '', 'display': 'All Statuses'}) # Option to clear filter
+
+    # Get all projects for filter dropdown
+    all_projects = Project.objects.all().order_by('name')
+    project_options = [{'id': p.id, 'name': p.name} for p in all_projects]
 
     # Pagination for the displayed tasks
     paginator = Paginator(tasks_for_display, 10) # Show 10 tasks per page
@@ -237,6 +250,8 @@ def task_report(request):
         'selected_status': status_filter,
         'selected_start_date': start_date_filter,
         'selected_end_date': end_date_filter,
+        'project_options': project_options,
+        'selected_project_id': int(project_filter_id) if project_filter_id else None,
     }
     return render(request, 'todo/report.html', context)
 

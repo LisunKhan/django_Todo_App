@@ -103,7 +103,11 @@
                     Status {% if request.GET.order_by == 'status' %}▲{% elif request.GET.order_by == '-status' %}▼{% endif %}
                 </a>
             </th>
-            <th>Project</th> {# New Project Column #}
+            <th>
+                <a href="?order_by={% if request.GET.order_by == 'project__name' %}-project__name{% else %}project__name{% endif %}&q={{ request.GET.q | default:'' }}">
+                    Project {% if request.GET.order_by == 'project__name' %}▲{% elif request.GET.order_by == '-project__name' %}▼{% endif %}
+                </a>
+            </th>
             <th>Actions</th>
         </tr>
     </thead>

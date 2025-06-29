@@ -251,7 +251,8 @@ body {
 .task-card.editing input[type="text"], /* More specific selector when card is in edit mode for title */
 .task-card.editing textarea,          /* More specific selector for description */
 .task-card.editing input[type="date"],    /* For date input */
-.task-card.editing input[type="number"] { /* For number input */
+.task-card.editing input[type="number"], /* For number input */
+.task-card.editing select { /* Added select for project dropdown */
     width: 100%;
     margin-bottom: 8px;
     padding: 7px 6px; /* Slightly less padding than form inputs to fit card */
@@ -292,9 +293,16 @@ body {
     /* width: 100% is already set by the common rule, should be fine */
 }
 
+.task-card.editing select { /* Specific styling for select */
+    font-size: 0.875em; /* Match other smaller inputs */
+    padding: 6px 7px; /* Match date/number padding */
+    /* background-image for dropdown arrow might be needed for cross-browser consistency, but often handled by browser default */
+}
+
 /* Focus state for inline edit inputs (if not covered by browser default with the blue border) */
 .task-card.editing input:focus,
-.task-card.editing textarea:focus {
+.task-card.editing textarea:focus,
+.task-card.editing select:focus {
     outline: none; /* The border itself provides focus indication */
     box-shadow: 0 0 3px 1px rgba(0, 82, 204, 0.3); /* Optional: subtle outer glow on focus */
 }
