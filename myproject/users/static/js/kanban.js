@@ -125,7 +125,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         const newStatus = result.todo.status;
                         statusBadge.textContent = newStatus.charAt(0).toUpperCase() + newStatus.slice(1);
                         // Remove old status classes (be specific to avoid removing task-status-badge)
-                        statusBadge.classList.remove('status-todo', 'status-inprogress', 'status-in-progress', 'status-done');
+                        statusBadge.classList.remove('status-todo', 'status-inprogress', 'status-in-progress', 'status-done', 'status-blocker');
                         // Add new status class
                         statusBadge.classList.add(`status-${newStatus.toLowerCase().replace(/\s+/g, '-')}`);
                     }
