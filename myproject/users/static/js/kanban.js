@@ -362,6 +362,8 @@ document.addEventListener('DOMContentLoaded', () => {
         taskCard.setAttribute('data-status', task.status);
         taskCard.setAttribute('data-task-date', task.task_date || '');
         taskCard.setAttribute('data-time-spent', String(task.time_spent_hours || '0'));
+        taskCard.setAttribute('data-project-id', task.project_id || '');
+        taskCard.setAttribute('data-project-name', task.project_name || '');
 
         // Create and add status badge
         const statusBadge = document.createElement('div');
@@ -393,6 +395,10 @@ document.addEventListener('DOMContentLoaded', () => {
         timeSpentElement.className = 'task-meta task-time-spent';
         timeSpentElement.innerHTML = `<strong>Time Spent:</strong> <span class="time-value">${task.time_spent_hours || '0'}</span> hours`;
 
+        const projectElement = document.createElement('div');
+        projectElement.className = 'task-meta task-project';
+        projectElement.innerHTML = `<strong>Project:</strong> <span class="project-name">${task.project_name || "N/A"}</span>`;
+
         const actionsDiv = document.createElement('div');
         actionsDiv.className = 'actions';
 
@@ -413,11 +419,12 @@ document.addEventListener('DOMContentLoaded', () => {
         taskCard.appendChild(descriptionElement);
         taskCard.appendChild(taskDateElement); // Add new element
         taskCard.appendChild(timeSpentElement); // Add new element
+        taskCard.appendChild(projectElement); // Add project element
         taskCard.appendChild(actionsDiv);
 
-        editButton.addEventListener('click', () => enableEditMode(taskCard, titleElement, descriptionElement, taskDateElement, timeSpentElement, editButton));
-        titleElement.addEventListener('dblclick', () => enableEditMode(taskCard, titleElement, descriptionElement, taskDateElement, timeSpentElement, editButton));
-        descriptionElement.addEventListener('dblclick', () => enableEditMode(taskCard, titleElement, descriptionElement, taskDateElement, timeSpentElement, editButton));
+        editButton.addEventListener('click', () => enableEditMode(taskCard, titleElement, descriptionElement, taskDateElement, timeSpentElement, projectElement, editButton));
+        titleElement.addEventListener('dblclick', () => enableEditMode(taskCard, titleElement, descriptionElement, taskDateElement, timeSpentElement, projectElement, editButton));
+        descriptionElement.addEventListener('dblclick', () => enableEditMode(taskCard, titleElement, descriptionElement, taskDateElement, timeSpentElement, projectElement, editButton));
         deleteButton.addEventListener('click', () => deleteTask(taskCard));
 
         return taskCard;
@@ -493,14 +500,17 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    function enableEditMode(taskCard, titleElement, descriptionElement, taskDateElement, timeSpentElement, editButton) {
+    // Added projectElement to parameters
+    function enableEditMode(taskCard, titleElement, descriptionElement, taskDateElement, timeSpentElement, projectElement, editButton) {
         if (taskCard.classList.contains('editing')) return; // Prevent multiple edit modes
         taskCard.classList.add('editing');
 
-        const originalTitle = taskCard.dataset.title; // Use data attribute for original value
-        const originalDescription = taskCard.dataset.description; // Use data attribute
+        const originalTitle = taskCard.dataset.title;
+        const originalDescription = taskCard.dataset.description;
         const originalTaskDate = taskCard.dataset.taskDate;
         const originalTimeSpent = taskCard.dataset.timeSpent;
+        const originalProjectId = taskCard.dataset.projectId;
+        // const originalProjectName = taskCard.dataset.projectName; // Not strictly needed for input if using ID
 
         const titleInput = document.createElement('input');
         titleInput.type = 'text';
@@ -547,12 +557,38 @@ document.addEventListener('DOMContentLoaded', () => {
         taskCard.insertBefore(timeSpentInput, timeSpentElement);
         timeSpentElement.style.display = 'none';
 
+        // Create and setup Project select
+        const projectSelect = document.createElement('select');
+        projectSelect.className = 'task-edit-project'; // Add a class for styling if needed
+        let projectOptionsHtml = '<option value="">-- Select Project --</option>';
+        // Assumes 'kanban_projects' is a global array of {id, name}
+        // This should be populated similarly to how 'all_projects' is handled in todo_list.html,
+        // possibly by passing data to the kanban_board.html template or a dedicated API call.
+        if (typeof kanban_projects !== 'undefined' && Array.isArray(kanban_projects)) {
+            kanban_projects.forEach(proj => {
+                projectOptionsHtml += `<option value="${proj.id}" ${originalProjectId == proj.id ? 'selected' : ''}>${proj.name}</option>`;
+            });
+        } else {
+            // Fallback: if current project ID exists and not 'N/A', add it as an option
+            const currentProjectName = projectElement.querySelector('.project-name') ? projectElement.querySelector('.project-name').textContent : '';
+            if (originalProjectId && currentProjectName && currentProjectName !== "N/A") {
+                 if (!projectOptionsHtml.includes(`value="${originalProjectId}"`)) { // Avoid duplicates if kanban_projects is empty but current is set
+                    projectOptionsHtml += `<option value="${originalProjectId}" selected>${currentProjectName} (Current)</option>`;
+                 }
+            }
+             console.warn('kanban_projects variable is not defined or not an array. Project dropdown may be incomplete.');
+        }
+        projectSelect.innerHTML = projectOptionsHtml;
+        taskCard.insertBefore(projectSelect, projectElement);
+        projectElement.style.display = 'none';
+
+
         editButton.innerHTML = '💾';
         editButton.title = 'Save task';
 
         // Forward new input elements to saveChanges
         const tempSaveListener = () => {
-            saveChanges(titleInput, descriptionTextarea, taskDateInput, timeSpentInput); // Pass inputs
+            saveChanges(titleInput, descriptionTextarea, taskDateInput, timeSpentInput, projectSelect); // Pass inputs
             newEditButton.removeEventListener('click', tempSaveListener); // Clean up self
         };
 
@@ -560,7 +596,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (e.key === 'Enter' && e.target === titleInput) {
                 e.preventDefault();
                 // Call saveChanges with the input elements it needs
-                saveChanges(titleInput, descriptionTextarea, taskDateInput, timeSpentInput);
+                saveChanges(titleInput, descriptionTextarea, taskDateInput, timeSpentInput, projectSelect);
                 titleInput.removeEventListener('keypress', tempKeyListener); // Clean up self
             }
         };
@@ -569,96 +605,94 @@ document.addEventListener('DOMContentLoaded', () => {
         editButton.parentNode.replaceChild(newEditButton, editButton);
 
         // Definition of the nested saveChanges function
-        // It uses variables from enableEditMode's scope: taskCard, titleElement, descriptionElement, taskDateElement, timeSpentElement, newEditButton, titleInput (for removing keylistener), tempKeyListener
-        function saveChanges(currentTitleInput, currentDescriptionTextarea, currentTaskDateInput, currentTimeSpentInput) {
+        // It uses variables from enableEditMode's scope: taskCard, titleElement, descriptionElement, projectElement, taskDateElement, timeSpentElement, newEditButton, titleInput (for removing keylistener), tempKeyListener
+        function saveChanges(currentTitleInput, currentDescriptionTextarea, currentTaskDateInput, currentTimeSpentInput, currentProjectSelect) {
             taskCard.classList.remove('editing');
             const newTitle = currentTitleInput.value.trim();
             const newDescription = currentDescriptionTextarea.value.trim();
-            const newTaskDate = currentTaskDateInput.value; // This will be YYYY-MM-DD from the date input
-            const newTimeSpent = currentTimeSpentInput.value.trim() || '0'; // Default to '0' if empty
+            const newTaskDate = currentTaskDateInput.value;
+            const newTimeSpent = currentTimeSpentInput.value.trim() || '0';
+            const newProjectId = currentProjectSelect.value ? parseInt(currentProjectSelect.value) : null;
+            // Get project name from selected option text, or use "N/A"
+            const newProjectName = newProjectId ? currentProjectSelect.options[currentProjectSelect.selectedIndex].text : "N/A";
+
 
             // Update display elements (text content)
             titleElement.textContent = newTitle;
             descriptionElement.textContent = newDescription;
 
-            // Update date display: format YYYY-MM-DD to locale string, or "Not set"
             let displayDate = 'Not set';
-            if (newTaskDate) { // newTaskDate is 'YYYY-MM-DD'
-                // Create date object assuming input is local date.
-                // Adding time component to avoid potential off-by-one day issues with UTC conversion by toLocaleDateString
+            if (newTaskDate) {
                 const dateParts = newTaskDate.split('-');
-                const localDate = new Date(parseInt(dateParts[0]), parseInt(dateParts[1]) - 1, parseInt(dateParts[2]), 12, 0, 0); // Noon to be safe
+                const localDate = new Date(parseInt(dateParts[0]), parseInt(dateParts[1]) - 1, parseInt(dateParts[2]), 12, 0, 0);
                 if (!isNaN(localDate.getTime())) {
                     displayDate = localDate.toLocaleDateString();
                 }
             }
             taskDateElement.querySelector('.date-value').textContent = displayDate;
-            timeSpentElement.querySelector('.time-value').textContent = newTimeSpent; // Already string '0' or valid number
+            timeSpentElement.querySelector('.time-value').textContent = newTimeSpent;
+            projectElement.querySelector('.project-name').textContent = newProjectName; // Server response will be source of truth after API call
 
             // Update data attributes on the task card
             taskCard.setAttribute('data-title', newTitle);
             taskCard.setAttribute('data-description', newDescription);
-            taskCard.setAttribute('data-task-date', newTaskDate); // Store as YYYY-MM-DD
+            taskCard.setAttribute('data-task-date', newTaskDate);
             taskCard.setAttribute('data-time-spent', newTimeSpent);
+            taskCard.setAttribute('data-project-id', newProjectId || '');
+            taskCard.setAttribute('data-project-name', newProjectName);
+
 
             // Remove input fields from the DOM
             if (currentTitleInput.parentNode === taskCard) taskCard.removeChild(currentTitleInput);
             if (currentDescriptionTextarea.parentNode === taskCard) taskCard.removeChild(currentDescriptionTextarea);
             if (currentTaskDateInput.parentNode === taskCard) taskCard.removeChild(currentTaskDateInput);
             if (currentTimeSpentInput.parentNode === taskCard) taskCard.removeChild(currentTimeSpentInput);
+            if (currentProjectSelect.parentNode === taskCard) taskCard.removeChild(currentProjectSelect);
+
 
             // Restore display of original static elements
             titleElement.style.display = '';
             descriptionElement.style.display = '';
             taskDateElement.style.display = '';
             timeSpentElement.style.display = '';
+            projectElement.style.display = '';
+
 
             // Reset the save button to an edit button
             newEditButton.innerHTML = '✏️';
             newEditButton.title = 'Edit task';
 
-            // Re-attach the edit listener to the button.
-            // Need to clone the button *again* to effectively replace it and its listeners,
-            // then add the new 'enableEditMode' listener to this fresh button.
-            const finalEditButton = newEditButton.cloneNode(true); // Clone the button (which is currently the save button)
-            newEditButton.parentNode.replaceChild(finalEditButton, newEditButton); // Replace the save button with the clone
+            const finalEditButton = newEditButton.cloneNode(true);
+            newEditButton.parentNode.replaceChild(finalEditButton, newEditButton);
 
-            // The event listener for 'click' on newEditButton (which was clickSaveListener) is now gone from finalEditButton.
-            // Add the listener to make it an edit button again.
             finalEditButton.addEventListener('click', () => {
-                enableEditMode(taskCard, titleElement, descriptionElement, taskDateElement, timeSpentElement, finalEditButton);
+                // Pass projectElement to enableEditMode
+                enableEditMode(taskCard, titleElement, descriptionElement, taskDateElement, timeSpentElement, projectElement, finalEditButton);
             });
-            // Note: The original `newEditButton` variable in `enableEditMode` scope still refers to the button *before* this save.
-            // This part is tricky with listener management. The key is that `finalEditButton` is the one now in the DOM.
 
             // Prepare data for the API call
             const updateData = {
                 title: newTitle,
                 description: newDescription,
-                task_date: newTaskDate, // Send YYYY-MM-DD string
-                time_spent_hours: parseFloat(newTimeSpent) // Convert to float for API
+                task_date: newTaskDate,
+                time_spent_hours: parseFloat(newTimeSpent),
+                project_id: newProjectId // Add project_id to API call
             };
             console.log(`Task ${taskCard.dataset.taskId} updated with data:`, updateData);
+            // updateTaskDetailsAPI will handle updating the card with server response, including project name
             updateTaskDetailsAPI(taskCard.dataset.taskId, updateData);
 
-            // Clean up the keypress listener attached to the original titleInput
-            // (currentTitleInput is the same as titleInput in this context)
             currentTitleInput.removeEventListener('keypress', tempKeyListener);
         }
 
-        // This is the listener for the save button.
         const clickSaveListener = () => {
-            saveChanges(titleInput, descriptionTextarea, taskDateInput, timeSpentInput);
-            // The listener itself should be removed from newEditButton.
-            // This is complex because newEditButton is replaced inside saveChanges.
-            // The most robust way is that saveChanges replaces newEditButton with finalEditButton,
-            // which implicitly removes the clickSaveListener.
-            // No explicit removeEventListener(clickSaveListener) needed here if button is replaced.
+            // Pass projectSelect to saveChanges
+            saveChanges(titleInput, descriptionTextarea, taskDateInput, timeSpentInput, projectSelect);
         };
 
-        newEditButton.addEventListener('click', clickSaveListener); // This listener is on `newEditButton`
+        newEditButton.addEventListener('click', clickSaveListener);
         titleInput.addEventListener('keypress', tempKeyListener);
-        titleInput.focus(); // Focus title input
+        titleInput.focus();
     }
 
     // --- Add New Task Functionality ---
@@ -684,9 +718,20 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const form = document.createElement('div');
         form.className = 'new-task-form task-card';
+
+        let projectOptionsHtml = '<option value="">-- Select Project --</option>';
+        if (typeof kanban_projects !== 'undefined' && Array.isArray(kanban_projects)) {
+            kanban_projects.forEach(proj => {
+                projectOptionsHtml += `<option value="${proj.id}">${proj.name}</option>`;
+            });
+        } else {
+            console.warn('kanban_projects variable is not defined for new task form. Project dropdown will be empty.');
+        }
+
         form.innerHTML = `
-            <input type="text" placeholder="Task Title" class="new-task-title">
+            <input type="text" placeholder="Task Title" class="new-task-title" required>
             <textarea placeholder="Task Description" class="new-task-description"></textarea>
+            <select class="new-task-project">${projectOptionsHtml}</select>
             <div class="form-actions">
                 <button class="save-new-task-btn">Save Task</button>
                 <button class="cancel-new-task-btn">Cancel</button>
@@ -700,18 +745,20 @@ document.addEventListener('DOMContentLoaded', () => {
         const cancelBtn = form.querySelector('.cancel-new-task-btn');
         const titleInput = form.querySelector('.new-task-title');
         const descriptionInput = form.querySelector('.new-task-description');
+        const projectSelect = form.querySelector('.new-task-project');
 
         const saveNewTaskHandler = async () => {
             const title = titleInput.value.trim();
             const description = descriptionInput.value.trim();
+            const projectId = projectSelect.value ? parseInt(projectSelect.value) : null;
 
             if (title) {
-                const newTaskData = { title, description, status };
-                const createdTask = await createTaskAPI(newTaskData);
-                if (createdTask) {
-                    const taskCard = renderTask(createdTask);
-                    // Decide where to add: current logic is append, maybe prepend?
-                    taskList.appendChild(taskCard); // Or taskList.prepend(taskCard) for top
+                // The createTaskAPI (which calls /add_todo/) expects 'project' as the field name for the ID.
+                const newTaskData = { title, description, status, project: projectId };
+                const createdTask = await createTaskAPI(newTaskData); // createTaskAPI should return the full task object
+                if (createdTask) { // Check if task creation was successful and returned data
+                    const taskCard = renderTask(createdTask); // renderTask expects project_id and project_name
+                    taskList.appendChild(taskCard);
                 }
                 form.remove();
                 if(originalAddButton) originalAddButton.style.display = '';

@@ -48,6 +48,21 @@
 
     <link rel="stylesheet" href="{% static 'css/kanban.css' %}">
 
+{{ kanban_projects_json|json_script:"kanban-projects-data" }}
+
+<script>
+    // Make kanban_projects available to JavaScript if passed in context
+    var kanban_projects = []; // Default to empty array
+    try {
+        const kanbanProjectsDataElement = document.getElementById('kanban-projects-data');
+        if (kanbanProjectsDataElement) {
+            kanban_projects = JSON.parse(kanbanProjectsDataElement.textContent);
+        }
+    } catch (e) {
+        console.error("Could not parse kanban_projects data:", e);
+    }
+</script>
+
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js" defer></script>
-<script src="{% static 'js/kanban.js' %}"></script>
+<script src="{% static 'js/kanban.js' %}"></script> {# kanban.js should be loaded after kanban_projects is defined #}
 {% endblock content %}

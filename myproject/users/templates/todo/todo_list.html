@@ -54,6 +54,17 @@
                         </select>
                         <div class="invalid-feedback" id="error_status_modal"></div>
                     </div>
+                    <div class="mb-3">
+                        <label for="id_project_modal" class="form-label">Project</label>
+                        <select name="project" class="form-select" id="id_project_modal">
+                            <option value="">---------</option>
+                            {# Assuming 'all_projects' is passed in context from the view #}
+                            {% for project in all_projects %}
+                            <option value="{{ project.id }}">{{ project.name }}</option>
+                            {% endfor %}
+                        </select>
+                        <div class="invalid-feedback" id="error_project_modal"></div>
+                    </div>
                     <div class="modal-footer">
                         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
                         <button type="submit" class="btn btn-primary">Save Task</button>
@@ -92,6 +103,11 @@
                     Status {% if request.GET.order_by == 'status' %}▲{% elif request.GET.order_by == '-status' %}▼{% endif %}
                 </a>
             </th>
+            <th>
+                <a href="?order_by={% if request.GET.order_by == 'project__name' %}-project__name{% else %}project__name{% endif %}&q={{ request.GET.q | default:'' }}">
+                    Project {% if request.GET.order_by == 'project__name' %}▲{% elif request.GET.order_by == '-project__name' %}▼{% endif %}
+                </a>
+            </th>
             <th>Actions</th>
         </tr>
     </thead>
@@ -113,6 +129,7 @@
                     <span class="badge bg-warning text-dark">{{ todo.get_status_display }}</span>
                 {% endif %}
             </td>
+            <td data-field="project" data-project-id="{{ todo.project.id | default:'' }}">{{ todo.project.name | default:"N/A" }}</td>
             <td>
                 <button type="button" class="btn btn-sm btn-outline-primary me-1 inline-edit-btn">Inline Edit</button>
                 <a href="{% url 'edit_todo' todo.id %}" class="btn btn-sm btn-outline-secondary">Edit Page</a>
@@ -154,7 +171,20 @@
 
 {% csrf_token %} {# For AJAX POST requests #}
 
+{{ all_projects|json_script:"all-projects-data" }}
+
 <script>
+    // Make all_projects available to JavaScript if passed in context
+    var all_projects = []; // Default to empty array
+    try {
+        const allProjectsDataElement = document.getElementById('all-projects-data');
+        if (allProjectsDataElement) {
+            all_projects = JSON.parse(allProjectsDataElement.textContent);
+        }
+    } catch (e) {
+        console.error("Could not parse all_projects data:", e);
+    }
+
 document.addEventListener('DOMContentLoaded', function () {
     const tableBody = document.querySelector('.table tbody');
     const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value; // General CSRF for inline edit
@@ -191,6 +221,9 @@ document.addEventListener('DOMContentLoaded', function () {
                 data[key] = value ? parseFloat(value) : null;
             } else if (key === 'task_date') {
                  data[key] = value ? value : null;
+            } else if (key === 'project') {
+                // Ensure project ID is sent, or null if not selected
+                data[key] = value ? parseInt(value) : null;
             }
             // Ensure 'completed' is explicitly set based on 'status' if it's still used by the backend logic for creation.
             // Otherwise, if 'completed' is fully removed from the model or handled by 'status' on save, this is not needed.
@@ -307,6 +340,8 @@ document.addEventListener('DOMContentLoaded', function () {
 
         const taskDateDisplay = todo.task_date ? new Date(todo.task_date + 'T00:00:00').toLocaleDateString('en-CA') : "N/A"; // Format to YYYY-MM-DD or N/A
         const timeSpentDisplay = todo.time_spent_hours != null ? `${parseFloat(todo.time_spent_hours).toFixed(2)}h` : "0.00h";
+        const projectNameDisplay = todo.project_name || "N/A";
+        const projectIdAttribute = todo.project_id || "";
 
         newRow.innerHTML = `
             <td data-field="title">${titleHtml}</td>
@@ -314,6 +349,7 @@ document.addEventListener('DOMContentLoaded', function () {
             <td data-field="time_spent">${timeSpentDisplay}</td>
             <td data-field="task_date">${taskDateDisplay}</td>
             <td data-field="status">${statusHtml}</td>
+            <td data-field="project" data-project-id="${projectIdAttribute}">${projectNameDisplay}</td>
             <td>
                 <button type="button" class="btn btn-sm btn-outline-primary me-1 inline-edit-btn">Inline Edit</button>
                 <a href="/todo/${todo.id}/edit/" class="btn btn-sm btn-outline-secondary">Edit Page</a>
@@ -504,6 +540,35 @@ document.addEventListener('DOMContentLoaded', function () {
                 <option value="done" ${currentStatusValue === 'done' ? 'selected' : ''}>Done</option>
             </select>`;
 
+        // Project
+        const projectCell = row.querySelector('td[data-field="project"]');
+        const currentProjectId = projectCell.dataset.projectId;
+        row.dataset.originalHtmlProject = projectCell.innerHTML;
+        let projectOptionsHtml = '<option value="">---------</option>';
+        // Assuming 'all_projects' is available globally or fetched dynamically
+        // For now, this part will rely on 'all_projects' being in the template's JS scope.
+        // A better approach would be an API call if 'all_projects' is large or dynamic.
+        if (typeof all_projects !== 'undefined' && Array.isArray(all_projects)) {
+            all_projects.forEach(project => {
+                projectOptionsHtml += `<option value="${project.id}" ${currentProjectId == project.id ? 'selected' : ''}>${project.name}</option>`;
+            });
+        } else {
+            // Fallback or indicate loading, this needs to be robust
+            // If all_projects isn't guaranteed, this select will be empty or show a default.
+            // For now, we'll proceed assuming it might be available.
+            // If the project currently assigned is not in all_projects, it won't be pre-selected.
+            // Consider adding the current project to the options if not in all_projects
+            // (e.g. if all_projects is a filtered list the user can assign, but the task has an old/different one)
+            const currentProjectName = projectCell.textContent.trim();
+            if (currentProjectId && currentProjectName !== "N/A") {
+                 // Check if current project is already in the options generated
+                if (!projectOptionsHtml.includes(`value="${currentProjectId}"`)) {
+                    projectOptionsHtml += `<option value="${currentProjectId}" selected>${currentProjectName} (Current)</option>`;
+                }
+            }
+        }
+        projectCell.innerHTML = `<select class="form-select form-select-sm">${projectOptionsHtml}</select>`;
+
         // Change buttons
         const actionsCell = editButton.closest('td');
         row.dataset.originalHtmlActions = actionsCell.innerHTML;
@@ -574,6 +639,12 @@ document.addEventListener('DOMContentLoaded', function () {
         }
         statusCell.innerHTML = statusBadgeHtml;
 
+        // Project
+        const projectCell = row.querySelector('td[data-field="project"]');
+        projectCell.textContent = newValues.project_name || "N/A"; // newValues from result.todo
+        projectCell.dataset.projectId = newValues.project_id || "";
+
+
         // Restore original action buttons
         const actionsCell = row.querySelector('td:last-child'); // Assuming actions are always last
         actionsCell.innerHTML = row.dataset.originalHtmlActions;
@@ -584,6 +655,7 @@ document.addEventListener('DOMContentLoaded', function () {
         delete row.dataset.originalHtmlTime;
         delete row.dataset.originalHtmlTaskDate; // Clean up task_date
         delete row.dataset.originalHtmlStatus;
+        delete row.dataset.originalHtmlProject; // Clean up project
         delete row.dataset.originalHtmlActions;
     }
 
@@ -595,6 +667,7 @@ document.addEventListener('DOMContentLoaded', function () {
         row.querySelector('td[data-field="time_spent"]').innerHTML = row.dataset.originalHtmlTime;
         row.querySelector('td[data-field="task_date"]').innerHTML = row.dataset.originalHtmlTaskDate; // Restore task_date
         row.querySelector('td[data-field="status"]').innerHTML = row.dataset.originalHtmlStatus;
+        row.querySelector('td[data-field="project"]').innerHTML = row.dataset.originalHtmlProject; // Restore project
         row.querySelector('td:last-child').innerHTML = row.dataset.originalHtmlActions; // Action buttons
 
         // Clean up stored original HTML
@@ -603,7 +676,11 @@ document.addEventListener('DOMContentLoaded', function () {
         delete row.dataset.originalHtmlTime;
         delete row.dataset.originalHtmlTaskDate; // Clean up task_date
         delete row.dataset.originalHtmlStatus;
+        delete row.dataset.originalHtmlProject; // Clean up project
         delete row.dataset.originalHtmlActions;
+
+        // Clean up original project HTML if stored separately
+        delete row.dataset.originalHtmlProject;
     }
 
     function saveChanges(row, todoId) {
@@ -611,10 +688,10 @@ document.addEventListener('DOMContentLoaded', function () {
         const description = row.querySelector('td[data-field="description"] textarea').value;
         const time_spent_hours = parseFloat(row.querySelector('td[data-field="time_spent"] input').value);
         const task_date_input = row.querySelector('td[data-field="task_date"] input').value;
-        // Send null if date is empty, otherwise send the date string.
-        // The backend (Django ModelForm/DateField) will handle conversion to None if appropriate.
         const task_date = task_date_input ? task_date_input : null;
-        const status = row.querySelector('td[data-field="status"] select').value; // 'todo', 'inprogress', 'done'
+        const status = row.querySelector('td[data-field="status"] select').value;
+        const projectSelect = row.querySelector('td[data-field="project"] select');
+        const project_id = projectSelect.value ? parseInt(projectSelect.value) : null;
 
 
         const data = {
@@ -622,7 +699,8 @@ document.addEventListener('DOMContentLoaded', function () {
             description: description,
             time_spent_hours: time_spent_hours,
             task_date: task_date,
-            status: status, // Send status
+            status: status,
+            project_id: project_id, // Send project_id
         };
         // If your backend for inline_edit specifically needs 'completed', this is where it would be derived.
         // However, since we are removing 'completed' functionality, this is no longer needed.
@@ -650,6 +728,7 @@ document.addEventListener('DOMContentLoaded', function () {
         .then(result => {
             if (result.success) {
                 // The server should return the processed data, including time_spent_hours
+                // and project_name, project_id
                 exitEditMode(row, result.todo);
             } else {
                 alert('Error saving changes: ' + (result.error || 'Unknown error'));
