@@ -399,7 +399,47 @@ def download_csv_report(request):
     except UserProfile.DoesNotExist: # Django raises User.profile.RelatedObjectDoesNotExist if profile doesn't exist
         user_bio = ""
 
+    # Start with the base queryset
     todo_items = TodoItem.objects.filter(user=user, time_spent__gt=0) # Only include todos with time spent
+
+    # Get filter parameters from request.GET, similar to task_report view
+    status_filter = request.GET.get('status', '')
+    start_date_filter = request.GET.get('start_date', '')
+    end_date_filter = request.GET.get('end_date', '')
+    project_filter_id = request.GET.get('project', '')
+    query = request.GET.get('q') # Search query
+
+    # Apply search filter
+    if query:
+        todo_items = todo_items.filter(
+            Q(title__icontains=query) |
+            Q(description__icontains=query) |
+            Q(project__name__icontains=query)
+        )
+
+    # Apply status filter
+    if status_filter:
+        todo_items = todo_items.filter(status=status_filter)
+
+    # Apply date filters
+    if start_date_filter:
+        todo_items = todo_items.filter(task_date__gte=start_date_filter)
+    if end_date_filter:
+        todo_items = todo_items.filter(task_date__lte=end_date_filter)
+
+    # Apply project filter
+    if project_filter_id:
+        todo_items = todo_items.filter(project_id=project_filter_id)
+
+    # Ordering (optional, but good for consistency if reports are ordered in UI)
+    order_by = request.GET.get('order_by', 'task_date')
+    allowed_ordering_fields = ['title', 'task_date', 'status', 'time_spent', 'project__name',
+                               '-title', '-task_date', '-status', '-time_spent', '-project__name']
+    if order_by not in allowed_ordering_fields:
+        order_by = 'task_date' # Fallback to default
+
+    if order_by:
+        todo_items = todo_items.order_by(order_by)
 
     response = HttpResponse(content_type='text/csv')
     response['Content-Disposition'] = 'attachment; filename="todo_report.csv"'
