@@ -518,9 +518,9 @@ class ProjectDetailView(LoginRequiredMixin, UserPassesTestMixin, DetailView):
     context_object_name = 'project'
 
     def test_func(self):
-        # Check if the user is a member of the project
         project = self.get_object()
-        return self.request.user in project.members.all()
+        # Allow access if the user is the owner OR a member of the project
+        return self.request.user == project.owner or self.request.user in project.members.all()
 
     def handle_no_permission(self):
         if not self.request.user.is_authenticated:

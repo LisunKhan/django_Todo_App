@@ -1076,6 +1076,9 @@ class ProjectViewTests(TestCase):
         self.project3 = Project.objects.create(name='Project Gamma (User2 only)', owner=self.user2, description='Description for Gamma')
         self.project3.members.add(self.user2)
 
+        # Project owned by user1, user1 is NOT explicitly a member.
+        self.project_owner_only = Project.objects.create(name='Project Delta (Owner Access Test)', owner=self.user1, description='Owned by user1')
+
         self.project_list_url = reverse('project_list')
 
     def test_project_list_view_login_required(self):
@@ -1118,10 +1121,23 @@ class ProjectViewTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, self.project1.name)
         self.assertContains(response, self.project1.description)
-        self.assertContains(response, self.user1.username) # Check if owner/member is listed
+        self.assertContains(response, self.user1.username) # user1 is owner and member of project1
 
-    def test_project_detail_view_non_member_access_denied(self):
-        """Test that a non-member cannot access the project detail view (403 Forbidden)."""
+    def test_project_detail_view_owner_access_without_membership(self):
+        """Test that an owner can access project details even if not explicitly a member."""
+        self.client.login(username='user1_proj_view', password='password123')
+        # project_owner_only is owned by user1, but user1 is not in project_owner_only.members
+        self.assertNotIn(self.user1, self.project_owner_only.members.all()) # Sanity check
+        self.assertEqual(self.project_owner_only.owner, self.user1)
+
+        project_detail_url = reverse('project_detail', args=[self.project_owner_only.pk])
+        response = self.client.get(project_detail_url)
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, self.project_owner_only.name)
+        self.assertContains(response, self.user1.username) # Owner's username
+
+    def test_project_detail_view_non_owner_non_member_access_denied(self):
+        """Test that a user who is neither an owner nor a member cannot access (403 Forbidden)."""
         self.client.login(username='user1_proj_view', password='password123')
         project_detail_url_gamma = reverse('project_detail', args=[self.project3.pk]) # User1 is not a member of Project Gamma
         response = self.client.get(project_detail_url_gamma)
