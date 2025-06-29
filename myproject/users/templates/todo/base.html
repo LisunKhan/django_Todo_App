@@ -69,6 +69,12 @@
                     </li>
                     {% if user.is_authenticated %}
                     <li class="nav-item">
+                        <a class="nav-link {% if request.resolver_match.url_name == 'project_list' or request.resolver_match.url_name == 'project_detail' %}active{% endif %}" href="{% url 'project_list' %}">
+                            <i class="fas fa-project-diagram"></i> {# Example icon, choose one that fits #}
+                            My Projects
+                        </a>
+                    </li>
+                    <li class="nav-item">
                         <a class="nav-link {% if request.resolver_match.url_name == 'task_report' %}active{% endif %}" href="{% url 'task_report' %}">
                             <i class="fas fa-chart-line"></i>
                             Task Report
