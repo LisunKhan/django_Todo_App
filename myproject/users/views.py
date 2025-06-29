@@ -32,7 +32,7 @@ def user_login(request):
         form = CustomAuthenticationForm()
     return render(request, 'registration/login.html', {'form': form})
 
-from .models import Project # Make sure Project is imported
+# Removed redundant import of Project
 
 @login_required
 def todo_list(request):
