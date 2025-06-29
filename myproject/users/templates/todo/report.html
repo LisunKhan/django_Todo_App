@@ -89,7 +89,7 @@
         {% for task in page_obj %} {# Use page_obj here #}
         <tr>
             <td><a href="{% url 'todo_detail' task.id %}">{{ task.title }}</a></td>
-            <td>{{ task.description }}</td>
+            <td data-field="description" title="{{ task.description }}">{{ task.description }}</td>
             <td>{{ task.task_date|date:"Y-m-d"|default:"N/A" }}</td>
             <td>
                 {% if task.status == 'done' %}
