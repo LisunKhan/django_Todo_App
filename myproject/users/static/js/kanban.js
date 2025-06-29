@@ -732,6 +732,8 @@ document.addEventListener('DOMContentLoaded', () => {
             <input type="text" placeholder="Task Title" class="new-task-title" required>
             <textarea placeholder="Task Description" class="new-task-description"></textarea>
             <select class="new-task-project">${projectOptionsHtml}</select>
+            <input type="date" placeholder="Task Date" class="new-task-date">
+            <input type="number" placeholder="Time Spent (Hours)" class="new-task-time-spent" min="0" step="0.1">
             <div class="form-actions">
                 <button class="save-new-task-btn">Save Task</button>
                 <button class="cancel-new-task-btn">Cancel</button>
@@ -746,15 +748,27 @@ document.addEventListener('DOMContentLoaded', () => {
         const titleInput = form.querySelector('.new-task-title');
         const descriptionInput = form.querySelector('.new-task-description');
         const projectSelect = form.querySelector('.new-task-project');
+        const dateInput = form.querySelector('.new-task-date');
+        const timeSpentInput = form.querySelector('.new-task-time-spent');
 
         const saveNewTaskHandler = async () => {
             const title = titleInput.value.trim();
             const description = descriptionInput.value.trim();
             const projectId = projectSelect.value ? parseInt(projectSelect.value) : null;
+            const taskDate = dateInput.value;
+            const timeSpentHours = timeSpentInput.value ? parseFloat(timeSpentInput.value) : 0;
 
             if (title) {
                 // The createTaskAPI (which calls /add_todo/) expects 'project' as the field name for the ID.
-                const newTaskData = { title, description, status, project: projectId };
+                // It also expects 'task_date' and 'time_spent_hours'.
+                const newTaskData = {
+                    title,
+                    description,
+                    status,
+                    project: projectId,
+                    task_date: taskDate,
+                    time_spent_hours: timeSpentHours
+                };
                 const createdTask = await createTaskAPI(newTaskData); // createTaskAPI should return the full task object
                 if (createdTask) { // Check if task creation was successful and returned data
                     const taskCard = renderTask(createdTask); // renderTask expects project_id and project_name
