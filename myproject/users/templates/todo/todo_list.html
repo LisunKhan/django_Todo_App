@@ -178,6 +178,11 @@
     .inline-edit-btn {
         display: none !important;
     }
+
+    /* Hide the search button in the todo list search form */
+    #todoSearchForm button[type="submit"] {
+        display: none;
+    }
 </style>
 
 <script>
@@ -850,7 +855,10 @@ document.addEventListener('DOMContentLoaded', function () {
         searchInput.addEventListener('input', function () {
             clearTimeout(debounceTimer);
             debounceTimer = setTimeout(function () {
-                todoSearchForm.submit(); // Submit the correct form
+                const query = searchInput.value.trim();
+                if (query.length === 0 || query.length >= 3) {
+                    todoSearchForm.submit(); // Submit the correct form
+                }
             }, 500); // Adjust delay as needed (500ms)
         });
     }

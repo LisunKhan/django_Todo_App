@@ -148,11 +148,12 @@ document.addEventListener('DOMContentLoaded', function () {
         searchInput.addEventListener('input', function () {
             clearTimeout(debounceTimer);
             debounceTimer = setTimeout(function () {
-                // We only want to submit if the 'q' input changes.
+                const query = searchInput.value.trim();
+                // We only want to submit if the 'q' input changes and meets length criteria.
                 // Other filters (date, status, project) have their own "Apply Filters" button.
-                // If we want those to also auto-submit, we'd need different logic.
-                // For now, this targets only the text search.
-                reportSearchForm.submit();
+                if (query.length === 0 || query.length >= 3) {
+                    reportSearchForm.submit();
+                }
             }, 500); // Adjust delay as needed (500ms)
         });
     }
@@ -171,4 +172,10 @@ document.addEventListener('DOMContentLoaded', function () {
     // And similarly for select elements (status, project).
 });
 </script>
+<style>
+    /* Hide the search button in the report page's main query search form */
+    #reportSearchForm .input-group button[type="submit"] {
+        display: none;
+    }
+</style>
 {% endblock %}
