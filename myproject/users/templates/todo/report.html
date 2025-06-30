@@ -47,7 +47,7 @@
             </select>
         </div>
         <div class="col-md-3 d-flex align-items-end">
-            <button class="btn btn-primary w-50 me-2" type="submit">Apply Filters</button>
+            <button id="applyFiltersBtn" class="btn btn-primary w-50 me-2" type="submit">Apply Filters</button>
             <a href="{% url 'task_report' %}" class="btn btn-secondary w-50">Reset Filters</a>
         </div>
     </div>
@@ -140,41 +140,57 @@ document.addEventListener('DOMContentLoaded', function () {
     // Automatic search for the main search bar
     const reportSearchForm = document.getElementById('reportSearchForm');
     const searchInput = reportSearchForm ? reportSearchForm.querySelector('input[name="q"]') : null;
-    let debounceTimer;
+    let debounceTimer; // Shared debounce timer
+
+    function triggerFormSubmit() {
+        clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(function () {
+            if (reportSearchForm) {
+                reportSearchForm.submit();
+            }
+        }, 500); // 500ms delay
+    }
 
     if (reportSearchForm && searchInput) {
-        // Also, ensure that other filter inputs don't trigger the search on their own,
-        // only the main 'q' input should. The 'Apply Filters' button handles the rest.
         searchInput.addEventListener('input', function () {
-            clearTimeout(debounceTimer);
-            debounceTimer = setTimeout(function () {
-                const query = searchInput.value.trim();
-                // We only want to submit if the 'q' input changes and meets length criteria.
-                // Other filters (date, status, project) have their own "Apply Filters" button.
-                if (query.length === 0 || query.length >= 3) {
-                    reportSearchForm.submit();
-                }
-            }, 500); // Adjust delay as needed (500ms)
+            const query = searchInput.value.trim();
+            if (query.length === 0 || query.length >= 3) {
+                triggerFormSubmit();
+            } else {
+                // If query is 1 or 2 chars, clear previous timer to prevent submission
+                clearTimeout(debounceTimer);
+            }
         });
     }
 
-    // Optional: If you want other filters to also auto-submit, you would add listeners here.
-    // For example, for date inputs:
-    // const dateInputs = document.querySelectorAll('input[type="date"]');
-    // dateInputs.forEach(input => {
-    //     input.addEventListener('change', function() { // 'change' is better for date pickers
-    //         clearTimeout(debounceTimer);
-    //         debounceTimer = setTimeout(function () {
-    //             searchForm.submit(); // Or a more specific form if filters are separate
-    //         }, 500);
-    //     });
-    // });
-    // And similarly for select elements (status, project).
+    // Automatic submission for other filters
+    const startDateInput = document.getElementById('startDate');
+    const endDateInput = document.getElementById('endDate');
+    const statusFilterSelect = document.getElementById('statusFilter');
+    const projectFilterSelect = document.getElementById('projectFilter');
+
+    if (startDateInput) {
+        startDateInput.addEventListener('change', triggerFormSubmit);
+    }
+    if (endDateInput) {
+        endDateInput.addEventListener('change', triggerFormSubmit);
+    }
+    if (statusFilterSelect) {
+        statusFilterSelect.addEventListener('change', triggerFormSubmit);
+    }
+    if (projectFilterSelect) {
+        projectFilterSelect.addEventListener('change', triggerFormSubmit);
+    }
 });
 </script>
 <style>
     /* Hide the search button in the report page's main query search form */
     #reportSearchForm .input-group button[type="submit"] {
+        display: none;
+    }
+
+    /* Hide the 'Apply Filters' button */
+    #applyFiltersBtn {
         display: none;
     }
 </style>
