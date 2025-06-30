@@ -481,17 +481,41 @@ from django.contrib.auth.views import redirect_to_login
 @login_required
 def api_get_kanban_tasks(request):
     """
-    API endpoint to fetch all tasks for the logged-in user,
+    API endpoint to fetch all tasks for projects the logged-in user is part of (owner or member),
     formatted for the Kanban board.
     """
-    user_tasks_query = TodoItem.objects.filter(user=request.user).select_related('user__profile', 'project').order_by('created_at')
+    current_user = request.user
 
+    # Find projects where the user is an owner or a member
+    # Q objects are used to combine queries with OR
+    user_projects = Project.objects.filter(
+        Q(owner=current_user) | Q(members=current_user)
+    ).distinct()
+
+    if not user_projects.exists():
+        # If the user is not part of any projects, return an empty list
+        return JsonResponse([], safe=False)
+
+    # Filter tasks that belong to these projects
+    # Also, ensure tasks are selected with related user profile and project for efficiency
+    # and ordered by creation date.
+    tasks_query = TodoItem.objects.filter(project__in=user_projects).select_related('user__profile', 'project').order_by('created_at')
+
+    # Apply the project filter from the request, if any
     project_id_filter = request.GET.get('project_id')
     if project_id_filter and project_id_filter.lower() != 'all' and project_id_filter.isdigit():
-        user_tasks_query = user_tasks_query.filter(project_id=project_id_filter)
+        # Ensure the filtered project is one of the user's projects
+        # This prevents users from accessing tasks of projects they are not part of via the filter
+        if user_projects.filter(id=project_id_filter).exists():
+            tasks_query = tasks_query.filter(project_id=project_id_filter)
+        else:
+            # If the user tries to filter by a project they are not part of,
+            # return an empty list or handle as an error.
+            # For simplicity, returning empty list of tasks.
+            return JsonResponse([], safe=False)
 
     tasks_data = []
-    for task in user_tasks_query:
+    for task in tasks_query:
         profile_picture_url = None
         if hasattr(task.user, 'profile') and task.user.profile.profile_picture:
             profile_picture_url = task.user.profile.profile_picture.url
