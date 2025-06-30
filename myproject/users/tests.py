@@ -1076,6 +1076,9 @@ class ProjectViewTests(TestCase):
         self.project3 = Project.objects.create(name='Project Gamma (User2 only)', owner=self.user2, description='Description for Gamma')
         self.project3.members.add(self.user2)
 
+        # Project owned by user1, user1 is NOT explicitly a member.
+        self.project_owner_only = Project.objects.create(name='Project Delta (Owner Access Test)', owner=self.user1, description='Owned by user1')
+
         self.project_list_url = reverse('project_list')
 
     def test_project_list_view_login_required(self):
@@ -1118,10 +1121,23 @@ class ProjectViewTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, self.project1.name)
         self.assertContains(response, self.project1.description)
-        self.assertContains(response, self.user1.username) # Check if owner/member is listed
+        self.assertContains(response, self.user1.username) # user1 is owner and member of project1
 
-    def test_project_detail_view_non_member_access_denied(self):
-        """Test that a non-member cannot access the project detail view (403 Forbidden)."""
+    def test_project_detail_view_owner_access_without_membership(self):
+        """Test that an owner can access project details even if not explicitly a member."""
+        self.client.login(username='user1_proj_view', password='password123')
+        # project_owner_only is owned by user1, but user1 is not in project_owner_only.members
+        self.assertNotIn(self.user1, self.project_owner_only.members.all()) # Sanity check
+        self.assertEqual(self.project_owner_only.owner, self.user1)
+
+        project_detail_url = reverse('project_detail', args=[self.project_owner_only.pk])
+        response = self.client.get(project_detail_url)
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, self.project_owner_only.name)
+        self.assertContains(response, self.user1.username) # Owner's username
+
+    def test_project_detail_view_non_owner_non_member_access_denied(self):
+        """Test that a user who is neither an owner nor a member cannot access (403 Forbidden)."""
         self.client.login(username='user1_proj_view', password='password123')
         project_detail_url_gamma = reverse('project_detail', args=[self.project3.pk]) # User1 is not a member of Project Gamma
         response = self.client.get(project_detail_url_gamma)
@@ -1151,3 +1167,47 @@ class ProjectViewTests(TestCase):
         project_detail_url = reverse('project_detail', args=[non_existent_pk])
         response = self.client.get(project_detail_url)
         self.assertEqual(response.status_code, 404)
+
+    def test_project_detail_view_displays_associated_tasks(self):
+        """Test that tasks associated with the project are listed."""
+        self.client.login(username='user1_proj_view', password='password123')
+
+        # project1 is owned by user1, and user1 is a member
+        # Create tasks for project1
+        task1_p1 = TodoItem.objects.create(user=self.user1, title="Task 1 for Project Alpha", project=self.project1, description="Desc P1T1")
+        task2_p1 = TodoItem.objects.create(user=self.user1, title="Task 2 for Project Alpha", project=self.project1, description="Desc P1T2", status="inprogress")
+
+        # Create a task for another project (project2) to ensure it's not shown
+        task1_p2 = TodoItem.objects.create(user=self.user1, title="Task 1 for Project Beta", project=self.project2, description="Desc P2T1")
+
+        project_detail_url = reverse('project_detail', args=[self.project1.pk])
+        response = self.client.get(project_detail_url)
+        self.assertEqual(response.status_code, 200)
+
+        self.assertContains(response, task1_p1.title)
+        self.assertContains(response, task1_p1.get_status_display())
+        self.assertContains(response, task2_p1.title)
+        self.assertContains(response, task2_p1.get_status_display())
+        self.assertNotContains(response, task1_p2.title) # Ensure task from other project is not listed
+
+        # Check tasks in context
+        self.assertIn('tasks', response.context)
+        context_tasks = response.context['tasks']
+        self.assertEqual(len(context_tasks), 2)
+        self.assertIn(task1_p1, context_tasks)
+        self.assertIn(task2_p1, context_tasks)
+
+        # Check task link
+        self.assertContains(response, f'href="{reverse("todo_detail", args=[task1_p1.pk])}"')
+
+
+    def test_project_detail_view_no_tasks(self):
+        """Test that 'No tasks' message is shown if a project has no tasks."""
+        self.client.login(username='user1_proj_view', password='password123')
+        # project_owner_only is owned by user1, and has no tasks by default
+        project_detail_url = reverse('project_detail', args=[self.project_owner_only.pk])
+        response = self.client.get(project_detail_url)
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "No tasks currently associated with this project.")
+        self.assertIn('tasks', response.context)
+        self.assertEqual(len(response.context['tasks']), 0)

@@ -518,9 +518,9 @@ class ProjectDetailView(LoginRequiredMixin, UserPassesTestMixin, DetailView):
     context_object_name = 'project'
 
     def test_func(self):
-        # Check if the user is a member of the project
         project = self.get_object()
-        return self.request.user in project.members.all()
+        # Allow access if the user is the owner OR a member of the project
+        return self.request.user == project.owner or self.request.user in project.members.all()
 
     def handle_no_permission(self):
         if not self.request.user.is_authenticated:
@@ -535,9 +535,8 @@ class ProjectDetailView(LoginRequiredMixin, UserPassesTestMixin, DetailView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         project = self.get_object()
-        # Add members to context. You might want to select specific fields
-        # e.g., project.members.select_related('profile').all() if you need profile info
+        # Add members to context
         context['members'] = project.members.all().select_related('profile')
-        # You could also add project tasks here if needed
-        # context['tasks'] = TodoItem.objects.filter(project=project)
+        # Add tasks associated with this project to the context
+        context['tasks'] = TodoItem.objects.filter(project=project).order_by('status', 'created_at')
         return context
