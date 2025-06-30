@@ -134,4 +134,41 @@
 </nav>
 
 <a href="{% url 'todo_list' %}" class="btn btn-primary mt-3">Back to Todo List</a>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    // Automatic search for the main search bar
+    const searchInput = document.querySelector('form[action="{% url \'task_report\' %}"] input[name="q"]');
+    const searchForm = searchInput ? searchInput.closest('form') : null;
+    let debounceTimer;
+
+    if (searchInput && searchForm) {
+        // Also, ensure that other filter inputs don't trigger the search on their own,
+        // only the main 'q' input should. The 'Apply Filters' button handles the rest.
+        searchInput.addEventListener('input', function () {
+            clearTimeout(debounceTimer);
+            debounceTimer = setTimeout(function () {
+                // We only want to submit if the 'q' input changes.
+                // Other filters (date, status, project) have their own "Apply Filters" button.
+                // If we want those to also auto-submit, we'd need different logic.
+                // For now, this targets only the text search.
+                searchForm.submit();
+            }, 500); // Adjust delay as needed (500ms)
+        });
+    }
+
+    // Optional: If you want other filters to also auto-submit, you would add listeners here.
+    // For example, for date inputs:
+    // const dateInputs = document.querySelectorAll('input[type="date"]');
+    // dateInputs.forEach(input => {
+    //     input.addEventListener('change', function() { // 'change' is better for date pickers
+    //         clearTimeout(debounceTimer);
+    //         debounceTimer = setTimeout(function () {
+    //             searchForm.submit(); // Or a more specific form if filters are separate
+    //         }, 500);
+    //     });
+    // });
+    // And similarly for select elements (status, project).
+});
+</script>
 {% endblock %}

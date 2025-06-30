@@ -840,5 +840,19 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 });
+
+    // Automatic search for the main search bar
+    const searchInput = document.querySelector('form[action="{% url \'todo_list\' %}"] input[name="q"]');
+    const searchForm = searchInput ? searchInput.closest('form') : null;
+    let debounceTimer;
+
+    if (searchInput && searchForm) {
+        searchInput.addEventListener('input', function () {
+            clearTimeout(debounceTimer);
+            debounceTimer = setTimeout(function () {
+                searchForm.submit();
+            }, 500); // Adjust delay as needed (500ms)
+        });
+    }
 </script>
 {% endblock %}
