@@ -62,10 +62,31 @@ def todo_list(request):
     if order_by not in allowed_ordering_fields:
         order_by = 'task_date' # Fallback to default if invalid field is provided
 
+    # Get new filter parameters
+    status_filter = request.GET.get('status', '')
+    start_date_filter = request.GET.get('start_date', '')
+    end_date_filter = request.GET.get('end_date', '')
+    project_filter_id = request.GET.get('project', '')
+
+    # Apply new filters
+    if status_filter:
+        todo_items = todo_items.filter(status=status_filter)
+    if start_date_filter:
+        todo_items = todo_items.filter(task_date__gte=start_date_filter)
+    if end_date_filter:
+        todo_items = todo_items.filter(task_date__lte=end_date_filter)
+    if project_filter_id:
+        todo_items = todo_items.filter(project_id=project_filter_id)
+
     if order_by:
         # Ensure that if ordering by 'status', it uses the actual field name
         # If 'completed' was a boolean and 'status' is char, direct replacement is fine.
         todo_items = todo_items.order_by(order_by)
+
+    # Status options for the filter dropdown
+    status_options_list = [{'value': choice[0], 'display': choice[1]} for choice in TodoItem.STATUS_CHOICES]
+    status_options_list.insert(0, {'value': '', 'display': 'All Statuses'})
+
 
     # Pagination
     paginator = Paginator(todo_items, 10) # Show 10 todos per page
@@ -74,9 +95,14 @@ def todo_list(request):
 
     context = {
         'page_obj': page_obj,
-        'query': query,
-        'current_order_by': order_by,
-        'all_projects': all_projects_data, # Pass projects to the template
+        'query': query, # Existing search query
+        'current_order_by': order_by, # Existing order_by
+        'all_projects': all_projects_data, # Existing projects for create task modal and new project filter
+        'status_options': status_options_list, # For the new status filter dropdown
+        'selected_status': status_filter,
+        'selected_start_date': start_date_filter,
+        'selected_end_date': end_date_filter,
+        'selected_project_id': int(project_filter_id) if project_filter_id else None,
     }
     return render(request, 'todo/todo_list.html', context)
 
