@@ -76,7 +76,7 @@
 </div>
 
 <!-- Search Form -->
-<form method="get" action="{% url 'todo_list' %}" class="mb-3">
+<form id="todoSearchForm" method="get" action="{% url 'todo_list' %}" class="mb-3">
     <div class="input-group">
         <input type="text" name="q" class="form-control" placeholder="Search tasks..." value="{{ request.GET.q | default:'' }}">
         <button class="btn btn-outline-secondary" type="submit">Search</button>
@@ -842,15 +842,15 @@ document.addEventListener('DOMContentLoaded', function () {
 });
 
     // Automatic search for the main search bar
-    const searchInput = document.querySelector('form[action="{% url \'todo_list\' %}"] input[name="q"]');
-    const searchForm = searchInput ? searchInput.closest('form') : null;
+    const todoSearchForm = document.getElementById('todoSearchForm');
+    const searchInput = todoSearchForm ? todoSearchForm.querySelector('input[name="q"]') : null;
     let debounceTimer;
 
-    if (searchInput && searchForm) {
+    if (todoSearchForm && searchInput) { // Check todoSearchForm and searchInput
         searchInput.addEventListener('input', function () {
             clearTimeout(debounceTimer);
             debounceTimer = setTimeout(function () {
-                searchForm.submit();
+                todoSearchForm.submit(); // Submit the correct form
             }, 500); // Adjust delay as needed (500ms)
         });
     }

@@ -13,7 +13,7 @@
 </div>
 
 <!-- Search Form -->
-<form method="get" action="{% url 'task_report' %}" class="my-3">
+<form id="reportSearchForm" method="get" action="{% url 'task_report' %}" class="my-3">
     <div class="input-group">
         <input type="text" name="q" class="form-control" placeholder="Search tasks..." value="{{ request.GET.q | default:'' }}">
         <button class="btn btn-outline-secondary" type="submit">Search</button>
@@ -138,11 +138,11 @@
 <script>
 document.addEventListener('DOMContentLoaded', function () {
     // Automatic search for the main search bar
-    const searchInput = document.querySelector('form[action="{% url \'task_report\' %}"] input[name="q"]');
-    const searchForm = searchInput ? searchInput.closest('form') : null;
+    const reportSearchForm = document.getElementById('reportSearchForm');
+    const searchInput = reportSearchForm ? reportSearchForm.querySelector('input[name="q"]') : null;
     let debounceTimer;
 
-    if (searchInput && searchForm) {
+    if (reportSearchForm && searchInput) {
         // Also, ensure that other filter inputs don't trigger the search on their own,
         // only the main 'q' input should. The 'Apply Filters' button handles the rest.
         searchInput.addEventListener('input', function () {
@@ -152,7 +152,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 // Other filters (date, status, project) have their own "Apply Filters" button.
                 // If we want those to also auto-submit, we'd need different logic.
                 // For now, this targets only the text search.
-                searchForm.submit();
+                reportSearchForm.submit();
             }, 500); // Adjust delay as needed (500ms)
         });
     }
