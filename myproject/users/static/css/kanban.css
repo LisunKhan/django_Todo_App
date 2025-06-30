@@ -47,6 +47,23 @@ body {
     /* overflow-y: auto; */ /* Add if columns might get too long */
 }
 
+/* Project Filter Select Styling */
+#project-filter-select {
+    padding: 8px 12px;
+    border-radius: 4px;
+    border: 1px solid #dfe1e6;
+    background-color: #fff;
+    font-size: 0.9em;
+    min-width: 200px; /* Adjust as needed */
+    margin-bottom: 15px; /* Space below the filter */
+}
+#project-filter-select:focus {
+    border-color: #0052cc;
+    box-shadow: 0 0 0 1px #0052cc;
+    outline: none;
+}
+
+
 .task-card {
     background-color: #ffffff;
     border: 1px solid #dfe1e6; /* Jira-like border color for cards */
@@ -382,4 +399,39 @@ body {
 .task-card h3 {
     /* ... existing h3 styles ... */
     padding-right: 70px; /* Add padding to the right of title to avoid overlap with badge. Adjust value as needed. */
+}
+
+/* User Info on Task Card */
+.task-user-info {
+    display: flex;
+    align-items: center;
+    margin-bottom: 8px; /* Space below user info block */
+}
+
+.task-assignee-pic {
+    width: 24px; /* Small avatar */
+    height: 24px;
+    border-radius: 50%; /* Circular avatar */
+    margin-right: 8px;
+    object-fit: cover; /* Ensures the image covers the area, might crop */
+    border: 1px solid #dfe1e6; /* Subtle border for avatar */
+}
+
+.task-assignee {
+    font-size: 0.85em;
+    color: #5e6c84; /* Muted color for username */
+    font-weight: 500;
+}
+
+/* Adjust task card padding if user info makes it too cramped */
+.task-card {
+    /* padding: 10px 12px; */ /* Original padding */
+    /* If more space is needed at the top due to user info + status badge */
+    /* padding-top: 12px;  */
+}
+
+/* Ensure meta-data like project, date, time are spaced correctly after user info */
+.task-card .task-meta {
+    /* margin-bottom: 10px; */ /* Original margin */
+    /* If user info is present, this might need adjustment or user-info handles its own margin-bottom */
 }

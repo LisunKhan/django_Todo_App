@@ -26,6 +26,17 @@ document.addEventListener('DOMContentLoaded', () => {
     const doneTasks = document.getElementById('done-tasks');
     const blockerTasks = document.getElementById('blocker-tasks'); // Added Blocker
     const addTaskBtns = document.querySelectorAll('.add-task-btn');
+    const projectFilterSelect = document.getElementById('project-filter-select');
+
+    // --- Populate Project Filter Dropdown ---
+    if (projectFilterSelect && typeof kanban_projects !== 'undefined' && Array.isArray(kanban_projects)) {
+        kanban_projects.forEach(project => {
+            const option = document.createElement('option');
+            option.value = project.id;
+            option.textContent = project.name;
+            projectFilterSelect.appendChild(option);
+        });
+    }
 
     // --- API Placeholder Functions ---
     async function createTaskAPI(taskData) {
@@ -374,8 +385,30 @@ document.addEventListener('DOMContentLoaded', () => {
         const titleElement = document.createElement('h3');
         titleElement.textContent = task.title;
 
-        const descriptionElement = document.createElement('p');
-        descriptionElement.textContent = task.description;
+        // Description is stored in data attribute but not rendered directly
+        const descriptionElement = document.createElement('p'); // Still create for data storage if needed by edit
+        descriptionElement.textContent = task.description; // Store it for edit mode if needed
+
+        // User information: Profile Picture and Username
+        const userBlock = document.createElement('div');
+        userBlock.className = 'task-user-info';
+
+        const userImage = document.createElement('img');
+        userImage.className = 'task-assignee-pic';
+        if (task.user && task.user.profile_picture_url) {
+            userImage.src = task.user.profile_picture_url;
+            userImage.alt = task.user.username || 'User';
+        } else {
+            userImage.src = '/static/images/default_avatar.png'; // Default placeholder
+            userImage.alt = 'Default User Avatar';
+        }
+
+        const userNameElement = document.createElement('span');
+        userNameElement.className = 'task-assignee';
+        userNameElement.textContent = (task.user && task.user.username) ? task.user.username : 'N/A';
+
+        userBlock.appendChild(userImage);
+        userBlock.appendChild(userNameElement);
 
         // New elements for Task Date and Time Spent
         const taskDateElement = document.createElement('div');
@@ -416,15 +449,17 @@ document.addEventListener('DOMContentLoaded', () => {
         actionsDiv.appendChild(deleteButton);
 
         taskCard.appendChild(titleElement);
-        taskCard.appendChild(descriptionElement);
+        // taskCard.appendChild(descriptionElement); // Description is NOT appended for display
+        taskCard.appendChild(userBlock); // Add user info block
+        taskCard.appendChild(projectElement); // Add project element
         taskCard.appendChild(taskDateElement); // Add new element
         taskCard.appendChild(timeSpentElement); // Add new element
-        taskCard.appendChild(projectElement); // Add project element
         taskCard.appendChild(actionsDiv);
 
         editButton.addEventListener('click', () => enableEditMode(taskCard, titleElement, descriptionElement, taskDateElement, timeSpentElement, projectElement, editButton));
         titleElement.addEventListener('dblclick', () => enableEditMode(taskCard, titleElement, descriptionElement, taskDateElement, timeSpentElement, projectElement, editButton));
-        descriptionElement.addEventListener('dblclick', () => enableEditMode(taskCard, titleElement, descriptionElement, taskDateElement, timeSpentElement, projectElement, editButton));
+        // Dblclick on description won't work if it's not in the DOM, but edit button is primary.
+        // descriptionElement.addEventListener('dblclick', () => enableEditMode(taskCard, titleElement, descriptionElement, taskDateElement, timeSpentElement, projectElement, editButton));
         deleteButton.addEventListener('click', () => deleteTask(taskCard));
 
         return taskCard;
@@ -457,10 +492,20 @@ document.addEventListener('DOMContentLoaded', () => {
     //     });
     // }
 
-    async function fetchAndRenderInitialTasks() {
+    async function fetchAndRenderInitialTasks(projectId = 'all') { // Default to 'all'
+        // Clear existing tasks from all columns
+        if (todoTasks) todoTasks.innerHTML = '';
+        if (inprogressTasks) inprogressTasks.innerHTML = '';
+        if (blockerTasks) blockerTasks.innerHTML = '';
+        if (doneTasks) doneTasks.innerHTML = '';
+
+        let apiUrl = '/api/kanban_tasks/';
+        if (projectId && projectId !== 'all') {
+            apiUrl += `?project_id=${projectId}`;
+        }
+
         try {
-            // Adjust the URL if your users app is namespaced in Django URLs, e.g., /users/api/kanban_tasks/
-            const response = await fetch('/api/kanban_tasks/');
+            const response = await fetch(apiUrl);
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
@@ -468,14 +513,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
             tasks.forEach(task => {
                 const card = renderTask(task);
+                // Ensure task list elements exist before appending
                 if (task.status === 'todo' && todoTasks) {
                     todoTasks.appendChild(card);
                 } else if (task.status === 'inprogress' && inprogressTasks) {
                     inprogressTasks.appendChild(card);
-                } else if (task.status === 'blocker' && blockerTasks) { // Added for Blocker
+                } else if (task.status === 'blocker' && blockerTasks) {
                     blockerTasks.appendChild(card);
                 } else if (task.status === 'done' && doneTasks) {
                     doneTasks.appendChild(card);
+                } else {
+                    console.warn(`Task column for status '${task.status}' not found or task list element is null.`);
                 }
             });
         } catch (error) {
@@ -484,7 +532,20 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    fetchAndRenderInitialTasks(); // Call this function when DOM is loaded
+    // --- Event Listener for Project Filter ---
+    if (projectFilterSelect) {
+        projectFilterSelect.addEventListener('change', (event) => {
+            const selectedProjectId = event.target.value;
+            fetchAndRenderInitialTasks(selectedProjectId);
+        });
+    }
+
+    // Initial load of tasks (defaulting to "All Projects" or whatever is selected)
+    if (projectFilterSelect) {
+        fetchAndRenderInitialTasks(projectFilterSelect.value);
+    } else {
+        fetchAndRenderInitialTasks(); // Fallback if filter select somehow isn't there
+    }
 
 
     function deleteTask(taskCard) {
@@ -719,10 +780,15 @@ document.addEventListener('DOMContentLoaded', () => {
         const form = document.createElement('div');
         form.className = 'new-task-form task-card';
 
+        // Determine current project filter selection
+        const currentProjectFilterValue = projectFilterSelect ? projectFilterSelect.value : 'all';
+
         let projectOptionsHtml = '<option value="">-- Select Project --</option>';
         if (typeof kanban_projects !== 'undefined' && Array.isArray(kanban_projects)) {
             kanban_projects.forEach(proj => {
-                projectOptionsHtml += `<option value="${proj.id}">${proj.name}</option>`;
+                // Pre-select if it matches the main project filter and is not "all"
+                const isSelected = (currentProjectFilterValue !== 'all' && String(proj.id) === currentProjectFilterValue);
+                projectOptionsHtml += `<option value="${proj.id}" ${isSelected ? 'selected' : ''}>${proj.name}</option>`;
             });
         } else {
             console.warn('kanban_projects variable is not defined for new task form. Project dropdown will be empty.');

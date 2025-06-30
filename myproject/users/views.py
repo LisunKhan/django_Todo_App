@@ -484,20 +484,35 @@ def api_get_kanban_tasks(request):
     API endpoint to fetch all tasks for the logged-in user,
     formatted for the Kanban board.
     """
-    user_tasks = TodoItem.objects.filter(user=request.user).order_by('created_at') # Or any preferred order
+    user_tasks_query = TodoItem.objects.filter(user=request.user).select_related('user__profile', 'project').order_by('created_at')
+
+    project_id_filter = request.GET.get('project_id')
+    if project_id_filter and project_id_filter.lower() != 'all' and project_id_filter.isdigit():
+        user_tasks_query = user_tasks_query.filter(project_id=project_id_filter)
 
     tasks_data = []
-    for task in user_tasks:
+    for task in user_tasks_query:
+        profile_picture_url = None
+        if hasattr(task.user, 'profile') and task.user.profile.profile_picture:
+            profile_picture_url = task.user.profile.profile_picture.url
+        # else:
+            # Optionally, set a default placeholder image URL here
+            # profile_picture_url = '/static/images/default_avatar.png'
+
         tasks_data.append({
             "id": task.id,
             "title": task.title,
-            "description": task.description,
+            "description": task.description, # Still needed for edit functionality
             "status": task.status,
             "get_status_display": task.get_status_display(),
             "task_date": task.task_date.strftime('%Y-%m-%d') if task.task_date else None,
             "time_spent_hours": task.time_spent_hours,
             "project_id": task.project.id if task.project else None,
             "project_name": task.project.name if task.project else None,
+            "user": {
+                "username": task.user.username,
+                "profile_picture_url": profile_picture_url
+            }
         })
 
     return JsonResponse(tasks_data, safe=False)
