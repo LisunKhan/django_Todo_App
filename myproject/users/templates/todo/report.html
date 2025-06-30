@@ -32,7 +32,6 @@
         <div class="col-md-3">
             <label for="statusFilter" class="form-label">Status</label>
             <select class="form-select" id="statusFilter" name="status">
-                <option value="">All Statuses</option>
                 {% for status in status_options %}
                     <option value="{{ status.value }}" {% if selected_status == status.value %}selected{% endif %}>{{ status.display }}</option>
                 {% endfor %}
