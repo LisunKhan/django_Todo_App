@@ -173,6 +173,13 @@
 
 {{ all_projects|json_script:"all-projects-data" }}
 
+<style>
+    /* Hide the original inline edit button */
+    .inline-edit-btn {
+        display: none !important;
+    }
+</style>
+
 <script>
     // Make all_projects available to JavaScript if passed in context
     var all_projects = []; // Default to empty array
@@ -433,25 +440,23 @@ document.addEventListener('DOMContentLoaded', function () {
         const todoId = row.dataset.id;
 
         // Handle "Inline Edit" button click
-        if (target.classList.contains('inline-edit-btn')) {
-            if (row.classList.contains('editing')) return; // Already editing
-            enterEditMode(row, target);
-        }
+        // if (target.classList.contains('inline-edit-btn')) { // Original logic for button
+        //     if (row.classList.contains('editing')) return;
+        //     enterEditMode(row, target); // target here was the edit button
+        // }
         // Handle "Save" button click
-        else if (target.classList.contains('save-btn')) {
+        if (target.classList.contains('save-btn')) {
             saveChanges(row, todoId);
         }
         // Handle "Cancel" button click
         else if (target.classList.contains('cancel-btn')) {
             cancelEditMode(row);
         }
-        // Handle "Delete" button click (if missed by the above specific check, e.g. if row.dataset.id was initially null but button is valid)
-        // This is a fallback, the primary check for delete is above.
+        // Handle "Delete" button click (already handled above, this is a fallback)
         else if (target.classList.contains('delete-todo-btn')) {
-             event.preventDefault();
+            // This logic is mostly covered by the initial check, but keeping it as a safeguard
+            event.preventDefault();
             const deleteUrl = target.dataset.deleteUrl;
-            // const specificRowToRemove = target.closest('tr'); // Already have 'row'
-
             Swal.fire({
                 title: 'Are you sure?',
                 text: "You won't be able to revert this!",
@@ -493,18 +498,48 @@ document.addEventListener('DOMContentLoaded', function () {
                 }
             });
         }
+        // New: Handle click on TD for inline editing
+        else if (target.tagName === 'TD' && !row.classList.contains('editing')) {
+            // Avoid triggering edit mode if clicking on a link, button, or any form element within the TD
+            const isInteractiveElement = target.querySelector('a, button, input, select, textarea') ||
+                                         event.target.closest('a, button, input, select, textarea');
+            if (isInteractiveElement && isInteractiveElement !== target) { // Click was on child interactive element
+                 // console.log('Clicked on interactive child, not entering edit mode.');
+                return;
+            }
+            if (target.closest('.actions-cell')) { // Assuming actions cell has a class or check last child
+                 // console.log('Clicked on actions cell, not entering edit mode.');
+                return;
+            }
+
+            // Find the original edit button to pass to enterEditMode, or null if not needed
+            // For now, enterEditMode is adapted to not strictly need it if it's hidden.
+            // const originalEditButton = row.querySelector('.inline-edit-btn'); // May be hidden
+            enterEditMode(row);
+        }
     });
 
-    function enterEditMode(row, editButton) {
+    function enterEditMode(row) {
         row.classList.add('editing');
-        row.dataset.originalHtml = {}; // Store original values for cancel
+        // row.dataset.originalHtml = {}; // This was not used, using specific data attributes instead
 
         // Title
         const titleCell = row.querySelector('td[data-field="title"]');
         const titleLink = titleCell.querySelector('a');
         const currentTitle = titleLink ? titleLink.textContent : titleCell.textContent.trim();
         row.dataset.originalHtmlTitle = titleCell.innerHTML;
-        titleCell.innerHTML = `<input type="text" class="form-control form-control-sm" value="${currentTitle}">`;
+        const titleInput = document.createElement('input');
+        titleInput.type = 'text';
+        titleInput.className = 'form-control form-control-sm';
+        titleInput.value = currentTitle;
+        titleInput.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                saveChanges(row, row.dataset.id);
+            }
+        });
+        titleCell.innerHTML = '';
+        titleCell.appendChild(titleInput);
 
         // Description
         const descriptionCell = row.querySelector('td[data-field="description"]');
@@ -517,7 +552,19 @@ document.addEventListener('DOMContentLoaded', function () {
         const currentTimeText = timeCell.textContent.trim().replace('h', '');
         const currentTime = parseFloat(currentTimeText) || 0;
         row.dataset.originalHtmlTime = timeCell.innerHTML;
-        timeCell.innerHTML = `<input type="number" step="0.1" class="form-control form-control-sm" value="${currentTime}">`;
+        const timeInput = document.createElement('input');
+        timeInput.type = 'number';
+        timeInput.step = '0.1';
+        timeInput.className = 'form-control form-control-sm';
+        timeInput.value = currentTime;
+        timeInput.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                saveChanges(row, row.dataset.id);
+            }
+        });
+        timeCell.innerHTML = '';
+        timeCell.appendChild(timeInput);
 
         // Task Date
         const taskDateCell = row.querySelector('td[data-field="task_date"]');
@@ -526,7 +573,18 @@ document.addEventListener('DOMContentLoaded', function () {
         // The existing display format is "Y-m-d", which is compatible.
         const taskDateForInput = currentTaskDate === "N/A" ? "" : currentTaskDate;
         row.dataset.originalHtmlTaskDate = taskDateCell.innerHTML;
-        taskDateCell.innerHTML = `<input type="date" class="form-control form-control-sm" value="${taskDateForInput}">`;
+        const taskDateInput = document.createElement('input');
+        taskDateInput.type = 'date';
+        taskDateInput.className = 'form-control form-control-sm';
+        taskDateInput.value = taskDateForInput;
+        taskDateInput.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                saveChanges(row, row.dataset.id);
+            }
+        });
+        taskDateCell.innerHTML = '';
+        taskDateCell.appendChild(taskDateInput);
 
         // Status
         const statusCell = row.querySelector('td[data-field="status"]');
@@ -538,7 +596,20 @@ document.addEventListener('DOMContentLoaded', function () {
                 <option value="inprogress" ${currentStatusValue === 'inprogress' ? 'selected' : ''}>In Progress</option>
                 <option value="blocker" ${currentStatusValue === 'blocker' ? 'selected' : ''}>Blocker</option>
                 <option value="done" ${currentStatusValue === 'done' ? 'selected' : ''}>Done</option>
-            </select>`;
+            </select>
+        `;
+        const statusSelect = statusCell.querySelector('select');
+        statusSelect.addEventListener('keydown', function(e) { // Changed from change to keydown for Enter
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                saveChanges(row, row.dataset.id);
+            }
+        });
+        // Also save on change for select elements, as users might expect that
+        statusSelect.addEventListener('change', function(e) {
+            saveChanges(row, row.dataset.id);
+        });
+
 
         // Project
         const projectCell = row.querySelector('td[data-field="project"]');
@@ -568,10 +639,37 @@ document.addEventListener('DOMContentLoaded', function () {
             }
         }
         projectCell.innerHTML = `<select class="form-select form-select-sm">${projectOptionsHtml}</select>`;
+        const projectSelect = projectCell.querySelector('select');
+        projectSelect.addEventListener('keydown', function(e) { // Changed from change to keydown for Enter
+             if (e.key === 'Enter') {
+                e.preventDefault();
+                saveChanges(row, row.dataset.id);
+            }
+        });
+        // Also save on change for select elements
+        projectSelect.addEventListener('change', function(e) {
+            saveChanges(row, row.dataset.id);
+        });
 
         // Change buttons
-        const actionsCell = editButton.closest('td');
-        row.dataset.originalHtmlActions = actionsCell.innerHTML;
+        const actionsCell = row.querySelector('td:last-child'); // Assume actions cell is always last
+        // If editButtonOrNull was passed and is valid, use it to find actionsCell for robustness
+        // const actionsCell = editButtonOrNull ? editButtonOrNull.closest('td') : row.querySelector('td:last-child');
+
+        // Store original actions HTML. This needs to be the actual buttons, not the inputs.
+        // The original inline-edit-btn is hidden by CSS. We need to reconstruct the original action buttons' HTML.
+        // This part might need to be more robust if the original HTML is complex.
+        // For now, we'll assume it's the standard set of buttons (edit, delete, etc.)
+        // If we are removing the inline-edit-btn permanently, this will be simpler.
+        if (!row.dataset.originalHtmlActions) { // Store only if not already stored (e.g. from a previous edit attempt)
+            // Let's capture the state of the action buttons as they are *before* we change them to Save/Cancel
+            // The inline-edit-btn is hidden, so we want the Edit Page and Delete buttons.
+            const editPageBtnHTML = actionsCell.querySelector('a[href*="/edit/"]')?.outerHTML || '';
+            const deleteBtnHTML = actionsCell.querySelector('.delete-todo-btn')?.outerHTML || '';
+            // The hidden inline-edit-btn is not needed here for restoration if we are moving away from it.
+            row.dataset.originalHtmlActions = `${editPageBtnHTML} ${deleteBtnHTML}`.trim();
+        }
+
         actionsCell.innerHTML = `
             <button type="button" class="btn btn-sm btn-success me-1 save-btn">Save</button>
             <button type="button" class="btn btn-sm btn-warning cancel-btn">Cancel</button>
