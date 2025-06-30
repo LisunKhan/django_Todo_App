@@ -581,7 +581,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const descriptionTextarea = document.createElement('textarea');
         descriptionTextarea.value = originalDescription;
-        taskCard.insertBefore(descriptionTextarea, descriptionElement);
+        // taskCard.insertBefore(descriptionTextarea, descriptionElement);
+        if (taskCard.contains(descriptionElement) && descriptionElement.parentNode === taskCard) {
+            taskCard.insertBefore(descriptionTextarea, descriptionElement);
+        } else {
+            taskCard.appendChild(descriptionTextarea);
+        }
         descriptionElement.style.display = 'none';
 
         // Create and setup Task Date input
