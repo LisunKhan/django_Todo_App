@@ -50,11 +50,18 @@ class TodoForm(forms.ModelForm):
         fields = ['title', 'description', 'project', 'status', 'task_date']
 
     def __init__(self, *args, **kwargs):
-        # It's good practice to pop custom kwargs before calling super if they are not expected by the parent.
-        # However, in this case, 'user' is not a custom kwarg to __init__ but rather used later.
-        # If we were passing a 'user' kwarg to filter project choices, it would be handled here.
-        # For instance: user = kwargs.pop('user', None)
+        # Pop 'user' from kwargs before calling super(), as ModelForm doesn't expect it.
+        user = kwargs.pop('user', None)
         super().__init__(*args, **kwargs) # Populates self.initial for fields in Meta.fields
+
+        if user:
+            from .models import Project # Local import to avoid circular dependency if Project model imports forms
+            from django.db.models import Q # For OR queries
+            # Filter projects to those owned by or member of the user
+            user_projects = Project.objects.filter(
+                Q(owner=user) | Q(members=user)
+            ).distinct().order_by('name')
+            self.fields['project'].queryset = user_projects
 
         # Set the initial value for 'time_spent_hours' in the form's initial data dictionary.
         if self.instance and self.instance.pk and self.instance.time_spent is not None:

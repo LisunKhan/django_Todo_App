@@ -38,9 +38,12 @@ from .models import Project # Make sure Project is imported
 def todo_list(request):
     todo_items = TodoItem.objects.filter(user=request.user)
 
-    # Fetch all projects for dropdowns in the template
-    projects = Project.objects.all()
-    all_projects_data = [{'id': p.id, 'name': p.name} for p in projects]
+    # Fetch projects for dropdowns in the template, filtered by user's ownership or membership
+    current_user = request.user
+    user_projects = Project.objects.filter(
+        Q(owner=current_user) | Q(members=current_user)
+    ).distinct().order_by('name')
+    all_projects_data = [{'id': p.id, 'name': p.name} for p in user_projects]
 
     # Search
     query = request.GET.get('q')
@@ -105,11 +108,13 @@ def add_todo(request):
         if is_ajax:
             try:
                 data = json.loads(request.body)
-                form = TodoForm(data) # Pass data to form
+                # Pass user to form for project filtering if applicable
+                form = TodoForm(data, user=request.user)
             except json.JSONDecodeError:
                 return JsonResponse({'success': False, 'error': 'Invalid JSON.'}, status=400)
         else:
-            form = TodoForm(request.POST)
+            # Pass user to form for project filtering
+            form = TodoForm(request.POST, user=request.user)
 
         if form.is_valid():
             todo = form.save(commit=False)
@@ -140,7 +145,8 @@ def add_todo(request):
                 # For non-AJAX, re-render the page with form and errors
                 return render(request, 'todo/add_todo.html', {'form': form})
     else: # GET request
-        form = TodoForm()
+        # Pass user to form for project filtering for GET requests as well
+        form = TodoForm(user=request.user)
         if is_ajax:
             # Typically, a GET to an 'add' endpoint via AJAX might not be standard,
             # but if needed, could return form structure or similar.
@@ -232,9 +238,12 @@ def task_report(request):
     status_options = [{'value': choice[0], 'display': choice[1]} for choice in TodoItem.STATUS_CHOICES]
     status_options.insert(0, {'value': '', 'display': 'All Statuses'}) # Option to clear filter
 
-    # Get all projects for filter dropdown
-    all_projects = Project.objects.all().order_by('name')
-    project_options = [{'id': p.id, 'name': p.name} for p in all_projects]
+    # Get projects for filter dropdown, filtered by user's ownership or membership
+    current_user = request.user
+    user_projects = Project.objects.filter(
+        Q(owner=current_user) | Q(members=current_user)
+    ).distinct().order_by('name')
+    project_options = [{'id': p.id, 'name': p.name} for p in user_projects]
 
     # Pagination for the displayed tasks
     paginator = Paginator(tasks_for_display, 10) # Show 10 tasks per page
@@ -259,12 +268,14 @@ def task_report(request):
 def edit_todo(request, todo_id):
     todo = get_object_or_404(TodoItem, id=todo_id, user=request.user)
     if request.method == 'POST':
-        form = TodoForm(request.POST, instance=todo)
+        # Pass user to form for project filtering
+        form = TodoForm(request.POST, instance=todo, user=request.user)
         if form.is_valid():
             form.save()
             return redirect(reverse('todo_detail', args=[todo.id]))
     else:
-        form = TodoForm(instance=todo)
+        # Pass user to form for project filtering
+        form = TodoForm(instance=todo, user=request.user)
     return render(request, 'todo/edit_todo.html', {'form': form, 'todo': todo})
 
 import json
@@ -294,19 +305,21 @@ def inline_edit_todo(request, todo_id):
             else:
                 try:
                     project_id_int = int(project_id_val)
-                    # Optional: Check if project exists and user has access
-                    # from .models import Project
-                    # project_instance = Project.objects.get(id=project_id_int)
-                    # if not request.user.is_superuser and request.user not in project_instance.members.all():
-                    #    return JsonResponse({'success': False, 'error': 'User does not have access to this project.'}, status=403)
-                    todo.project_id = project_id_int
+                    # Check if project exists and user has access (owner or member)
+                    user_accessible_projects = Project.objects.filter(
+                        Q(owner=request.user) | Q(members=request.user)
+                    ).distinct()
+
+                    project_instance = get_object_or_404(user_accessible_projects, id=project_id_int)
+                    todo.project = project_instance # Assign the validated project instance
                 except ValueError:
                     return JsonResponse({'success': False, 'error': 'Invalid project_id format.'}, status=400)
-                # except Project.DoesNotExist:
-                #     return JsonResponse({'success': False, 'error': 'Project not found.'}, status=404)
+                except Project.DoesNotExist:
+                     # This error will be raised by get_object_or_404 if project_id_int is not in user_accessible_projects
+                    return JsonResponse({'success': False, 'error': 'Project not found or user does not have access.'}, status=404)
                 except Exception as e:
                     # Log error e for server-side inspection
-                    return JsonResponse({'success': False, 'error': f'Could not assign project: {str(e)}'}, status=400)
+                    return JsonResponse({'success': False, 'error': f'Could not assign project: {str(e)}'}, status=500) # 500 for unexpected
         # If 'project_id' is not in data, todo.project remains unchanged by this block.
 
         task_date_str = data.get('task_date')
@@ -458,11 +471,16 @@ def kanban_board_view(request):
 
     # For now, just render the template. The JS will handle task creation/display.
 
-    # Fetch projects for the Kanban board's new/edit task forms
-    projects = Project.objects.all()
+    # Fetch projects for the Kanban board's new/edit task forms,
+    # filtered by user's ownership or membership.
+    current_user = request.user
+    user_projects = Project.objects.filter(
+        Q(owner=current_user) | Q(members=current_user)
+    ).distinct().order_by('name')
+
     # The template kanban_board.html expects 'kanban_projects_json' for the json_script,
     # which will then be parsed into 'kanban_projects' JS array of objects.
-    kanban_projects_data = [{'id': p.id, 'name': p.name} for p in projects]
+    kanban_projects_data = [{'id': p.id, 'name': p.name} for p in user_projects]
 
     context = {
         'kanban_projects_json': kanban_projects_data
@@ -481,23 +499,62 @@ from django.contrib.auth.views import redirect_to_login
 @login_required
 def api_get_kanban_tasks(request):
     """
-    API endpoint to fetch all tasks for the logged-in user,
+    API endpoint to fetch all tasks for projects the logged-in user is part of (owner or member),
     formatted for the Kanban board.
     """
-    user_tasks = TodoItem.objects.filter(user=request.user).order_by('created_at') # Or any preferred order
+    current_user = request.user
+
+    # Find projects where the user is an owner or a member
+    # Q objects are used to combine queries with OR
+    user_projects = Project.objects.filter(
+        Q(owner=current_user) | Q(members=current_user)
+    ).distinct()
+
+    if not user_projects.exists():
+        # If the user is not part of any projects, return an empty list
+        return JsonResponse([], safe=False)
+
+    # Filter tasks that belong to these projects
+    # Also, ensure tasks are selected with related user profile and project for efficiency
+    # and ordered by creation date.
+    tasks_query = TodoItem.objects.filter(project__in=user_projects).select_related('user__profile', 'project').order_by('created_at')
+
+    # Apply the project filter from the request, if any
+    project_id_filter = request.GET.get('project_id')
+    if project_id_filter and project_id_filter.lower() != 'all' and project_id_filter.isdigit():
+        # Ensure the filtered project is one of the user's projects
+        # This prevents users from accessing tasks of projects they are not part of via the filter
+        if user_projects.filter(id=project_id_filter).exists():
+            tasks_query = tasks_query.filter(project_id=project_id_filter)
+        else:
+            # If the user tries to filter by a project they are not part of,
+            # return an empty list or handle as an error.
+            # For simplicity, returning empty list of tasks.
+            return JsonResponse([], safe=False)
 
     tasks_data = []
-    for task in user_tasks:
+    for task in tasks_query:
+        profile_picture_url = None
+        if hasattr(task.user, 'profile') and task.user.profile.profile_picture:
+            profile_picture_url = task.user.profile.profile_picture.url
+        # else:
+            # Optionally, set a default placeholder image URL here
+            # profile_picture_url = '/static/images/default_avatar.png'
+
         tasks_data.append({
             "id": task.id,
             "title": task.title,
-            "description": task.description,
+            "description": task.description, # Still needed for edit functionality
             "status": task.status,
             "get_status_display": task.get_status_display(),
             "task_date": task.task_date.strftime('%Y-%m-%d') if task.task_date else None,
             "time_spent_hours": task.time_spent_hours,
             "project_id": task.project.id if task.project else None,
             "project_name": task.project.name if task.project else None,
+            "user": {
+                "username": task.user.username,
+                "profile_picture_url": profile_picture_url
+            }
         })
 
     return JsonResponse(tasks_data, safe=False)
