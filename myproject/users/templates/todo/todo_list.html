@@ -75,11 +75,44 @@
     </div>
 </div>
 
-<!-- Search Form -->
-<form method="get" action="{% url 'todo_list' %}" class="mb-3">
-    <div class="input-group">
-        <input type="text" name="q" class="form-control" placeholder="Search tasks..." value="{{ request.GET.q | default:'' }}">
-        <button class="btn btn-outline-secondary" type="submit">Search</button>
+<!-- Search and Filter Form -->
+<form id="todoSearchForm" method="get" action="{% url 'todo_list' %}" class="mb-3">
+    <div class="row g-2 align-items-end mb-3">
+        <div class="col-lg-3 col-md-12">
+            <label for="q_search_todo" class="form-label mb-1">Search Tasks</label>
+            <div class="input-group input-group-sm">
+                <input type="text" id="q_search_todo" name="q" class="form-control form-control-sm" placeholder="Min 3 chars..." value="{{ query | default:'' }}">
+                <!-- Search button is hidden by #todoSearchForm button[type="submit"] -->
+            </div>
+        </div>
+        <div class="col-lg-2 col-md-6 col-sm-12">
+            <label for="startDate" class="form-label mb-1">Start Date</label>
+            <input type="date" class="form-control form-control-sm" id="startDate" name="start_date" value="{{ selected_start_date | default:'' }}">
+        </div>
+        <div class="col-lg-2 col-md-6 col-sm-12">
+            <label for="endDate" class="form-label mb-1">End Date</label>
+            <input type="date" class="form-control form-control-sm" id="endDate" name="end_date" value="{{ selected_end_date | default:'' }}">
+        </div>
+        <div class="col-lg-2 col-md-6 col-sm-12">
+            <label for="statusFilter" class="form-label mb-1">Status</label>
+            <select class="form-select form-select-sm" id="statusFilter" name="status">
+                {% for status_opt in status_options %}
+                    <option value="{{ status_opt.value }}" {% if selected_status == status_opt.value %}selected{% endif %}>{{ status_opt.display }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-lg-2 col-md-6 col-sm-12">
+            <label for="projectFilter" class="form-label mb-1">Project</label>
+            <select class="form-select form-select-sm" id="projectFilter" name="project">
+                <option value="">All Projects</option>
+                {% for project_opt in all_projects %} {# Assuming all_projects is a list of dicts with id and name #}
+                    <option value="{{ project_opt.id }}" {% if selected_project_id == project_opt.id %}selected{% endif %}>{{ project_opt.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-lg-1 col-md-12">
+            <a href="{% url 'todo_list' %}" class="btn btn-secondary btn-sm w-100 mt-md-0 mt-2">Reset Filters</a>
+        </div>
     </div>
 </form>
 
@@ -87,24 +120,24 @@
     <thead>
         <tr>
             <th>
-                <a href="?order_by={% if request.GET.order_by == 'title' %}-title{% else %}title{% endif %}&q={{ request.GET.q | default:'' }}">
+                <a href="?order_by={% if request.GET.order_by == 'title' %}-title{% else %}title{% endif %}&q={{ query | default:'' }}&start_date={{ selected_start_date|default:'' }}&end_date={{ selected_end_date|default:'' }}&status={{ selected_status|default:'' }}&project={{ selected_project_id|default:'' }}">
                     Title {% if request.GET.order_by == 'title' %}▲{% elif request.GET.order_by == '-title' %}▼{% endif %}
                 </a>
             </th>
             <th>Description</th> {# Assuming description is not a primary sort field #}
             <th>Time Spent (hours)</th>
             <th>
-                <a href="?order_by={% if request.GET.order_by == 'task_date' %}-task_date{% else %}task_date{% endif %}&q={{ request.GET.q | default:'' }}">
+                <a href="?order_by={% if request.GET.order_by == 'task_date' %}-task_date{% else %}task_date{% endif %}&q={{ query | default:'' }}&start_date={{ selected_start_date|default:'' }}&end_date={{ selected_end_date|default:'' }}&status={{ selected_status|default:'' }}&project={{ selected_project_id|default:'' }}">
                     Task Date {% if request.GET.order_by == 'task_date' %}▲{% elif request.GET.order_by == '-task_date' %}▼{% endif %}
                 </a>
             </th>
             <th>
-                <a href="?order_by={% if request.GET.order_by == 'status' %}-status{% else %}status{% endif %}&q={{ request.GET.q | default:'' }}">
+                <a href="?order_by={% if request.GET.order_by == 'status' %}-status{% else %}status{% endif %}&q={{ query | default:'' }}&start_date={{ selected_start_date|default:'' }}&end_date={{ selected_end_date|default:'' }}&status={{ selected_status|default:'' }}&project={{ selected_project_id|default:'' }}">
                     Status {% if request.GET.order_by == 'status' %}▲{% elif request.GET.order_by == '-status' %}▼{% endif %}
                 </a>
             </th>
             <th>
-                <a href="?order_by={% if request.GET.order_by == 'project__name' %}-project__name{% else %}project__name{% endif %}&q={{ request.GET.q | default:'' }}">
+                <a href="?order_by={% if request.GET.order_by == 'project__name' %}-project__name{% else %}project__name{% endif %}&q={{ query | default:'' }}&start_date={{ selected_start_date|default:'' }}&end_date={{ selected_end_date|default:'' }}&status={{ selected_status|default:'' }}&project={{ selected_project_id|default:'' }}">
                     Project {% if request.GET.order_by == 'project__name' %}▲{% elif request.GET.order_by == '-project__name' %}▼{% endif %}
                 </a>
             </th>
@@ -150,8 +183,8 @@
 <nav aria-label="Page navigation">
     <ul class="pagination justify-content-center">
         {% if page_obj.has_previous %}
-            <li class="page-item"><a class="page-link" href="?page=1&q={{ request.GET.q | default:'' }}&order_by={{ request.GET.order_by | default:'task_date' }}">&laquo; First</a></li>
-            <li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}&q={{ request.GET.q | default:'' }}&order_by={{ request.GET.order_by | default:'task_date' }}">Previous</a></li>
+            <li class="page-item"><a class="page-link" href="?page=1&q={{ query | default:'' }}&order_by={{ current_order_by | default:'task_date' }}&start_date={{ selected_start_date|default:'' }}&end_date={{ selected_end_date|default:'' }}&status={{ selected_status|default:'' }}&project={{ selected_project_id|default:'' }}">&laquo; First</a></li>
+            <li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}&q={{ query | default:'' }}&order_by={{ current_order_by | default:'task_date' }}&start_date={{ selected_start_date|default:'' }}&end_date={{ selected_end_date|default:'' }}&status={{ selected_status|default:'' }}&project={{ selected_project_id|default:'' }}">Previous</a></li>
         {% else %}
             <li class="page-item disabled"><span class="page-link">&laquo; First</span></li>
             <li class="page-item disabled"><span class="page-link">Previous</span></li>
@@ -160,8 +193,8 @@
         <li class="page-item disabled"><span class="page-link">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span></li>
 
         {% if page_obj.has_next %}
-            <li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}&q={{ request.GET.q | default:'' }}&order_by={{ request.GET.order_by | default:'task_date' }}">Next</a></li>
-            <li class="page-item"><a class="page-link" href="?page={{ page_obj.paginator.num_pages }}&q={{ request.GET.q | default:'' }}&order_by={{ request.GET.order_by | default:'task_date' }}">Last &raquo;</a></li>
+            <li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}&q={{ query | default:'' }}&order_by={{ current_order_by | default:'task_date' }}&start_date={{ selected_start_date|default:'' }}&end_date={{ selected_end_date|default:'' }}&status={{ selected_status|default:'' }}&project={{ selected_project_id|default:'' }}">Next</a></li>
+            <li class="page-item"><a class="page-link" href="?page={{ page_obj.paginator.num_pages }}&q={{ query | default:'' }}&order_by={{ current_order_by | default:'task_date' }}&start_date={{ selected_start_date|default:'' }}&end_date={{ selected_end_date|default:'' }}&status={{ selected_status|default:'' }}&project={{ selected_project_id|default:'' }}">Last &raquo;</a></li>
         {% else %}
             <li class="page-item disabled"><span class="page-link">Next</span></li>
             <li class="page-item disabled"><span class="page-link">Last &raquo;</span></li>
@@ -177,6 +210,11 @@
     /* Hide the original inline edit button */
     .inline-edit-btn {
         display: none !important;
+    }
+
+    /* Hide the search button in the todo list search form */
+    #todoSearchForm button[type="submit"] {
+        display: none;
     }
 </style>
 
@@ -840,5 +878,48 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 });
+
+    // Automatic search and filter application
+    const todoSearchForm = document.getElementById('todoSearchForm');
+    const searchInput = document.getElementById('q_search_todo'); // Use new ID
+    const startDateInput = document.getElementById('startDate');
+    const endDateInput = document.getElementById('endDate');
+    const statusFilterSelect = document.getElementById('statusFilter');
+    const projectFilterSelect = document.getElementById('projectFilter');
+    let debounceTimer;
+
+    function triggerTodoFormSubmit() {
+        clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(function () {
+            if (todoSearchForm) {
+                todoSearchForm.submit();
+            }
+        }, 500); // 500ms delay
+    }
+
+    if (todoSearchForm) {
+        if (searchInput) {
+            searchInput.addEventListener('input', function () {
+                const query = searchInput.value.trim();
+                if (query.length === 0 || query.length >= 3) {
+                    triggerTodoFormSubmit();
+                } else {
+                    clearTimeout(debounceTimer); // Prevent submission for <3 chars
+                }
+            });
+        }
+        if (startDateInput) {
+            startDateInput.addEventListener('change', triggerTodoFormSubmit);
+        }
+        if (endDateInput) {
+            endDateInput.addEventListener('change', triggerTodoFormSubmit);
+        }
+        if (statusFilterSelect) {
+            statusFilterSelect.addEventListener('change', triggerTodoFormSubmit);
+        }
+        if (projectFilterSelect) {
+            projectFilterSelect.addEventListener('change', triggerTodoFormSubmit);
+        }
+    }
 </script>
 {% endblock %}

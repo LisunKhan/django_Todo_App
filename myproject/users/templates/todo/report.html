@@ -13,42 +13,44 @@
 </div>
 
 <!-- Search Form -->
-<form method="get" action="{% url 'task_report' %}" class="my-3">
-    <div class="input-group">
-        <input type="text" name="q" class="form-control" placeholder="Search tasks..." value="{{ request.GET.q | default:'' }}">
-        <button class="btn btn-outline-secondary" type="submit">Search</button>
-    </div>
-
-    <!-- Filter Controls -->
-    <div class="row mt-3 mb-3">
-        <div class="col-md-3">
-            <label for="startDate" class="form-label">Start Date</label>
-            <input type="date" class="form-control" id="startDate" name="start_date" value="{{ selected_start_date|default:'' }}">
+<form id="reportSearchForm" method="get" action="{% url 'task_report' %}" class="my-3">
+    <!-- Combined Filter Controls -->
+    <div class="row g-2 align-items-end mb-3">
+        <div class="col-lg-3 col-md-12"> <!-- Text search wider on large screens, full width on medium -->
+            <label for="q_search" class="form-label mb-1">Search Tasks</label>
+            <div class="input-group input-group-sm">
+                <input type="text" id="q_search" name="q" class="form-control form-control-sm" placeholder="Min 3 chars..." value="{{ request.GET.q | default:'' }}">
+                <!-- Search button is hidden by #reportSearchForm .input-group button[type="submit"] { display: none; } -->
+            </div>
         </div>
-        <div class="col-md-3">
-            <label for="endDate" class="form-label">End Date</label>
-            <input type="date" class="form-control" id="endDate" name="end_date" value="{{ selected_end_date|default:'' }}">
+        <div class="col-lg-2 col-md-6 col-sm-12">
+            <label for="startDate" class="form-label mb-1">Start Date</label>
+            <input type="date" class="form-control form-control-sm" id="startDate" name="start_date" value="{{ selected_start_date|default:'' }}">
         </div>
-        <div class="col-md-3">
-            <label for="statusFilter" class="form-label">Status</label>
-            <select class="form-select" id="statusFilter" name="status">
+        <div class="col-lg-2 col-md-6 col-sm-12">
+            <label for="endDate" class="form-label mb-1">End Date</label>
+            <input type="date" class="form-control form-control-sm" id="endDate" name="end_date" value="{{ selected_end_date|default:'' }}">
+        </div>
+        <div class="col-lg-2 col-md-6 col-sm-12">
+            <label for="statusFilter" class="form-label mb-1">Status</label>
+            <select class="form-select form-select-sm" id="statusFilter" name="status">
                 {% for status in status_options %}
                     <option value="{{ status.value }}" {% if selected_status == status.value %}selected{% endif %}>{{ status.display }}</option>
                 {% endfor %}
             </select>
         </div>
-        <div class="col-md-3">
-            <label for="projectFilter" class="form-label">Project</label>
-            <select class="form-select" id="projectFilter" name="project">
+        <div class="col-lg-2 col-md-6 col-sm-12">
+            <label for="projectFilter" class="form-label mb-1">Project</label>
+            <select class="form-select form-select-sm" id="projectFilter" name="project">
                 <option value="">All Projects</option>
                 {% for project in project_options %}
                     <option value="{{ project.id }}" {% if selected_project_id == project.id %}selected{% endif %}>{{ project.name }}</option>
                 {% endfor %}
             </select>
         </div>
-        <div class="col-md-3 d-flex align-items-end">
-            <button class="btn btn-primary w-50 me-2" type="submit">Apply Filters</button>
-            <a href="{% url 'task_report' %}" class="btn btn-secondary w-50">Reset Filters</a>
+        <div class="col-lg-1 col-md-12">
+            <button id="applyFiltersBtn" class="btn btn-primary btn-sm me-2" type="submit" style="display: none;">Apply Filters</button> <!-- Already hidden by CSS but good to be explicit -->
+            <a href="{% url 'task_report' %}" class="btn btn-secondary btn-sm w-100 mt-md-0 mt-2">Reset Filters</a> <!-- mt-md-0 mt-2 for spacing when stacked -->
         </div>
     </div>
 </form>
@@ -134,4 +136,64 @@
 </nav>
 
 <a href="{% url 'todo_list' %}" class="btn btn-primary mt-3">Back to Todo List</a>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    // Automatic search for the main search bar
+    const reportSearchForm = document.getElementById('reportSearchForm');
+    const searchInput = reportSearchForm ? reportSearchForm.querySelector('input[name="q"]') : null;
+    let debounceTimer; // Shared debounce timer
+
+    function triggerFormSubmit() {
+        clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(function () {
+            if (reportSearchForm) {
+                reportSearchForm.submit();
+            }
+        }, 500); // 500ms delay
+    }
+
+    if (reportSearchForm && searchInput) {
+        searchInput.addEventListener('input', function () {
+            const query = searchInput.value.trim();
+            if (query.length === 0 || query.length >= 3) {
+                triggerFormSubmit();
+            } else {
+                // If query is 1 or 2 chars, clear previous timer to prevent submission
+                clearTimeout(debounceTimer);
+            }
+        });
+    }
+
+    // Automatic submission for other filters
+    const startDateInput = document.getElementById('startDate');
+    const endDateInput = document.getElementById('endDate');
+    const statusFilterSelect = document.getElementById('statusFilter');
+    const projectFilterSelect = document.getElementById('projectFilter');
+
+    if (startDateInput) {
+        startDateInput.addEventListener('change', triggerFormSubmit);
+    }
+    if (endDateInput) {
+        endDateInput.addEventListener('change', triggerFormSubmit);
+    }
+    if (statusFilterSelect) {
+        statusFilterSelect.addEventListener('change', triggerFormSubmit);
+    }
+    if (projectFilterSelect) {
+        projectFilterSelect.addEventListener('change', triggerFormSubmit);
+    }
+});
+</script>
+<style>
+    /* Hide the search button in the report page's main query search form */
+    #reportSearchForm .input-group button[type="submit"] {
+        display: none;
+    }
+
+    /* Hide the 'Apply Filters' button */
+    #applyFiltersBtn {
+        display: none;
+    }
+</style>
 {% endblock %}
