@@ -1,20 +1,21 @@
 from django.db import models
 from django.contrib.auth.models import User
 from django.utils import timezone
+from django.db.models import Sum
 
 # Create your models here.
-class TodoItem(models.Model):
+class Task(models.Model):
     """
-    The TodoItem model (also referred to as the Task model) represents a user's task or to-do item.
-    It tracks the user, title, description, time spent (in minutes), creation and update timestamps,
-    an optional task date, and the current status (To Do, In Progress, or Done). Developers may see
-    this model referenced as either TodoItem or Task in documentation or code.
+    The Task model represents a user's task.
+    It tracks the user, title, description, estimation time, total spent hours,
+    creation and update timestamps, an optional task date, and the current status.
     """
-    user = models.ForeignKey(User, on_delete=models.CASCADE, default=1) # Consider if default=1 is still appropriate
-    title = models.CharField(max_length=100)
-    description = models.TextField()
-    project = models.ForeignKey('Project', on_delete=models.SET_NULL, null=True, blank=True, related_name='todo_items')
-    time_spent = models.IntegerField(default=0)  # Stored in minutes
+    user = models.ForeignKey(User, on_delete=models.CASCADE, default=1)
+    title = models.CharField(max_length=255)
+    description = models.TextField(blank=True)
+    project = models.ForeignKey('Project', on_delete=models.SET_NULL, null=True, blank=True, related_name='tasks')
+    estimation_time = models.FloatField(default=0)  # in hours
+    total_spent_hours = models.FloatField(default=0)  # calculated field
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     task_date = models.DateField(null=True, blank=True)
@@ -31,14 +32,23 @@ class TodoItem(models.Model):
         default='todo',
     )
 
-    @property
-    def time_spent_hours(self):
-        if self.time_spent is None:
-            return 0
-        return self.time_spent / 60
-
     def __str__(self):
         return self.title
+
+    def update_total_spent_hours(self):
+        total = self.logs.aggregate(Sum('spent_time'))['spent_time__sum'] or 0
+        self.total_spent_hours = total
+        self.save(update_fields=['total_spent_hours'])
+
+class TaskLog(models.Model):
+    task = models.ForeignKey(Task, related_name='logs', on_delete=models.CASCADE)
+    spent_time = models.FloatField()  # in hours
+    task_date = models.DateField()
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"Log for {self.task.title} on {self.task_date}"
 
 # Project and ProjectMembership Models
 
@@ -93,3 +103,13 @@ def create_or_update_user_profile(sender, instance, created, **kwargs):
             # For a simple UserProfile like this one, it might not be strictly needed
             # unless there are fields on UserProfile that are updated by its save() method.
             pass # Or profile.save() if specific conditions require it.
+
+@receiver(post_save, sender=TaskLog)
+def update_task_total_spent_on_save(sender, instance, **kwargs):
+    instance.task.update_total_spent_hours()
+
+from django.db.models.signals import post_delete
+
+@receiver(post_delete, sender=TaskLog)
+def update_task_total_spent_on_delete(sender, instance, **kwargs):
+    instance.task.update_total_spent_hours()

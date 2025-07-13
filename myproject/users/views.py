@@ -2,8 +2,8 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import login
 from .forms import CustomUserCreationForm, CustomAuthenticationForm
 from django.contrib.auth.decorators import login_required
-from .models import TodoItem, UserProfile
-from .forms import TodoForm
+from .models import Task, TaskLog, UserProfile
+from .forms import TaskForm, TaskLogForm
 from django.db.models import Sum, Q
 from django.urls import reverse
 from django.core.paginator import Paginator
@@ -27,7 +27,7 @@ def user_login(request):
         if form.is_valid():
             user = form.get_user()
             login(request, user)
-            return redirect('todo_list')
+            return redirect('task_list')
     else:
         form = CustomAuthenticationForm()
     return render(request, 'registration/login.html', {'form': form})
@@ -35,195 +35,137 @@ def user_login(request):
 from .models import Project # Make sure Project is imported
 
 @login_required
-def todo_list(request):
-    todo_items = TodoItem.objects.filter(user=request.user)
+def task_list(request):
+    tasks = Task.objects.filter(user=request.user)
 
-    # Fetch projects for dropdowns in the template, filtered by user's ownership or membership
     current_user = request.user
     user_projects = Project.objects.filter(
         Q(owner=current_user) | Q(members=current_user)
     ).distinct().order_by('name')
     all_projects_data = [{'id': p.id, 'name': p.name} for p in user_projects]
 
-    # Search
     query = request.GET.get('q')
     if query:
-        todo_items = todo_items.filter(
+        tasks = tasks.filter(
             Q(title__icontains=query) |
             Q(description__icontains=query) |
             Q(project__name__icontains=query)
         )
 
-    # Ordering
-    order_by = request.GET.get('order_by', 'task_date') # Default order by task_date
-    # Update allowed_ordering_fields to use 'status' instead of 'completed'
+    order_by = request.GET.get('order_by', 'task_date')
     allowed_ordering_fields = ['title', 'task_date', 'status', 'project__name',
                                '-title', '-task_date', '-status', '-project__name']
     if order_by not in allowed_ordering_fields:
-        order_by = 'task_date' # Fallback to default if invalid field is provided
+        order_by = 'task_date'
 
-    # Get new filter parameters
     status_filter = request.GET.get('status', '')
     start_date_filter = request.GET.get('start_date', '')
     end_date_filter = request.GET.get('end_date', '')
     project_filter_id = request.GET.get('project', '')
 
-    # Apply new filters
     if status_filter:
-        todo_items = todo_items.filter(status=status_filter)
+        tasks = tasks.filter(status=status_filter)
     if start_date_filter:
-        todo_items = todo_items.filter(task_date__gte=start_date_filter)
+        tasks = tasks.filter(task_date__gte=start_date_filter)
     if end_date_filter:
-        todo_items = todo_items.filter(task_date__lte=end_date_filter)
+        tasks = tasks.filter(task_date__lte=end_date_filter)
     if project_filter_id:
-        todo_items = todo_items.filter(project_id=project_filter_id)
+        tasks = tasks.filter(project_id=project_filter_id)
 
     if order_by:
-        # Ensure that if ordering by 'status', it uses the actual field name
-        # If 'completed' was a boolean and 'status' is char, direct replacement is fine.
-        todo_items = todo_items.order_by(order_by)
+        tasks = tasks.order_by(order_by)
 
-    # Status options for the filter dropdown
-    status_options_list = [{'value': choice[0], 'display': choice[1]} for choice in TodoItem.STATUS_CHOICES]
+    status_options_list = [{'value': choice[0], 'display': choice[1]} for choice in Task.STATUS_CHOICES]
     status_options_list.insert(0, {'value': '', 'display': 'All Statuses'})
 
-
-    # Pagination
-    paginator = Paginator(todo_items, 10) # Show 10 todos per page
+    paginator = Paginator(tasks, 10)
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
 
     context = {
         'page_obj': page_obj,
-        'query': query, # Existing search query
-        'current_order_by': order_by, # Existing order_by
-        'all_projects': all_projects_data, # Existing projects for create task modal and new project filter
-        'status_options': status_options_list, # For the new status filter dropdown
+        'query': query,
+        'current_order_by': order_by,
+        'all_projects': all_projects_data,
+        'status_options': status_options_list,
         'selected_status': status_filter,
         'selected_start_date': start_date_filter,
         'selected_end_date': end_date_filter,
         'selected_project_id': int(project_filter_id) if project_filter_id else None,
     }
-    return render(request, 'todo/todo_list.html', context)
-
-# @login_required
-# def add_todo(request):
-#     if request.method == 'POST':
-#         title = request.POST['title']
-#         todo = TodoItem(title=title)
-#         todo.save()
-#         return redirect('todo_list')
-#     return render(request, 'todo/add_todo.html')
-
-# @login_required
-# def add_todo(request):
-#     if request.method == 'POST':
-#         form = TodoForm(request.POST)
-#         if form.is_valid():
-#             form.save()
-#             return redirect('todo_list')
-#     else:
-#         form = TodoForm()
-#     return render(request, 'todo/add_todo.html', {'form': form})
+    return render(request, 'todo/task_list.html', context)
 
 @login_required
-def add_todo(request):
+def add_task(request):
     is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
 
     if request.method == 'POST':
         if is_ajax:
             try:
                 data = json.loads(request.body)
-                # Pass user to form for project filtering if applicable
-                form = TodoForm(data, user=request.user)
+                form = TaskForm(data, user=request.user)
             except json.JSONDecodeError:
                 return JsonResponse({'success': False, 'error': 'Invalid JSON.'}, status=400)
         else:
-            # Pass user to form for project filtering
-            form = TodoForm(request.POST, user=request.user)
+            form = TaskForm(request.POST, user=request.user)
 
         if form.is_valid():
-            todo = form.save(commit=False)
-            todo.user = request.user
-            todo.save()
+            task = form.save(commit=False)
+            task.user = request.user
+            task.save()
 
             if is_ajax:
-                # Serialize necessary fields for the frontend
-                serialized_todo = {
-                    'id': todo.id,
-                    'title': todo.title,
-                    'description': todo.description,
-                    'status': todo.status,
-                    'get_status_display': todo.get_status_display(),
-                    'task_date': todo.task_date.strftime('%Y-%m-%d') if todo.task_date else None,
-                    'time_spent_hours': todo.time_spent_hours,
-                    'project_id': todo.project.id if todo.project else None,
-                    'project_name': todo.project.name if todo.project else None,
+                serialized_task = {
+                    'id': task.id,
+                    'title': task.title,
+                    'description': task.description,
+                    'status': task.status,
+                    'get_status_display': task.get_status_display(),
+                    'task_date': task.task_date.strftime('%Y-%m-%d') if task.task_date else None,
+                    'estimation_time': task.estimation_time,
+                    'total_spent_hours': task.total_spent_hours,
+                    'project_id': task.project.id if task.project else None,
+                    'project_name': task.project.name if task.project else None,
                 }
-                return JsonResponse({'success': True, 'todo': serialized_todo})
+                return JsonResponse({'success': True, 'task': serialized_task})
             else:
-                return redirect('todo_list')
-        else: # Form is invalid
+                return redirect('task_list')
+        else:
             if is_ajax:
-                # form.errors.as_json() returns a JSON string of errors by field
                 return JsonResponse({'success': False, 'errors': form.errors.as_json()}, status=400)
             else:
-                # For non-AJAX, re-render the page with form and errors
-                return render(request, 'todo/add_todo.html', {'form': form})
-    else: # GET request
-        # Pass user to form for project filtering for GET requests as well
-        form = TodoForm(user=request.user)
+                return render(request, 'todo/add_task.html', {'form': form})
+    else:
+        form = TaskForm(user=request.user)
         if is_ajax:
-            # Typically, a GET to an 'add' endpoint via AJAX might not be standard,
-            # but if needed, could return form structure or similar.
-            # For now, let's assume GET AJAX calls are not expected for this view or return an error.
-            return JsonResponse({'error': 'GET request not supported for AJAX here'}, status=405) # Method Not Allowed
-        return render(request, 'todo/add_todo.html', {'form': form})
+            return JsonResponse({'error': 'GET request not supported for AJAX here'}, status=405)
+        return render(request, 'todo/add_task.html', {'form': form})
 
 @login_required
-def delete_todo(request, todo_id):
-    todo = get_object_or_404(TodoItem, id=todo_id, user=request.user)
+def delete_task(request, task_id):
+    task = get_object_or_404(Task, id=task_id, user=request.user)
     is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
 
     if request.method == 'POST':
-        todo.delete()
+        task.delete()
         if is_ajax:
             return JsonResponse({'success': True})
         else:
-            # Fallback for non-AJAX POST, though primarily expecting AJAX now
-            return redirect('todo_list')
+            return redirect('task_list')
 
-    # For GET requests, or if not POST (though delete should be POST)
-    # This part will be less used if all deletes are via AJAX on the list page.
-    # If a user somehow navigates to the delete URL directly via GET.
-    return render(request, 'todo/delete_todo.html', {'todo': todo})
-
-# @login_required
-# def delete_todo(request, todo_id):
-#     todo = get_object_or_404(TodoItem, id=todo_id)
-#     if request.method == 'POST':
-#         todo.delete()
-#         return redirect('todo_list')
-#     return render(request, 'todo/delete_todo.html', {'todo': todo})
+    return render(request, 'todo/delete_task.html', {'task': task})
 
 @login_required
-def todo_detail(request, todo_id):
-    todo = get_object_or_404(TodoItem, id=todo_id)
-    return render(request, 'todo/todo_detail.html', {'todo': todo})
+def task_detail(request, task_id):
+    task = get_object_or_404(Task, id=task_id)
+    return render(request, 'todo/task_detail.html', {'task': task})
 
 @login_required
 def task_report(request):
-    # Calculate total time spent on tasks for today by the user
     today = date.today()
-    todays_tasks = TodoItem.objects.filter(user=request.user, task_date=today)
-    total_time_spent_today_minutes = todays_tasks.aggregate(total_time=Sum('time_spent'))['total_time'] or 0
-    total_time_spent_today_hours = total_time_spent_today_minutes / 60
+    # This calculation needs to be updated to use TaskLog
+    tasks_for_display = Task.objects.filter(user=request.user, logs__isnull=False).distinct()
 
-    # Get tasks for display, apply search and ordering
-    # This part remains the same, for the main list of tasks displayed in the table
-    tasks_for_display = TodoItem.objects.filter(user=request.user, time_spent__gt=0)
-
-    # Search
     query = request.GET.get('q')
     if query:
         tasks_for_display = tasks_for_display.filter(
@@ -232,53 +174,48 @@ def task_report(request):
             Q(project__name__icontains=query)
         )
 
-    # Ordering
-    order_by = request.GET.get('order_by', 'task_date') # Default order
-    allowed_ordering_fields = ['title', 'task_date', 'status', 'time_spent', 'project__name',
-                               '-title', '-task_date', '-status', '-time_spent', '-project__name']
+    order_by = request.GET.get('order_by', 'task_date')
+    allowed_ordering_fields = ['title', 'task_date', 'status', 'total_spent_hours', 'project__name',
+                               '-title', '-task_date', '-status', '-total_spent_hours', '-project__name']
     if order_by not in allowed_ordering_fields:
-        order_by = 'task_date' # Fallback to default
+        order_by = 'task_date'
 
-    # Get filter parameters
-    status_filter = request.GET.get('status', '') # This will be 'todo', 'inprogress', or 'done'
+    status_filter = request.GET.get('status', '')
     start_date_filter = request.GET.get('start_date', '')
     end_date_filter = request.GET.get('end_date', '')
     project_filter_id = request.GET.get('project', '')
 
-    # Apply filters
     if status_filter:
-        # Filter by the new status field
         tasks_for_display = tasks_for_display.filter(status=status_filter)
     if start_date_filter:
-        tasks_for_display = tasks_for_display.filter(task_date__gte=start_date_filter)
+        tasks_for_display = tasks_for_display.filter(logs__task_date__gte=start_date_filter)
     if end_date_filter:
-        tasks_for_display = tasks_for_display.filter(task_date__lte=end_date_filter)
+        tasks_for_display = tasks_for_display.filter(logs__task_date__lte=end_date_filter)
     if project_filter_id:
         tasks_for_display = tasks_for_display.filter(project_id=project_filter_id)
 
     if order_by:
         tasks_for_display = tasks_for_display.order_by(order_by)
 
-    # Get unique statuses for dropdown
-    # Updated to use the new status choices from the model
-    status_options = [{'value': choice[0], 'display': choice[1]} for choice in TodoItem.STATUS_CHOICES]
-    status_options.insert(0, {'value': '', 'display': 'All Statuses'}) # Option to clear filter
+    status_options = [{'value': choice[0], 'display': choice[1]} for choice in Task.STATUS_CHOICES]
+    status_options.insert(0, {'value': '', 'display': 'All Statuses'})
 
-    # Get projects for filter dropdown, filtered by user's ownership or membership
     current_user = request.user
     user_projects = Project.objects.filter(
         Q(owner=current_user) | Q(members=current_user)
     ).distinct().order_by('name')
     project_options = [{'id': p.id, 'name': p.name} for p in user_projects]
 
-    # Pagination for the displayed tasks
-    paginator = Paginator(tasks_for_display, 10) # Show 10 tasks per page
+    paginator = Paginator(tasks_for_display, 10)
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
 
+    total_time_spent_today_hours = TaskLog.objects.filter(task__user=request.user, task_date=today).aggregate(total_time=Sum('spent_time'))['total_time'] or 0
+
+
     context = {
-        'page_obj': page_obj, # Paginated tasks
-        'total_time_spent_today_hours': total_time_spent_today_hours, # Aggregation for today's tasks
+        'page_obj': page_obj,
+        'total_time_spent_today_hours': total_time_spent_today_hours,
         'query': query,
         'current_order_by': order_by,
         'status_options': status_options,
@@ -291,108 +228,90 @@ def task_report(request):
     return render(request, 'todo/report.html', context)
 
 @login_required
-def edit_todo(request, todo_id):
-    todo = get_object_or_404(TodoItem, id=todo_id, user=request.user)
+def edit_task(request, task_id):
+    task = get_object_or_404(Task, id=task_id, user=request.user)
     if request.method == 'POST':
-        # Pass user to form for project filtering
-        form = TodoForm(request.POST, instance=todo, user=request.user)
+        form = TaskForm(request.POST, instance=task, user=request.user)
         if form.is_valid():
             form.save()
-            return redirect(reverse('todo_detail', args=[todo.id]))
+            return redirect(reverse('task_detail', args=[task.id]))
     else:
-        # Pass user to form for project filtering
-        form = TodoForm(instance=todo, user=request.user)
-    return render(request, 'todo/edit_todo.html', {'form': form, 'todo': todo})
+        form = TaskForm(instance=task, user=request.user)
+    return render(request, 'todo/edit_task.html', {'form': form, 'task': task})
 
 import json
 from django.http import JsonResponse
 from django.views.decorators.http import require_POST
 
 @login_required
-@require_POST # Ensures this view only accepts POST requests
-def inline_edit_todo(request, todo_id):
+@require_POST
+def inline_edit_task(request, task_id):
     try:
-        todo = get_object_or_404(TodoItem, id=todo_id, user=request.user)
+        task = get_object_or_404(Task, id=task_id, user=request.user)
         data = json.loads(request.body)
 
-        todo.title = data.get('title', todo.title)
-        todo.description = data.get('description', todo.description)
+        task.title = data.get('title', task.title)
+        task.description = data.get('description', task.description)
 
-        # Handle status
-        new_status = data.get('status', todo.status)
-        if new_status in [choice[0] for choice in TodoItem.STATUS_CHOICES]:
-            todo.status = new_status
+        new_status = data.get('status', task.status)
+        if new_status in [choice[0] for choice in Task.STATUS_CHOICES]:
+            task.status = new_status
 
-        # Handle project
-        if 'project_id' in data: # Check if project_id key is in the payload
+        if 'project_id' in data:
             project_id_val = data['project_id']
             if project_id_val is None or str(project_id_val).lower() == 'null' or str(project_id_val) == '':
-                todo.project = None
+                task.project = None
             else:
                 try:
                     project_id_int = int(project_id_val)
-                    # Check if project exists and user has access (owner or member)
                     user_accessible_projects = Project.objects.filter(
                         Q(owner=request.user) | Q(members=request.user)
                     ).distinct()
-
                     project_instance = get_object_or_404(user_accessible_projects, id=project_id_int)
-                    todo.project = project_instance # Assign the validated project instance
-                except ValueError:
-                    return JsonResponse({'success': False, 'error': 'Invalid project_id format.'}, status=400)
-                except Project.DoesNotExist:
-                     # This error will be raised by get_object_or_404 if project_id_int is not in user_accessible_projects
+                    task.project = project_instance
+                except (ValueError, Project.DoesNotExist):
                     return JsonResponse({'success': False, 'error': 'Project not found or user does not have access.'}, status=404)
-                except Exception as e:
-                    # Log error e for server-side inspection
-                    return JsonResponse({'success': False, 'error': f'Could not assign project: {str(e)}'}, status=500) # 500 for unexpected
-        # If 'project_id' is not in data, todo.project remains unchanged by this block.
 
-        task_date_str = data.get('task_date')
-        if 'task_date' in data: # Check if task_date key is in the payload
-            if task_date_str: # Correctly indented
+        if 'task_date' in data:
+            task_date_str = data.get('task_date')
+            if task_date_str:
                 try:
-                    todo.task_date = task_date_str # Django's DateField can parse 'YYYY-MM-DD'
+                    task.task_date = task_date_str
                 except ValueError:
                     return JsonResponse({'success': False, 'error': 'Invalid date format for task_date. Use YYYY-MM-DD.'}, status=400)
-        elif 'task_date' in data and task_date_str is None: # Explicitly setting task_date to null
-            todo.task_date = None
+            else:
+                task.task_date = None
 
-
-        if 'time_spent_hours' in data:
+        if 'estimation_time' in data:
             try:
-                hours_str = data['time_spent_hours']
-                if hours_str is None or str(hours_str).strip() == '': # Handle null or empty string for time_spent
-                    todo.time_spent = 0 # Or None, depending on model definition for time_spent (it's IntegerField default 0)
-                else:
-                    hours = float(hours_str)
-                    if hours < 0:
-                        return JsonResponse({'success': False, 'error': 'Time spent cannot be negative.'}, status=400)
-                    todo.time_spent = int(hours * 60)
-            except ValueError:
-                return JsonResponse({'success': False, 'error': 'Invalid time format for time_spent_hours.'}, status=400)
+                hours = float(data['estimation_time'])
+                if hours < 0:
+                    return JsonResponse({'success': False, 'error': 'Estimation time cannot be negative.'}, status=400)
+                task.estimation_time = hours
+            except (ValueError, TypeError):
+                return JsonResponse({'success': False, 'error': 'Invalid format for estimation_time.'}, status=400)
 
-        todo.save()
-        todo.refresh_from_db()
+        task.save()
+        task.refresh_from_db()
 
         return JsonResponse({
             'success': True,
-            'todo': {
-                'id': todo.id,
-                'title': todo.title,
-                'description': todo.description,
-                'status': todo.status,
-                'get_status_display': todo.get_status_display(),
-                'task_date': todo.task_date.strftime('%Y-%m-%d') if todo.task_date else None,
-                'time_spent_hours': todo.time_spent_hours,
-                'project_id': todo.project.id if todo.project else None,
-                'project_name': todo.project.name if todo.project else None,
+            'task': {
+                'id': task.id,
+                'title': task.title,
+                'description': task.description,
+                'status': task.status,
+                'get_status_display': task.get_status_display(),
+                'task_date': task.task_date.strftime('%Y-%m-%d') if task.task_date else None,
+                'estimation_time': task.estimation_time,
+                'total_spent_hours': task.total_spent_hours,
+                'project_id': task.project.id if task.project else None,
+                'project_name': task.project.name if task.project else None,
             }
         })
     except json.JSONDecodeError:
         return JsonResponse({'success': False, 'error': 'Invalid JSON.'}, status=400)
     except Exception as e:
-        # Log the exception e
         return JsonResponse({'success': False, 'error': 'An unexpected error occurred.'}, status=500)
 
 @login_required
@@ -519,8 +438,8 @@ from django.http import JsonResponse, HttpResponseForbidden
 from django.views.generic import ListView, DetailView
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.contrib.auth.views import redirect_to_login
-# Make sure TodoItem and Project are imported if not already:
-# from .models import TodoItem, Project
+# Make sure Task and Project are imported if not already:
+# from .models import Task, Project
 
 @login_required
 def api_get_kanban_tasks(request):
@@ -530,34 +449,22 @@ def api_get_kanban_tasks(request):
     """
     current_user = request.user
 
-    # Find projects where the user is an owner or a member
-    # Q objects are used to combine queries with OR
     user_projects = Project.objects.filter(
         Q(owner=current_user) | Q(members=current_user)
     ).distinct()
 
     if not user_projects.exists():
-        # If the user is not part of any projects, return an empty list
         return JsonResponse([], safe=False)
 
-    # Filter tasks that belong to these projects
-    # Also, ensure tasks are selected with related user profile and project for efficiency
-    # and ordered by creation date.
-    tasks_query = TodoItem.objects.filter(
+    tasks_query = Task.objects.filter(
         Q(project__in=user_projects) | Q(project__isnull=True, user=current_user)
     ).select_related('user__profile', 'project').order_by('created_at')
 
-    # Apply the project filter from the request, if any
     project_id_filter = request.GET.get('project_id')
     if project_id_filter and project_id_filter.lower() != 'all' and project_id_filter.isdigit():
-        # Ensure the filtered project is one of the user's projects
-        # This prevents users from accessing tasks of projects they are not part of via the filter
         if user_projects.filter(id=project_id_filter).exists():
             tasks_query = tasks_query.filter(project_id=project_id_filter)
         else:
-            # If the user tries to filter by a project they are not part of,
-            # return an empty list or handle as an error.
-            # For simplicity, returning empty list of tasks.
             return JsonResponse([], safe=False)
 
     tasks_data = []
@@ -565,18 +472,16 @@ def api_get_kanban_tasks(request):
         profile_picture_url = None
         if hasattr(task.user, 'profile') and task.user.profile.profile_picture:
             profile_picture_url = task.user.profile.profile_picture.url
-        # else:
-            # Optionally, set a default placeholder image URL here
-            # profile_picture_url = '/static/images/default_avatar.png'
 
         tasks_data.append({
             "id": task.id,
             "title": task.title,
-            "description": task.description, # Still needed for edit functionality
+            "description": task.description,
             "status": task.status,
             "get_status_display": task.get_status_display(),
             "task_date": task.task_date.strftime('%Y-%m-%d') if task.task_date else None,
-            "time_spent_hours": task.time_spent_hours,
+            "estimation_time": task.estimation_time,
+            "total_spent_hours": task.total_spent_hours,
             "project_id": task.project.id if task.project else None,
             "project_name": task.project.name if task.project else None,
             "user": {
@@ -590,21 +495,19 @@ def api_get_kanban_tasks(request):
 
 class ProjectListView(LoginRequiredMixin, ListView):
     model = Project
-    template_name = 'projects/project_list.html'  # Specify your template name
+    template_name = 'projects/project_list.html'
     context_object_name = 'projects'
 
     def get_queryset(self):
-        # Filter projects to only those the current user is a member of
         return Project.objects.filter(members=self.request.user).order_by('name')
 
 class ProjectDetailView(LoginRequiredMixin, UserPassesTestMixin, DetailView):
     model = Project
-    template_name = 'projects/project_detail.html'  # Specify your template name
+    template_name = 'projects/project_detail.html'
     context_object_name = 'project'
 
     def test_func(self):
         project = self.get_object()
-        # Allow access if the user is the owner OR a member of the project
         return self.request.user == project.owner or self.request.user in project.members.all()
 
     def handle_no_permission(self):
@@ -614,14 +517,43 @@ class ProjectDetailView(LoginRequiredMixin, UserPassesTestMixin, DetailView):
                 self.get_login_url(),
                 self.get_redirect_field_name()
             )
-        # For authenticated users failing test_func (UserPassesTestMixin)
         return HttpResponseForbidden("You do not have permission to view this project.")
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         project = self.get_object()
-        # Add members to context
         context['members'] = project.members.all().select_related('profile')
-        # Add tasks associated with this project to the context
-        context['tasks'] = TodoItem.objects.filter(project=project).order_by('status', 'created_at')
+        context['tasks'] = Task.objects.filter(project=project).order_by('status', 'created_at')
         return context
+
+@login_required
+def task_logs_api(request, task_id=None, log_id=None):
+    if request.method == 'POST':
+        data = json.loads(request.body)
+        form = TaskLogForm(data)
+        if form.is_valid():
+            task = get_object_or_404(Task, id=data['task_id'], user=request.user)
+            log = form.save(commit=False)
+            log.task = task
+            log.save()
+            return JsonResponse({'id': log.id, 'spent_time': log.spent_time, 'task_date': log.task_date}, status=201)
+        return JsonResponse(form.errors, status=400)
+
+    if request.method == 'GET' and task_id:
+        task = get_object_or_404(Task, id=task_id, user=request.user)
+        logs = task.logs.all().values('id', 'spent_time', 'task_date')
+        return JsonResponse(list(logs), safe=False)
+
+    if request.method == 'PUT' and log_id:
+        log = get_object_or_404(TaskLog, id=log_id, task__user=request.user)
+        data = json.loads(request.body)
+        form = TaskLogForm(data, instance=log)
+        if form.is_valid():
+            log = form.save()
+            return JsonResponse({'id': log.id, 'spent_time': log.spent_time, 'task_date': log.task_date})
+        return JsonResponse(form.errors, status=400)
+
+    if request.method == 'DELETE' and log_id:
+        log = get_object_or_404(TaskLog, id=log_id, task__user=request.user)
+        log.delete()
+        return JsonResponse({'status': 'deleted'}, status=204)

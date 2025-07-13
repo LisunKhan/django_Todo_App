@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import TodoItem, Project, ProjectMembership, UserProfile
+from .models import Task, TaskLog, Project, ProjectMembership, UserProfile
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from django.contrib.auth.models import User
 
@@ -25,13 +25,20 @@ class ProjectMembershipAdmin(admin.ModelAdmin):
     list_filter = ('project', 'user', 'date_joined')
     autocomplete_fields = ['project', 'user']
 
-@admin.register(TodoItem)
-class TodoItemAdmin(admin.ModelAdmin):
-    list_display = ('title', 'project', 'status', 'user', 'created_at', 'updated_at', 'task_date')
+@admin.register(Task)
+class TaskAdmin(admin.ModelAdmin):
+    list_display = ('title', 'project', 'status', 'user', 'estimation_time', 'total_spent_hours', 'created_at', 'updated_at', 'task_date')
     list_filter = ('status', 'project', 'user', 'created_at', 'updated_at', 'task_date')
     search_fields = ('title', 'description')
-    readonly_fields = ('created_at', 'updated_at')
+    readonly_fields = ('created_at', 'updated_at', 'total_spent_hours')
     autocomplete_fields = ['user', 'project']
+
+@admin.register(TaskLog)
+class TaskLogAdmin(admin.ModelAdmin):
+    list_display = ('task', 'spent_time', 'task_date', 'created_at')
+    list_filter = ('task_date', 'task__project', 'task__user')
+    search_fields = ('task__title',)
+    autocomplete_fields = ['task']
 
 
 # If UserProfile is used, it's good to have it in the User admin

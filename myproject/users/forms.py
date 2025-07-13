@@ -1,5 +1,5 @@
 from django import forms
-from .models import TodoItem
+from .models import Task, TaskLog
 from django.contrib.auth.forms import UserCreationForm, AuthenticationForm
 # from django.contrib.auth.models import User # Not strictly required for this change, Django handles User model internally for forms
 
@@ -39,66 +39,42 @@ class CustomAuthenticationForm(AuthenticationForm):
         self.error_messages['invalid_login'] = "Invalid username or password. Please double-check and try again."
         self.error_messages['inactive'] = "This account is inactive. Please contact support."
 
-class TodoForm(forms.ModelForm):
-    time_spent_hours = forms.FloatField(label="Time Spent (hours)", required=False)
+class TaskForm(forms.ModelForm):
+    estimation_time = forms.FloatField(label="Estimation Time (hours)", required=False)
     task_date = forms.DateField(widget=forms.DateInput(attrs={'type': 'date'}), required=False)
 
     class Meta:
-        model = TodoItem
-        # Include all model fields that the form should handle directly or indirectly.
-        # 'time_spent' is the actual model field.
-        fields = ['title', 'description', 'project', 'status', 'task_date']
+        model = Task
+        fields = ['title', 'description', 'project', 'status', 'task_date', 'estimation_time']
 
     def __init__(self, *args, **kwargs):
-        # Pop 'user' from kwargs before calling super(), as ModelForm doesn't expect it.
         user = kwargs.pop('user', None)
-        super().__init__(*args, **kwargs) # Populates self.initial for fields in Meta.fields
+        super().__init__(*args, **kwargs)
 
         if user:
-            from .models import Project # Local import to avoid circular dependency if Project model imports forms
-            from django.db.models import Q # For OR queries
-            # Filter projects to those owned by or member of the user
+            from .models import Project
+            from django.db.models import Q
             user_projects = Project.objects.filter(
                 Q(owner=user) | Q(members=user)
             ).distinct().order_by('name')
             self.fields['project'].queryset = user_projects
 
-        # Set the initial value for 'time_spent_hours' in the form's initial data dictionary.
-        if self.instance and self.instance.pk and self.instance.time_spent is not None:
-            self.initial['time_spent_hours'] = self.instance.time_spent_hours
+        if self.instance and self.instance.pk:
+            self.initial['estimation_time'] = self.instance.estimation_time
         else:
-            # Provide a default for time_spent_hours if no instance or time_spent is None
-            self.initial['time_spent_hours'] = self.fields['time_spent_hours'].initial if self.fields['time_spent_hours'].initial is not None else 0
+            self.initial['estimation_time'] = 0
 
-        # Make status not required in the form, model default will be used
         self.fields['status'].required = False
-        # Set initial for status if it's a new form and status is not already in initial data
-        # This helps the form display the default value even before saving.
         if not self.initial.get('status') and not (self.instance and self.instance.pk):
-            self.initial['status'] = 'todo' # Corresponds to model default
+            self.initial['status'] = 'todo'
 
-
-    def clean_time_spent_hours(self):
-        hours = self.cleaned_data.get('time_spent_hours')
-        if hours is None:
-            return 0  # Default to 0 if not provided
-        if hours < 0:
-            raise forms.ValidationError("Time spent cannot be negative.")
-        return hours
-
-    def save(self, commit=True):
-        # Get the hours from the cleaned data
-        hours = self.cleaned_data.get('time_spent_hours', 0)
-        # Convert hours to minutes and set it on the instance
-        self.instance.time_spent = int((hours or 0) * 60)
-
-        # Call the superclass's save method to save the instance
-        # but ensure 'time_spent_hours' is not passed to the model's constructor
-        # if it's not a model field.
-        # Since 'time_spent_hours' is not a model field, we should pop it
-        # if we were directly passing self.cleaned_data to model.
-        # However, ModelForm's save() handles this by only using fields that exist on the model.
-        return super().save(commit)
+class TaskLogForm(forms.ModelForm):
+    class Meta:
+        model = TaskLog
+        fields = ['spent_time', 'task_date']
+        widgets = {
+            'task_date': forms.DateInput(attrs={'type': 'date'}),
+        }
 
 
 from .models import UserProfile # Import UserProfile
