@@ -515,6 +515,77 @@ def kanban_board_view(request):
     return render(request, 'users/kanban_board.html', context)
 
 
+@login_required
+def ds_board_view(request):
+    """
+    View to render the Daily Standup board page.
+    """
+    current_user = request.user
+    user_projects = Project.objects.filter(
+        Q(owner=current_user) | Q(members=current_user)
+    ).distinct().order_by('name')
+
+    projects_data = [{'id': p.id, 'name': p.name} for p in user_projects]
+
+    context = {
+        'projects_json': projects_data,
+    }
+    return render(request, 'users/ds_board.html', context)
+
+
+@login_required
+def api_get_ds_board_tasks(request):
+    """
+    API endpoint to fetch tasks for the Daily Standup board, organized by user.
+    """
+    project_id_filter = request.GET.get('project_id')
+    if not project_id_filter or project_id_filter.lower() == 'all':
+        return JsonResponse([], safe=False)
+
+    try:
+        project = Project.objects.get(id=project_id_filter)
+        # Check if the current user is a member of the project
+        if not (request.user == project.owner or request.user in project.members.all()):
+            return JsonResponse({'error': 'You do not have permission to view this project.'}, status=403)
+    except Project.DoesNotExist:
+        return JsonResponse({'error': 'Project not found.'}, status=404)
+
+    members = project.members.all()
+    users_data = []
+
+    for member in members:
+        tasks = TodoItem.objects.filter(project=project, user=member).select_related('user__profile', 'project')
+        tasks_data = []
+        for task in tasks:
+            profile_picture_url = None
+            if hasattr(task.user, 'profile') and task.user.profile.profile_picture:
+                profile_picture_url = task.user.profile.profile_picture.url
+
+            tasks_data.append({
+                "id": task.id,
+                "title": task.title,
+                "description": task.description,
+                "status": task.status,
+                "task_date": task.task_date.strftime('%Y-%m-%d') if task.task_date else None,
+                "time_spent_hours": task.time_spent_hours,
+                "project_id": task.project.id if task.project else None,
+                "project_name": task.project.name if task.project else None,
+            })
+
+        profile_picture_url = None
+        if hasattr(member, 'profile') and member.profile.profile_picture:
+            profile_picture_url = member.profile.profile_picture.url
+
+        users_data.append({
+            'user_id': member.id,
+            'username': member.username,
+            'profile_picture_url': profile_picture_url,
+            'tasks': tasks_data,
+        })
+
+    return JsonResponse(users_data, safe=False)
+
+
 from django.http import JsonResponse, HttpResponseForbidden
 from django.views.generic import ListView, DetailView
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin

@@ -23,6 +23,10 @@ urlpatterns = [
     path('download_csv_report/', views.download_csv_report, name='download_csv_report'),
     # Kanban Board URL
     path('kanban/', views.kanban_board_view, name='kanban_board'),
+    # DS Board URL
+    path('ds_board/', views.ds_board_view, name='ds_board'),
     # API URL for fetching Kanban tasks
     path('api/kanban_tasks/', views.api_get_kanban_tasks, name='api_kanban_tasks'),
+    # API URL for fetching DS board tasks
+    path('api/ds_board_tasks/', views.api_get_ds_board_tasks, name='api_ds_board_tasks'),
 ]
