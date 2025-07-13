@@ -113,8 +113,95 @@ document.addEventListener('DOMContentLoaded', () => {
         const card = document.createElement('div');
         card.className = 'task-card';
         card.dataset.taskId = task.id;
-        card.textContent = task.title;
+        card.dataset.title = task.title;
+        card.dataset.description = task.description;
+        card.dataset.timeSpent = task.time_spent_hours;
+        card.dataset.taskDate = task.task_date;
+
+        card.innerHTML = `
+            <h5>${task.title}</h5>
+            <p>${task.description}</p>
+            <div class="task-meta">
+                <span>Date: ${task.task_date || 'N/A'}</span>
+                <span>Time: ${task.time_spent_hours || 0}h</span>
+            </div>
+            <button class="edit-task-btn">Edit</button>
+        `;
+
+        card.querySelector('.edit-task-btn').addEventListener('click', () => {
+            showEditModal(task);
+        });
+
         return card;
+    }
+
+    function showEditModal(task) {
+        const modal = document.createElement('div');
+        modal.className = 'modal';
+        modal.innerHTML = `
+            <div class="modal-content">
+                <span class="close-btn">&times;</span>
+                <h2>Edit Task</h2>
+                <input type="text" id="edit-title" value="${task.title}">
+                <textarea id="edit-description">${task.description}</textarea>
+                <input type="date" id="edit-task-date" value="${task.task_date || ''}">
+                <input type="number" id="edit-time-spent" value="${task.time_spent_hours || 0}">
+                <button id="save-edit-btn">Save</button>
+            </div>
+        `;
+
+        document.body.appendChild(modal);
+
+        modal.querySelector('.close-btn').addEventListener('click', () => {
+            document.body.removeChild(modal);
+        });
+
+        modal.querySelector('#save-edit-btn').addEventListener('click', async () => {
+            const newTitle = document.getElementById('edit-title').value;
+            const newDescription = document.getElementById('edit-description').value;
+            const newTaskDate = document.getElementById('edit-task-date').value;
+            const newTimeSpent = document.getElementById('edit-time-spent').value;
+
+            const updatedTask = {
+                title: newTitle,
+                description: newDescription,
+                task_date: newTaskDate,
+                time_spent_hours: newTimeSpent,
+            };
+
+            try {
+                const response = await fetch(`/todo/inline_edit/${task.id}/`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCookie('csrftoken'),
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
+                    body: JSON.stringify(updatedTask)
+                });
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                const responseData = await response.json();
+                if (responseData.success) {
+                    // Update the card in the UI
+                    const card = document.querySelector(`.task-card[data-task-id="${task.id}"]`);
+                    card.querySelector('h5').textContent = newTitle;
+                    card.querySelector('p').textContent = newDescription;
+                    card.querySelector('.task-meta span:first-child').textContent = `Date: ${newTaskDate || 'N/A'}`;
+                    card.querySelector('.task-meta span:last-child').textContent = `Time: ${newTimeSpent || 0}h`;
+                    // Update dataset attributes
+                    card.dataset.title = newTitle;
+                    card.dataset.description = newDescription;
+                    card.dataset.taskDate = newTaskDate;
+                    card.dataset.timeSpent = newTimeSpent;
+
+                    document.body.removeChild(modal);
+                }
+            } catch (error) {
+                console.error("Error updating task:", error);
+            }
+        });
     }
 
     async function handleTaskDrop(evt) {
