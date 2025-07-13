@@ -1,3 +1,4 @@
 Django>=3.2,<4.0
 djangorestframework>=3.12,<3.13
+Pillow
 django-crispy-forms>=1.10,<2.0

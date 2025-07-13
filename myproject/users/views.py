@@ -103,16 +103,24 @@ def add_task(request):
         if is_ajax:
             try:
                 data = json.loads(request.body)
-                form = TaskForm(data, user=request.user)
+                task_form = TaskForm(data, user=request.user)
+                log_form = TaskLogForm(data)
             except json.JSONDecodeError:
                 return JsonResponse({'success': False, 'error': 'Invalid JSON.'}, status=400)
         else:
-            form = TaskForm(request.POST, user=request.user)
+            task_form = TaskForm(request.POST, user=request.user)
+            log_form = TaskLogForm(request.POST)
 
-        if form.is_valid():
-            task = form.save(commit=False)
+        if task_form.is_valid():
+            task = task_form.save(commit=False)
             task.user = request.user
             task.save()
+
+            if log_form.is_valid():
+                log = log_form.save(commit=False)
+                if log.spent_time and log.task_date:
+                    log.task = task
+                    log.save()
 
             if is_ajax:
                 serialized_task = {
@@ -132,14 +140,18 @@ def add_task(request):
                 return redirect('task_list')
         else:
             if is_ajax:
-                return JsonResponse({'success': False, 'errors': form.errors.as_json()}, status=400)
+                errors = task_form.errors.as_json()
+                if not log_form.is_valid():
+                    errors += log_form.errors.as_json()
+                return JsonResponse({'success': False, 'errors': errors}, status=400)
             else:
-                return render(request, 'tasks/add_task.html', {'form': form})
+                return render(request, 'tasks/add_task.html', {'form': task_form, 'log_form': log_form})
     else:
-        form = TaskForm(user=request.user)
+        task_form = TaskForm(user=request.user)
+        log_form = TaskLogForm()
         if is_ajax:
             return JsonResponse({'error': 'GET request not supported for AJAX here'}, status=405)
-        return render(request, 'tasks/add_task.html', {'form': form})
+        return render(request, 'tasks/add_task.html', {'form': task_form, 'log_form': log_form})
 
 @login_required
 def delete_task(request, task_id):
@@ -153,7 +165,7 @@ def delete_task(request, task_id):
         else:
             return redirect('task_list')
 
-    return render(request, 'tasks/delete_task.html', {'task': task})
+    return render(request, 'todo/delete_task.html', {'task': task})
 
 @login_required
 def task_detail(request, task_id):
@@ -225,7 +237,7 @@ def task_report(request):
         'project_options': project_options,
         'selected_project_id': int(project_filter_id) if project_filter_id else None,
     }
-    return render(request, 'tasks/report.html', context)
+    return render(request, 'todo/report.html', context)
 
 @login_required
 def edit_task(request, task_id):

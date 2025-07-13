@@ -246,6 +246,342 @@ document.addEventListener('DOMContentLoaded', function () {
             }
         });
     });
+
+    tableBody.addEventListener('click', function (event) {
+        const target = event.target;
+        const row = target.closest('tr');
+
+        if (!row || !row.dataset.id) {
+            if (target.classList.contains('delete-task-btn')) {
+                event.preventDefault();
+                const taskId = target.dataset.taskId;
+                const deleteUrl = target.dataset.deleteUrl;
+                const specificRowToRemove = target.closest('tr');
+
+                Swal.fire({
+                    title: 'Are you sure?',
+                    text: "You won't be able to revert this!",
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: '#d33',
+                    cancelButtonColor: '#3085d6',
+                    confirmButtonText: 'Yes, delete it!'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        fetch(deleteUrl, {
+                            method: 'POST',
+                            headers: {
+                                'X-CSRFToken': csrfToken,
+                                'X-Requested-With': 'XMLHttpRequest'
+                            }
+                        })
+                        .then(response => {
+                            if (!response.ok) {
+                                return response.json().then(err => { throw err; });
+                            }
+                            return response.json();
+                        })
+                        .then(data => {
+                            if (data.success) {
+                                if (specificRowToRemove) specificRowToRemove.remove();
+                                Swal.fire('Deleted!','Your task has been deleted.','success');
+                                if (tableBody.querySelectorAll('tr').length === 0) {
+                                    const emptyMessageHtml = `
+                                        <tr>
+                                            <td colspan="8" class="text-center text-muted">
+                                                You have no tasks yet. <a href="{% url 'add_task' %}">Add one!</a>
+                                            </td>
+                                        </tr>`;
+                                    tableBody.innerHTML = emptyMessageHtml;
+                                }
+                            } else {
+                                Swal.fire('Failed!', data.error || 'Could not delete the task.', 'error');
+                            }
+                        })
+                        .catch(error => {
+                            console.error('Error deleting task:', error);
+                            Swal.fire('Error!', error.error || 'An unexpected error occurred.', 'error');
+                        });
+                    }
+                });
+            }
+            return;
+        }
+
+        const taskId = row.dataset.id;
+
+        if (target.classList.contains('save-btn')) {
+            saveChanges(row, taskId);
+        }
+        else if (target.classList.contains('cancel-btn')) {
+            cancelEditMode(row);
+        }
+        else if (target.tagName === 'TD' && !row.classList.contains('editing')) {
+            const isInteractiveElement = target.querySelector('a, button, input, select, textarea') ||
+                                         event.target.closest('a, button, input, select, textarea');
+            if (isInteractiveElement && isInteractiveElement !== target) {
+                return;
+            }
+            if (target.closest('.actions-cell')) {
+                return;
+            }
+            enterEditMode(row);
+        }
+    });
+
+    function enterEditMode(row) {
+        row.classList.add('editing');
+
+        const titleCell = row.querySelector('td[data-field="title"]');
+        const titleLink = titleCell.querySelector('a');
+        const currentTitle = titleLink ? titleLink.textContent : titleCell.textContent.trim();
+        row.dataset.originalHtmlTitle = titleCell.innerHTML;
+        const titleInput = document.createElement('input');
+        titleInput.type = 'text';
+        titleInput.className = 'form-control form-control-sm';
+        titleInput.value = currentTitle;
+        titleInput.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                saveChanges(row, row.dataset.id);
+            }
+        });
+        titleCell.innerHTML = '';
+        titleCell.appendChild(titleInput);
+        titleInput.focus();
+
+        const descriptionCell = row.querySelector('td[data-field="description"]');
+        const currentDescription = descriptionCell.textContent.trim();
+        row.dataset.originalHtmlDescription = descriptionCell.innerHTML;
+        descriptionCell.innerHTML = `<textarea class="form-control form-control-sm">${currentDescription}</textarea>`;
+
+        const estimationTimeCell = row.querySelector('td[data-field="estimation_time"]');
+        const currentTimeText = estimationTimeCell.textContent.trim().replace('h', '');
+        const currentTime = parseFloat(currentTimeText) || 0;
+        row.dataset.originalHtmlEstimationTime = estimationTimeCell.innerHTML;
+        const timeInput = document.createElement('input');
+        timeInput.type = 'number';
+        timeInput.step = '0.1';
+        timeInput.className = 'form-control form-control-sm';
+        timeInput.value = currentTime;
+        timeInput.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                saveChanges(row, row.dataset.id);
+            }
+        });
+        estimationTimeCell.innerHTML = '';
+        estimationTimeCell.appendChild(timeInput);
+
+        const taskDateCell = row.querySelector('td[data-field="task_date"]');
+        const currentTaskDate = taskDateCell.textContent.trim();
+        const taskDateForInput = currentTaskDate === "N/A" ? "" : currentTaskDate;
+        row.dataset.originalHtmlTaskDate = taskDateCell.innerHTML;
+        const taskDateInput = document.createElement('input');
+        taskDateInput.type = 'date';
+        taskDateInput.className = 'form-control form-control-sm';
+        taskDateInput.value = taskDateForInput;
+        taskDateInput.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                saveChanges(row, row.dataset.id);
+            }
+        });
+        taskDateCell.innerHTML = '';
+        taskDateCell.appendChild(taskDateInput);
+
+        const statusCell = row.querySelector('td[data-field="status"]');
+        const currentStatusValue = statusCell.dataset.value;
+        row.dataset.originalHtmlStatus = statusCell.innerHTML;
+        statusCell.innerHTML = `
+            <select class="form-select form-select-sm">
+                <option value="todo" ${currentStatusValue === 'todo' ? 'selected' : ''}>To Do</option>
+                <option value="inprogress" ${currentStatusValue === 'inprogress' ? 'selected' : ''}>In Progress</option>
+                <option value="blocker" ${currentStatusValue === 'blocker' ? 'selected' : ''}>Blocker</option>
+                <option value="done" ${currentStatusValue === 'done' ? 'selected' : ''}>Done</option>
+            </select>
+        `;
+        const statusSelect = statusCell.querySelector('select');
+        statusSelect.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                saveChanges(row, row.dataset.id);
+            }
+        });
+        statusSelect.addEventListener('change', function(e) {
+            saveChanges(row, row.dataset.id);
+        });
+
+        const projectCell = row.querySelector('td[data-field="project"]');
+        const currentProjectId = projectCell.dataset.projectId;
+        row.dataset.originalHtmlProject = projectCell.innerHTML;
+        let projectOptionsHtml = '<option value="">---------</option>';
+        var all_projects = JSON.parse(document.getElementById('all-projects-data').textContent);
+        if (typeof all_projects !== 'undefined' && Array.isArray(all_projects)) {
+            all_projects.forEach(project => {
+                projectOptionsHtml += `<option value="${project.id}" ${currentProjectId == project.id ? 'selected' : ''}>${project.name}</option>`;
+            });
+        }
+        projectCell.innerHTML = `<select class="form-select form-select-sm">${projectOptionsHtml}</select>`;
+        const projectSelect = projectCell.querySelector('select');
+        projectSelect.addEventListener('keydown', function(e) {
+             if (e.key === 'Enter') {
+                e.preventDefault();
+                saveChanges(row, row.dataset.id);
+            }
+        });
+        projectSelect.addEventListener('change', function(e) {
+            saveChanges(row, row.dataset.id);
+        });
+
+        const actionsCell = row.querySelector('td:last-child');
+        if (!row.dataset.originalHtmlActions) {
+            const editPageBtnHTML = actionsCell.querySelector('a[href*="/edit/"]')?.outerHTML || '';
+            const deleteBtnHTML = actionsCell.querySelector('.delete-task-btn')?.outerHTML || '';
+            row.dataset.originalHtmlActions = `${editPageBtnHTML} ${deleteBtnHTML}`.trim();
+        }
+
+        actionsCell.innerHTML = `
+            <button type="button" class="btn btn-sm btn-success me-1 save-btn">Save</button>
+            <button type="button" class="btn btn-sm btn-warning cancel-btn">Cancel</button>
+        `;
+    }
+
+    function exitEditMode(row, newValues) {
+        row.classList.remove('editing');
+
+        const titleCell = row.querySelector('td[data-field="title"]');
+        const originalTitleHTML = row.dataset.originalHtmlTitle;
+        if (originalTitleHTML && originalTitleHTML.includes('<a href')) {
+            const link = document.createElement('a');
+            link.href = originalTitleHTML.match(/href="([^"]*)"/)[1];
+            link.innerHTML = `<b>${newValues.title}</b>`;
+            titleCell.innerHTML = '';
+            titleCell.appendChild(link);
+        } else {
+            titleCell.innerHTML = `<b>${newValues.title}</b>`;
+        }
+
+        const descriptionCell = row.querySelector('td[data-field="description"]');
+        descriptionCell.textContent = newValues.description;
+
+        const estimationTimeCell = row.querySelector('td[data-field="estimation_time"]');
+        estimationTimeCell.textContent = `${parseFloat(newValues.estimation_time).toFixed(2)}h`;
+
+        const taskDateCell = row.querySelector('td[data-field="task_date"]');
+        let displayTaskDate = "N/A";
+        if (newValues.task_date) {
+            displayTaskDate = newValues.task_date;
+        }
+        taskDateCell.textContent = displayTaskDate;
+
+        const statusCell = row.querySelector('td[data-field="status"]');
+        const newStatusValue = newValues.status;
+        statusCell.dataset.value = newStatusValue;
+        let statusBadgeHtml;
+        const statusDisplayMap = {
+            'todo': 'To Do',
+            'inprogress': 'In Progress',
+            'blocker': 'Blocker',
+            'done': 'Done'
+        };
+        const newStatusDisplay = newValues.get_status_display || statusDisplayMap[newStatusValue];
+
+        if (newStatusValue === 'done') {
+            statusBadgeHtml = `<span class="badge bg-success">${newStatusDisplay}</span>`;
+        } else if (newStatusValue === 'inprogress') {
+            statusBadgeHtml = `<span class="badge bg-primary">${newStatusDisplay}</span>`;
+        } else if (newStatusValue === 'blocker') {
+            statusBadgeHtml = `<span class="badge bg-danger">${newStatusDisplay}</span>`;
+        } else {
+            statusBadgeHtml = `<span class="badge bg-warning text-dark">${newStatusDisplay}</span>`;
+        }
+        statusCell.innerHTML = statusBadgeHtml;
+
+        const projectCell = row.querySelector('td[data-field="project"]');
+        projectCell.textContent = newValues.project_name || "N/A";
+        projectCell.dataset.projectId = newValues.project_id || "";
+
+        const actionsCell = row.querySelector('td:last-child');
+        actionsCell.innerHTML = row.dataset.originalHtmlActions;
+
+        delete row.dataset.originalHtmlTitle;
+        delete row.dataset.originalHtmlDescription;
+        delete row.dataset.originalHtmlEstimationTime;
+        delete row.dataset.originalHtmlTaskDate;
+        delete row.dataset.originalHtmlStatus;
+        delete row.dataset.originalHtmlProject;
+        delete row.dataset.originalHtmlActions;
+    }
+
+    function cancelEditMode(row) {
+        row.classList.remove('editing');
+        row.querySelector('td[data-field="title"]').innerHTML = row.dataset.originalHtmlTitle;
+        row.querySelector('td[data-field="description"]').innerHTML = row.dataset.originalHtmlDescription;
+        row.querySelector('td[data-field="estimation_time"]').innerHTML = row.dataset.originalHtmlEstimationTime;
+        row.querySelector('td[data-field="task_date"]').innerHTML = row.dataset.originalHtmlTaskDate;
+        row.querySelector('td[data-field="status"]').innerHTML = row.dataset.originalHtmlStatus;
+        row.querySelector('td[data-field="project"]').innerHTML = row.dataset.originalHtmlProject;
+        row.querySelector('td:last-child').innerHTML = row.dataset.originalHtmlActions;
+
+        delete row.dataset.originalHtmlTitle;
+        delete row.dataset.originalHtmlDescription;
+        delete row.dataset.originalHtmlEstimationTime;
+        delete row.dataset.originalHtmlTaskDate;
+        delete row.dataset.originalHtmlStatus;
+        delete row.dataset.originalHtmlProject;
+        delete row.dataset.originalHtmlActions;
+    }
+
+    function saveChanges(row, taskId) {
+        const title = row.querySelector('td[data-field="title"] input').value;
+        const description = row.querySelector('td[data-field="description"] textarea').value;
+        const estimation_time = parseFloat(row.querySelector('td[data-field="estimation_time"] input').value);
+        const task_date_input = row.querySelector('td[data-field="task_date"] input').value;
+        const task_date = task_date_input ? task_date_input : null;
+        const status = row.querySelector('td[data-field="status"] select').value;
+        const projectSelect = row.querySelector('td[data-field="project"] select');
+        const project_id = projectSelect.value ? parseInt(projectSelect.value) : null;
+
+        const data = {
+            title: title,
+            description: description,
+            estimation_time: estimation_time,
+            task_date: task_date,
+            status: status,
+            project_id: project_id,
+        };
+
+        fetch(`/task/inline_edit/${taskId}/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrfToken,
+            },
+            body: JSON.stringify(data),
+        })
+        .then(response => {
+            if (!response.ok) {
+                return response.json().then(errData => {
+                    throw new Error(errData.error || response.statusText);
+                }).catch(() => {
+                    throw new Error(`Server error: ${response.status} ${response.statusText}`);
+                });
+            }
+            return response.json();
+        })
+        .then(result => {
+            if (result.success) {
+                exitEditMode(row, result.task);
+            } else {
+                alert('Error saving changes: ' + (result.error || 'Unknown error'));
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Failed to save changes: ' + error.message);
+        });
+    }
 });
 </script>
 {% endblock %}

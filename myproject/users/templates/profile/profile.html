@@ -1,4 +1,4 @@
-{% extends "todo/base.html" %}
+{% extends "tasks/base.html" %}
 
 {% block title %}User Profile{% endblock %}
 
@@ -24,7 +24,7 @@
             </div>
             <hr>
             <a href="{% url 'edit_profile_view' %}" class="btn btn-primary">Edit Profile</a>
-            <a href="{% url 'todo_list' %}" class="btn btn-secondary">Back to Todo List</a>
+            <a href="{% url 'task_list' %}" class="btn btn-secondary">Back to Task List</a>
         </div>
     </div>
 </div>
