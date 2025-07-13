@@ -687,26 +687,31 @@ class CSVReportTests(TestCase):
 
 
     def test_download_csv_report_no_todos(self):
-        """Test CSV output when the user has no todo items."""
+        """
+        Test that the CSV report is generated correctly when the user has no to-do items.
+        """
         self.client.login(username='csvuser', password='password123')
-        TodoItem.objects.filter(user=self.user).delete() # Remove existing todos
+        TodoItem.objects.filter(user=self.user).delete()
 
         response = self.client.get(self.url)
         self.assertEqual(response.status_code, 200)
+        self.assertEqual(response['Content-Type'], 'text/csv')
+        self.assertEqual(response['Content-Disposition'], 'attachment; filename="todo_report.csv"')
+
         content = response.content.decode('utf-8')
         reader = csv.reader(StringIO(content))
+        rows = list(reader)
 
-        header = next(reader) # Skip header
-
-        data_row = next(reader)
-        self.assertEqual(data_row[0], self.user.username)
-        self.assertEqual(data_row[1], self.user.email)
-        self.assertEqual(data_row[2], self.user.profile.bio)
-        for i in range(3, 10): # Todo specific fields
-            self.assertEqual(data_row[i], 'N/A')
-
-        with self.assertRaises(StopIteration):
-            next(reader) # No more rows
+        self.assertEqual(len(rows), 2)
+        self.assertEqual(rows[0], [
+            'Username', 'Email', 'Bio',
+            'Todo Title', 'Todo Description', 'Project Name', 'Status',
+            'Time Spent (hours)', 'Created At', 'Updated At', 'Task Date'
+        ])
+        self.assertEqual(rows[1], [
+            self.user.username, self.user.email, self.user.profile.bio,
+            'N/A', 'N/A', 'N/A', 'N/A', 'N/A', 'N/A', 'N/A', 'N/A'
+        ])
 
     def test_download_csv_report_without_profile_bio(self):
         """Test CSV output when user profile bio is empty."""

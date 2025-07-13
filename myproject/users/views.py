@@ -456,7 +456,7 @@ def download_csv_report(request):
         # Write a row with user info even if there are no todos
         writer.writerow([
             user.username, user.email, user_bio,
-            'N/A', 'N/A', 'N/A', 'N/A', 'N/A', 'N/A', 'N/A', 'N/A' # Matched N/A count
+            'N/A', 'N/A', 'N/A', 'N/A', 'N/A', 'N/A', 'N/A', 'N/A'
         ])
     else:
         for item in todo_items:
@@ -543,7 +543,9 @@ def api_get_kanban_tasks(request):
     # Filter tasks that belong to these projects
     # Also, ensure tasks are selected with related user profile and project for efficiency
     # and ordered by creation date.
-    tasks_query = TodoItem.objects.filter(project__in=user_projects).select_related('user__profile', 'project').order_by('created_at')
+    tasks_query = TodoItem.objects.filter(
+        Q(project__in=user_projects) | Q(project__isnull=True, user=current_user)
+    ).select_related('user__profile', 'project').order_by('created_at')
 
     # Apply the project filter from the request, if any
     project_id_filter = request.GET.get('project_id')
