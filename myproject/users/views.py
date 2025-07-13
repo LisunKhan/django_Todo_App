@@ -93,7 +93,7 @@ def task_list(request):
         'selected_end_date': end_date_filter,
         'selected_project_id': int(project_filter_id) if project_filter_id else None,
     }
-    return render(request, 'todo/task_list.html', context)
+    return render(request, 'tasks/task_list.html', context)
 
 @login_required
 def add_task(request):
@@ -134,12 +134,12 @@ def add_task(request):
             if is_ajax:
                 return JsonResponse({'success': False, 'errors': form.errors.as_json()}, status=400)
             else:
-                return render(request, 'todo/add_task.html', {'form': form})
+                return render(request, 'tasks/add_task.html', {'form': form})
     else:
         form = TaskForm(user=request.user)
         if is_ajax:
             return JsonResponse({'error': 'GET request not supported for AJAX here'}, status=405)
-        return render(request, 'todo/add_task.html', {'form': form})
+        return render(request, 'tasks/add_task.html', {'form': form})
 
 @login_required
 def delete_task(request, task_id):
@@ -153,12 +153,12 @@ def delete_task(request, task_id):
         else:
             return redirect('task_list')
 
-    return render(request, 'todo/delete_task.html', {'task': task})
+    return render(request, 'tasks/delete_task.html', {'task': task})
 
 @login_required
 def task_detail(request, task_id):
     task = get_object_or_404(Task, id=task_id)
-    return render(request, 'todo/task_detail.html', {'task': task})
+    return render(request, 'tasks/task_detail.html', {'task': task})
 
 @login_required
 def task_report(request):
@@ -225,7 +225,7 @@ def task_report(request):
         'project_options': project_options,
         'selected_project_id': int(project_filter_id) if project_filter_id else None,
     }
-    return render(request, 'todo/report.html', context)
+    return render(request, 'tasks/report.html', context)
 
 @login_required
 def edit_task(request, task_id):
@@ -237,7 +237,7 @@ def edit_task(request, task_id):
             return redirect(reverse('task_detail', args=[task.id]))
     else:
         form = TaskForm(instance=task, user=request.user)
-    return render(request, 'todo/edit_task.html', {'form': form, 'task': task})
+    return render(request, 'tasks/edit_task.html', {'form': form, 'task': task})
 
 import json
 from django.http import JsonResponse
