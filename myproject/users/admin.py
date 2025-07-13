@@ -27,16 +27,16 @@ class ProjectMembershipAdmin(admin.ModelAdmin):
 
 @admin.register(Task)
 class TaskAdmin(admin.ModelAdmin):
-    list_display = ('title', 'project', 'status', 'user', 'estimation_time', 'total_spent_hours', 'created_at', 'updated_at', 'task_date')
-    list_filter = ('status', 'project', 'user', 'created_at', 'updated_at', 'task_date')
+    list_display = ('title', 'project', 'status', 'user', 'estimation_time', 'total_spent_hours', 'created_at', 'updated_at')
+    list_filter = ('status', 'project', 'user', 'created_at', 'updated_at')
     search_fields = ('title', 'description')
     readonly_fields = ('created_at', 'updated_at', 'total_spent_hours')
     autocomplete_fields = ['user', 'project']
 
 @admin.register(TaskLog)
 class TaskLogAdmin(admin.ModelAdmin):
-    list_display = ('task', 'spent_time', 'task_date', 'created_at')
-    list_filter = ('task_date', 'task__project', 'task__user')
+    list_display = ('task', 'spent_time', 'log_date', 'created_at')
+    list_filter = ('log_date', 'task__project', 'task__user')
     search_fields = ('task__title',)
     autocomplete_fields = ['task']
 

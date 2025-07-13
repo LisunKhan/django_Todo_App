@@ -44,7 +44,7 @@ class TaskLogModelTests(TestCase):
         log = TaskLog.objects.create(
             task=self.task,
             spent_time=1.5,
-            task_date=date.today()
+            log_date=date.today()
         )
         self.assertEqual(log.task, self.task)
         self.assertEqual(log.spent_time, 1.5)
@@ -52,8 +52,8 @@ class TaskLogModelTests(TestCase):
         self.assertEqual(self.task.total_spent_hours, 1.5)
 
     def test_total_spent_hours_update(self):
-        TaskLog.objects.create(task=self.task, spent_time=1, task_date=date.today())
-        TaskLog.objects.create(task=self.task, spent_time=2, task_date=date.today())
+        TaskLog.objects.create(task=self.task, spent_time=1, log_date=date.today())
+        TaskLog.objects.create(task=self.task, spent_time=2, log_date=date.today())
         self.task.refresh_from_db()
         self.assertEqual(self.task.total_spent_hours, 3)
 
@@ -123,31 +123,31 @@ class TaskLogAPITests(TestCase):
 
     def test_create_task_log(self):
         url = reverse('tasklog_create')
-        data = {'task_id': self.task.id, 'spent_time': 2, 'task_date': '2023-01-01'}
+        data = {'task_id': self.task.id, 'spent_time': 2, 'log_date': '2023-01-01'}
         response = self.client.post(url, json.dumps(data), content_type='application/json')
         self.assertEqual(response.status_code, 201)
         self.task.refresh_from_db()
         self.assertEqual(self.task.total_spent_hours, 2)
 
     def test_list_task_logs(self):
-        TaskLog.objects.create(task=self.task, spent_time=1, task_date='2023-01-01')
-        TaskLog.objects.create(task=self.task, spent_time=2, task_date='2023-01-02')
+        TaskLog.objects.create(task=self.task, spent_time=1, log_date='2023-01-01')
+        TaskLog.objects.create(task=self.task, spent_time=2, log_date='2023-01-02')
         url = reverse('tasklog_list', args=[self.task.id])
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
         self.assertEqual(len(response.json()), 2)
 
     def test_update_task_log(self):
-        log = TaskLog.objects.create(task=self.task, spent_time=1, task_date='2023-01-01')
+        log = TaskLog.objects.create(task=self.task, spent_time=1, log_date='2023-01-01')
         url = reverse('tasklog_detail', args=[log.id])
-        data = {'spent_time': 1.5, 'task_date': '2023-01-01'}
+        data = {'spent_time': 1.5, 'log_date': '2023-01-01'}
         response = self.client.put(url, json.dumps(data), content_type='application/json')
         self.assertEqual(response.status_code, 200)
         self.task.refresh_from_db()
         self.assertEqual(self.task.total_spent_hours, 1.5)
 
     def test_delete_task_log(self):
-        log = TaskLog.objects.create(task=self.task, spent_time=1, task_date='2023-01-01')
+        log = TaskLog.objects.create(task=self.task, spent_time=1, log_date='2023-01-01')
         url = reverse('tasklog_detail', args=[log.id])
         response = self.client.delete(url)
         self.assertEqual(response.status_code, 204)

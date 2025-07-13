@@ -18,7 +18,6 @@ class Task(models.Model):
     total_spent_hours = models.FloatField(default=0)  # calculated field
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    task_date = models.DateField(null=True, blank=True)
 
     STATUS_CHOICES = [
         ('todo', 'To Do'),
@@ -43,12 +42,12 @@ class Task(models.Model):
 class TaskLog(models.Model):
     task = models.ForeignKey(Task, related_name='logs', on_delete=models.CASCADE)
     spent_time = models.FloatField()  # in hours
-    task_date = models.DateField()
+    log_date = models.DateField()
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
-        return f"Log for {self.task.title} on {self.task_date}"
+        return f"Log for {self.task.title} on {self.log_date}"
 
 # Project and ProjectMembership Models
 

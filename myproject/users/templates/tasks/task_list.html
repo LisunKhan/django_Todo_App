@@ -125,11 +125,8 @@
             <th>Description</th>
             <th>Est. Time (h)</th>
             <th>Total Spent (h)</th>
-            <th>
-                <a href="?order_by={% if request.GET.order_by == 'task_date' %}-task_date{% else %}task_date{% endif %}&q={{ query | default:'' }}&start_date={{ selected_start_date|default:'' }}&end_date={{ selected_end_date|default:'' }}&status={{ selected_status|default:'' }}&project={{ selected_project_id|default:'' }}">
-                    Task Date {% if request.GET.order_by == 'task_date' %}▲{% elif request.GET.order_by == '-task_date' %}▼{% endif %}
-                </a>
-            </th>
+            <th>Log Date</th>
+            <th>Spent Time</th>
             <th>
                 <a href="?order_by={% if request.GET.order_by == 'status' %}-status{% else %}status{% endif %}&q={{ query | default:'' }}&start_date={{ selected_start_date|default:'' }}&end_date={{ selected_end_date|default:'' }}&status={{ selected_status|default:'' }}&project={{ selected_project_id|default:'' }}">
                     Status {% if request.GET.order_by == 'status' %}▲{% elif request.GET.order_by == '-status' %}▼{% endif %}
@@ -150,7 +147,8 @@
             <td data-field="description" title="{{ task.description }}">{{ task.description }}</td>
             <td data-field="estimation_time">{{ task.estimation_time|floatformat:2 }}h</td>
             <td data-field="total_spent_hours">{{ task.total_spent_hours|floatformat:2 }}h</td>
-            <td data-field="task_date">{{ task.task_date|date:"Y-m-d"|default:"N/A" }}</td>
+            <td data-field="log_date"></td>
+            <td data-field="spent_time"></td>
             <td data-field="status" data-value="{{ task.status }}">
                 {% if task.status == 'done' %}
                     <span class="badge bg-success">{{ task.get_status_display }}</span>
@@ -373,22 +371,40 @@ document.addEventListener('DOMContentLoaded', function () {
         estimationTimeCell.innerHTML = '';
         estimationTimeCell.appendChild(timeInput);
 
-        const taskDateCell = row.querySelector('td[data-field="task_date"]');
-        const currentTaskDate = taskDateCell.textContent.trim();
-        const taskDateForInput = currentTaskDate === "N/A" ? "" : currentTaskDate;
-        row.dataset.originalHtmlTaskDate = taskDateCell.innerHTML;
-        const taskDateInput = document.createElement('input');
-        taskDateInput.type = 'date';
-        taskDateInput.className = 'form-control form-control-sm';
-        taskDateInput.value = taskDateForInput;
-        taskDateInput.addEventListener('keydown', function(e) {
+        const logDateCell = row.querySelector('td[data-field="log_date"]');
+        const currentLogDate = logDateCell.textContent.trim();
+        const logDateForInput = currentLogDate === "N/A" ? "" : currentLogDate;
+        row.dataset.originalHtmlLogDate = logDateCell.innerHTML;
+        const logDateInput = document.createElement('input');
+        logDateInput.type = 'date';
+        logDateInput.className = 'form-control form-control-sm';
+        logDateInput.value = logDateForInput;
+        logDateInput.addEventListener('keydown', function(e) {
             if (e.key === 'Enter') {
                 e.preventDefault();
                 saveChanges(row, row.dataset.id);
             }
         });
-        taskDateCell.innerHTML = '';
-        taskDateCell.appendChild(taskDateInput);
+        logDateCell.innerHTML = '';
+        logDateCell.appendChild(logDateInput);
+
+        const spentTimeCell = row.querySelector('td[data-field="spent_time"]');
+        const currentSpentTimeText = spentTimeCell.textContent.trim().replace('h', '');
+        const currentSpentTime = parseFloat(currentSpentTimeText) || 0;
+        row.dataset.originalHtmlSpentTime = spentTimeCell.innerHTML;
+        const spentTimeInput = document.createElement('input');
+        spentTimeInput.type = 'number';
+        spentTimeInput.step = '0.1';
+        spentTimeInput.className = 'form-control form-control-sm';
+        spentTimeInput.value = currentSpentTime;
+        spentTimeInput.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                saveChanges(row, row.dataset.id);
+            }
+        });
+        spentTimeCell.innerHTML = '';
+        spentTimeCell.appendChild(spentTimeInput);
 
         const statusCell = row.querySelector('td[data-field="status"]');
         const currentStatusValue = statusCell.dataset.value;
@@ -468,12 +484,15 @@ document.addEventListener('DOMContentLoaded', function () {
         const estimationTimeCell = row.querySelector('td[data-field="estimation_time"]');
         estimationTimeCell.textContent = `${parseFloat(newValues.estimation_time).toFixed(2)}h`;
 
-        const taskDateCell = row.querySelector('td[data-field="task_date"]');
-        let displayTaskDate = "N/A";
-        if (newValues.task_date) {
-            displayTaskDate = newValues.task_date;
+        const logDateCell = row.querySelector('td[data-field="log_date"]');
+        let displayLogDate = "N/A";
+        if (newValues.log_date) {
+            displayLogDate = newValues.log_date;
         }
-        taskDateCell.textContent = displayTaskDate;
+        logDateCell.textContent = displayLogDate;
+
+        const spentTimeCell = row.querySelector('td[data-field="spent_time"]');
+        spentTimeCell.textContent = `${parseFloat(newValues.spent_time).toFixed(2)}h`;
 
         const statusCell = row.querySelector('td[data-field="status"]');
         const newStatusValue = newValues.status;
@@ -537,8 +556,9 @@ document.addEventListener('DOMContentLoaded', function () {
         const title = row.querySelector('td[data-field="title"] input').value;
         const description = row.querySelector('td[data-field="description"] textarea').value;
         const estimation_time = parseFloat(row.querySelector('td[data-field="estimation_time"] input').value);
-        const task_date_input = row.querySelector('td[data-field="task_date"] input').value;
-        const task_date = task_date_input ? task_date_input : null;
+        const log_date_input = row.querySelector('td[data-field="log_date"] input').value;
+        const log_date = log_date_input ? log_date_input : null;
+        const spent_time = parseFloat(row.querySelector('td[data-field="spent_time"] input').value);
         const status = row.querySelector('td[data-field="status"] select').value;
         const projectSelect = row.querySelector('td[data-field="project"] select');
         const project_id = projectSelect.value ? parseInt(projectSelect.value) : null;
@@ -547,10 +567,24 @@ document.addEventListener('DOMContentLoaded', function () {
             title: title,
             description: description,
             estimation_time: estimation_time,
-            task_date: task_date,
             status: status,
             project_id: project_id,
         };
+
+        const log_data = {
+            log_date: log_date,
+            spent_time: spent_time,
+            task_id: taskId
+        };
+
+        fetch(`/api/tasklogs/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrfToken,
+            },
+            body: JSON.stringify(log_data),
+        })
 
         fetch(`/task/inline_edit/${taskId}/`, {
             method: 'POST',

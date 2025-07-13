@@ -71,9 +71,9 @@ class TaskForm(forms.ModelForm):
 class TaskLogForm(forms.ModelForm):
     class Meta:
         model = TaskLog
-        fields = ['spent_time', 'task_date']
+        fields = ['spent_time', 'log_date']
         widgets = {
-            'task_date': forms.DateInput(attrs={'type': 'date'}),
+            'log_date': forms.DateInput(attrs={'type': 'date'}),
         }
 
 

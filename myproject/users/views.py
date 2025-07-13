@@ -52,11 +52,11 @@ def task_list(request):
             Q(project__name__icontains=query)
         )
 
-    order_by = request.GET.get('order_by', 'task_date')
-    allowed_ordering_fields = ['title', 'task_date', 'status', 'project__name',
-                               '-title', '-task_date', '-status', '-project__name']
+    order_by = request.GET.get('order_by', 'created_at')
+    allowed_ordering_fields = ['title', 'status', 'project__name',
+                               '-title', '-status', '-project__name']
     if order_by not in allowed_ordering_fields:
-        order_by = 'task_date'
+        order_by = 'created_at'
 
     status_filter = request.GET.get('status', '')
     start_date_filter = request.GET.get('start_date', '')
@@ -118,7 +118,7 @@ def add_task(request):
 
             if log_form.is_valid():
                 log = log_form.save(commit=False)
-                if log.spent_time and log.task_date:
+                if log.spent_time and log.log_date:
                     log.task = task
                     log.save()
 
@@ -129,7 +129,6 @@ def add_task(request):
                     'description': task.description,
                     'status': task.status,
                     'get_status_display': task.get_status_display(),
-                    'task_date': task.task_date.strftime('%Y-%m-%d') if task.task_date else None,
                     'estimation_time': task.estimation_time,
                     'total_spent_hours': task.total_spent_hours,
                     'project_id': task.project.id if task.project else None,
@@ -243,13 +242,20 @@ def task_report(request):
 def edit_task(request, task_id):
     task = get_object_or_404(Task, id=task_id, user=request.user)
     if request.method == 'POST':
-        form = TaskForm(request.POST, instance=task, user=request.user)
-        if form.is_valid():
-            form.save()
+        task_form = TaskForm(request.POST, instance=task, user=request.user)
+        log_form = TaskLogForm(request.POST)
+        if task_form.is_valid():
+            task_form.save()
+            if log_form.is_valid():
+                log = log_form.save(commit=False)
+                if log.spent_time and log.log_date:
+                    log.task = task
+                    log.save()
             return redirect(reverse('task_detail', args=[task.id]))
     else:
-        form = TaskForm(instance=task, user=request.user)
-    return render(request, 'tasks/edit_task.html', {'form': form, 'task': task})
+        task_form = TaskForm(instance=task, user=request.user)
+        log_form = TaskLogForm()
+    return render(request, 'tasks/edit_task.html', {'form': task_form, 'log_form': log_form, 'task': task})
 
 import json
 from django.http import JsonResponse
@@ -548,12 +554,12 @@ def task_logs_api(request, task_id=None, log_id=None):
             log = form.save(commit=False)
             log.task = task
             log.save()
-            return JsonResponse({'id': log.id, 'spent_time': log.spent_time, 'task_date': log.task_date}, status=201)
+            return JsonResponse({'id': log.id, 'spent_time': log.spent_time, 'log_date': log.log_date}, status=201)
         return JsonResponse(form.errors, status=400)
 
     if request.method == 'GET' and task_id:
         task = get_object_or_404(Task, id=task_id, user=request.user)
-        logs = task.logs.all().values('id', 'spent_time', 'task_date')
+        logs = task.logs.all().values('id', 'spent_time', 'log_date')
         return JsonResponse(list(logs), safe=False)
 
     if request.method == 'PUT' and log_id:
@@ -562,7 +568,7 @@ def task_logs_api(request, task_id=None, log_id=None):
         form = TaskLogForm(data, instance=log)
         if form.is_valid():
             log = form.save()
-            return JsonResponse({'id': log.id, 'spent_time': log.spent_time, 'task_date': log.task_date})
+            return JsonResponse({'id': log.id, 'spent_time': log.spent_time, 'log_date': log.log_date})
         return JsonResponse(form.errors, status=400)
 
     if request.method == 'DELETE' and log_id:
