@@ -185,11 +185,11 @@ def task_report(request):
             Q(project__name__icontains=query)
         )
 
-    order_by = request.GET.get('order_by', 'task_date')
-    allowed_ordering_fields = ['title', 'task_date', 'status', 'total_spent_hours', 'project__name',
-                               '-title', '-task_date', '-status', '-total_spent_hours', '-project__name']
+    order_by = request.GET.get('order_by', 'created_at')
+    allowed_ordering_fields = ['title', 'status', 'total_spent_hours', 'project__name',
+                               '-title', '-status', '-total_spent_hours', '-project__name']
     if order_by not in allowed_ordering_fields:
-        order_by = 'task_date'
+        order_by = 'created_at'
 
     status_filter = request.GET.get('status', '')
     start_date_filter = request.GET.get('start_date', '')
@@ -199,9 +199,9 @@ def task_report(request):
     if status_filter:
         tasks_for_display = tasks_for_display.filter(status=status_filter)
     if start_date_filter:
-        tasks_for_display = tasks_for_display.filter(logs__task_date__gte=start_date_filter)
+        tasks_for_display = tasks_for_display.filter(logs__log_date__gte=start_date_filter)
     if end_date_filter:
-        tasks_for_display = tasks_for_display.filter(logs__task_date__lte=end_date_filter)
+        tasks_for_display = tasks_for_display.filter(logs__log_date__lte=end_date_filter)
     if project_filter_id:
         tasks_for_display = tasks_for_display.filter(project_id=project_filter_id)
 
@@ -290,15 +290,6 @@ def inline_edit_task(request, task_id):
                 except (ValueError, Project.DoesNotExist):
                     return JsonResponse({'success': False, 'error': 'Project not found or user does not have access.'}, status=404)
 
-        if 'task_date' in data:
-            task_date_str = data.get('task_date')
-            if task_date_str:
-                try:
-                    task.task_date = task_date_str
-                except ValueError:
-                    return JsonResponse({'success': False, 'error': 'Invalid date format for task_date. Use YYYY-MM-DD.'}, status=400)
-            else:
-                task.task_date = None
 
         if 'estimation_time' in data:
             try:
@@ -497,7 +488,6 @@ def api_get_kanban_tasks(request):
             "description": task.description,
             "status": task.status,
             "get_status_display": task.get_status_display(),
-            "task_date": task.task_date.strftime('%Y-%m-%d') if task.task_date else None,
             "estimation_time": task.estimation_time,
             "total_spent_hours": task.total_spent_hours,
             "project_id": task.project.id if task.project else None,
