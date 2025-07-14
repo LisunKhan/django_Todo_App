@@ -125,6 +125,8 @@
             <th>Description</th>
             <th>Est. Time (h)</th>
             <th>Total Spent (h)</th>
+            <th>Latest Log Date</th>
+            <th>Latest Spent Time</th>
             <th>
                 <a href="?order_by={% if request.GET.order_by == 'status' %}-status{% else %}status{% endif %}&q={{ query | default:'' }}&start_date={{ selected_start_date|default:'' }}&end_date={{ selected_end_date|default:'' }}&status={{ selected_status|default:'' }}&project={{ selected_project_id|default:'' }}">
                     Status {% if request.GET.order_by == 'status' %}▲{% elif request.GET.order_by == '-status' %}▼{% endif %}
@@ -145,6 +147,8 @@
             <td data-field="description" title="{{ task.description }}">{{ task.description }}</td>
             <td data-field="estimation_time">{{ task.estimation_time|floatformat:2 }}h</td>
             <td data-field="total_spent_hours">{{ task.total_spent_hours|floatformat:2 }}h</td>
+            <td data-field="latest_log_date">{{ task.latest_log_date|date:"Y-m-d"|default:"N/A" }}</td>
+            <td data-field="latest_spent_time">{{ task.latest_spent_time|floatformat:2|default:"0.00" }}h</td>
             <td data-field="status" data-value="{{ task.status }}">
                 {% if task.status == 'done' %}
                     <span class="badge bg-success">{{ task.get_status_display }}</span>
@@ -367,18 +371,24 @@ document.addEventListener('DOMContentLoaded', function () {
         estimationTimeCell.innerHTML = '';
         estimationTimeCell.appendChild(timeInput);
 
+        const logDateCell = row.querySelector('td[data-field="latest_log_date"]');
+        row.dataset.originalHtmlLogDate = logDateCell.innerHTML;
         const logDateInput = document.createElement('input');
         logDateInput.type = 'date';
-        logDateInput.className = 'form-control form-control-sm d-none';
+        logDateInput.className = 'form-control form-control-sm';
         logDateInput.name = 'log_date';
-        row.querySelector('td[data-field="status"]').appendChild(logDateInput);
+        logDateCell.innerHTML = '';
+        logDateCell.appendChild(logDateInput);
 
+        const spentTimeCell = row.querySelector('td[data-field="latest_spent_time"]');
+        row.dataset.originalHtmlSpentTime = spentTimeCell.innerHTML;
         const spentTimeInput = document.createElement('input');
         spentTimeInput.type = 'number';
         spentTimeInput.step = '0.1';
-        spentTimeInput.className = 'form-control form-control-sm d-none';
+        spentTimeInput.className = 'form-control form-control-sm';
         spentTimeInput.name = 'spent_time';
-        row.querySelector('td[data-field="status"]').appendChild(spentTimeInput);
+        spentTimeCell.innerHTML = '';
+        spentTimeCell.appendChild(spentTimeInput);
 
         const statusCell = row.querySelector('td[data-field="status"]');
         const currentStatusValue = statusCell.dataset.value;
@@ -458,15 +468,11 @@ document.addEventListener('DOMContentLoaded', function () {
         const estimationTimeCell = row.querySelector('td[data-field="estimation_time"]');
         estimationTimeCell.textContent = `${parseFloat(newValues.estimation_time).toFixed(2)}h`;
 
-        const logDateCell = row.querySelector('td[data-field="log_date"]');
-        let displayLogDate = "N/A";
-        if (newValues.log_date) {
-            displayLogDate = newValues.log_date;
-        }
-        logDateCell.textContent = displayLogDate;
+        const logDateCell = row.querySelector('td[data-field="latest_log_date"]');
+        logDateCell.innerHTML = row.dataset.originalHtmlLogDate;
 
-        const spentTimeCell = row.querySelector('td[data-field="spent_time"]');
-        spentTimeCell.textContent = `${parseFloat(newValues.spent_time).toFixed(2)}h`;
+        const spentTimeCell = row.querySelector('td[data-field="latest_spent_time"]');
+        spentTimeCell.innerHTML = row.dataset.originalHtmlSpentTime;
 
         const statusCell = row.querySelector('td[data-field="status"]');
         const newStatusValue = newValues.status;
@@ -504,8 +510,6 @@ document.addEventListener('DOMContentLoaded', function () {
         delete row.dataset.originalHtmlStatus;
         delete row.dataset.originalHtmlProject;
         delete row.dataset.originalHtmlActions;
-        row.querySelector('input[name="log_date"]').remove();
-        row.querySelector('input[name="spent_time"]').remove();
     }
 
     function cancelEditMode(row) {
@@ -513,6 +517,8 @@ document.addEventListener('DOMContentLoaded', function () {
         row.querySelector('td[data-field="title"]').innerHTML = row.dataset.originalHtmlTitle;
         row.querySelector('td[data-field="description"]').innerHTML = row.dataset.originalHtmlDescription;
         row.querySelector('td[data-field="estimation_time"]').innerHTML = row.dataset.originalHtmlEstimationTime;
+        row.querySelector('td[data-field="latest_log_date"]').innerHTML = row.dataset.originalHtmlLogDate;
+        row.querySelector('td[data-field="latest_spent_time"]').innerHTML = row.dataset.originalHtmlSpentTime;
         row.querySelector('td[data-field="status"]').innerHTML = row.dataset.originalHtmlStatus;
         row.querySelector('td[data-field="project"]').innerHTML = row.dataset.originalHtmlProject;
         row.querySelector('td:last-child').innerHTML = row.dataset.originalHtmlActions;
@@ -520,7 +526,8 @@ document.addEventListener('DOMContentLoaded', function () {
         delete row.dataset.originalHtmlTitle;
         delete row.dataset.originalHtmlDescription;
         delete row.dataset.originalHtmlEstimationTime;
-        delete row.dataset.originalHtmlTaskDate;
+        delete row.dataset.originalHtmlLogDate;
+        delete row.dataset.originalHtmlSpentTime;
         delete row.dataset.originalHtmlStatus;
         delete row.dataset.originalHtmlProject;
         delete row.dataset.originalHtmlActions;
@@ -530,9 +537,9 @@ document.addEventListener('DOMContentLoaded', function () {
         const title = row.querySelector('td[data-field="title"] input').value;
         const description = row.querySelector('td[data-field="description"] textarea').value;
         const estimation_time = parseFloat(row.querySelector('td[data-field="estimation_time"] input').value);
-        const log_date_input = row.querySelector('input[name="log_date"]').value;
+        const log_date_input = row.querySelector('td[data-field="latest_log_date"] input').value;
         const log_date = log_date_input ? log_date_input : null;
-        const spent_time = parseFloat(row.querySelector('input[name="spent_time"]').value);
+        const spent_time = parseFloat(row.querySelector('td[data-field="latest_spent_time"] input').value);
         const status = row.querySelector('td[data-field="status"] select').value;
         const projectSelect = row.querySelector('td[data-field="project"] select');
         const project_id = projectSelect.value ? parseInt(projectSelect.value) : null;

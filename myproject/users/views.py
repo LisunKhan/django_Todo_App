@@ -34,9 +34,15 @@ def user_login(request):
 
 from .models import Project # Make sure Project is imported
 
+from django.db.models import OuterRef, Subquery
+
 @login_required
 def task_list(request):
-    tasks = Task.objects.filter(user=request.user)
+    latest_log = TaskLog.objects.filter(task=OuterRef('pk')).order_by('-log_date')
+    tasks = Task.objects.filter(user=request.user).annotate(
+        latest_log_date=Subquery(latest_log.values('log_date')[:1]),
+        latest_spent_time=Subquery(latest_log.values('spent_time')[:1])
+    )
 
     current_user = request.user
     user_projects = Project.objects.filter(
@@ -301,6 +307,15 @@ def inline_edit_task(request, task_id):
                 return JsonResponse({'success': False, 'error': 'Invalid format for estimation_time.'}, status=400)
 
         task.save()
+
+        if 'log_date' in data and 'spent_time' in data:
+            log_form = TaskLogForm(data)
+            if log_form.is_valid():
+                log = log_form.save(commit=False)
+                if log.spent_time and log.log_date:
+                    log.task = task
+                    log.save()
+
         task.refresh_from_db()
 
         return JsonResponse({
