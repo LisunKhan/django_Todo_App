@@ -677,7 +677,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (e.key === 'Enter' && e.target === titleInput) {
                 e.preventDefault();
                 // Call saveChanges with the input elements it needs
-                saveChanges(titleInput, descriptionTextarea, taskDateInput, timeSpentInput, projectSelect);
+                saveChanges(titleInput, descriptionTextarea, taskDateInput, timeSpentInput, projectSelect, estimationTimeInput);
                 titleInput.removeEventListener('keypress', tempKeyListener); // Clean up self
             }
         };
@@ -771,7 +771,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const clickSaveListener = () => {
             // Pass projectSelect to saveChanges
-            saveChanges(titleInput, descriptionTextarea, taskDateInput, timeSpentInput, projectSelect);
+            saveChanges(titleInput, descriptionTextarea, taskDateInput, timeSpentInput, projectSelect, estimationTimeInput);
         };
 
         newEditButton.addEventListener('click', clickSaveListener);

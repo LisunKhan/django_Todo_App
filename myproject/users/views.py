@@ -157,6 +157,7 @@ def add_todo(request):
                     'get_status_display': todo.get_status_display(),
                     'task_date': todo.task_date.strftime('%Y-%m-%d') if todo.task_date else None,
                     'time_spent_hours': todo.time_spent_hours,
+                    'estimation_time_hours': todo.estimation_time_hours,
                     'project_id': todo.project.id if todo.project else None,
                     'project_name': todo.project.name if todo.project else None,
                 }
