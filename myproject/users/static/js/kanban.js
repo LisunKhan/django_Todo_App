@@ -373,6 +373,7 @@ document.addEventListener('DOMContentLoaded', () => {
         taskCard.setAttribute('data-status', task.status);
         taskCard.setAttribute('data-task-date', task.task_date || '');
         taskCard.setAttribute('data-time-spent', String(task.time_spent_hours || '0'));
+        taskCard.setAttribute('data-estimation-time', String(task.estimation_time_hours || '0'));
         taskCard.setAttribute('data-project-id', task.project_id || '');
         taskCard.setAttribute('data-project-name', task.project_name || '');
 
@@ -428,6 +429,10 @@ document.addEventListener('DOMContentLoaded', () => {
         timeSpentElement.className = 'task-meta task-time-spent';
         timeSpentElement.innerHTML = `<strong>Time Spent:</strong> <span class="time-value">${task.time_spent_hours || '0'}</span> hours`;
 
+        const estimationTimeElement = document.createElement('div');
+        estimationTimeElement.className = 'task-meta task-estimation-time';
+        estimationTimeElement.innerHTML = `<strong>Estimation:</strong> <span class="time-value">${task.estimation_time_hours || '0'}</span> hours`;
+
         const projectElement = document.createElement('div');
         projectElement.className = 'task-meta task-project';
         projectElement.innerHTML = `<strong>Project:</strong> <span class="project-name">${task.project_name || "N/A"}</span>`;
@@ -454,6 +459,7 @@ document.addEventListener('DOMContentLoaded', () => {
         taskCard.appendChild(projectElement); // Add project element
         taskCard.appendChild(taskDateElement); // Add new element
         taskCard.appendChild(timeSpentElement); // Add new element
+        taskCard.appendChild(estimationTimeElement);
         taskCard.appendChild(actionsDiv);
 
         editButton.addEventListener('click', () => enableEditMode(taskCard, titleElement, descriptionElement, taskDateElement, timeSpentElement, projectElement, editButton));
@@ -570,6 +576,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const originalDescription = taskCard.dataset.description;
         const originalTaskDate = taskCard.dataset.taskDate;
         const originalTimeSpent = taskCard.dataset.timeSpent;
+        const originalEstimationTime = taskCard.dataset.estimationTime;
         const originalProjectId = taskCard.dataset.projectId;
         // const originalProjectName = taskCard.dataset.projectName; // Not strictly needed for input if using ID
 
@@ -623,6 +630,14 @@ document.addEventListener('DOMContentLoaded', () => {
         taskCard.insertBefore(timeSpentInput, timeSpentElement);
         timeSpentElement.style.display = 'none';
 
+        const estimationTimeInput = document.createElement('input');
+        estimationTimeInput.type = 'number';
+        estimationTimeInput.value = originalEstimationTime || '0';
+        estimationTimeInput.min = '0';
+        estimationTimeInput.step = '0.1';
+        taskCard.insertBefore(estimationTimeInput, taskCard.querySelector('.task-estimation-time'));
+        taskCard.querySelector('.task-estimation-time').style.display = 'none';
+
         // Create and setup Project select
         const projectSelect = document.createElement('select');
         projectSelect.className = 'task-edit-project'; // Add a class for styling if needed
@@ -672,12 +687,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Definition of the nested saveChanges function
         // It uses variables from enableEditMode's scope: taskCard, titleElement, descriptionElement, projectElement, taskDateElement, timeSpentElement, newEditButton, titleInput (for removing keylistener), tempKeyListener
-        function saveChanges(currentTitleInput, currentDescriptionTextarea, currentTaskDateInput, currentTimeSpentInput, currentProjectSelect) {
+        function saveChanges(currentTitleInput, currentDescriptionTextarea, currentTaskDateInput, currentTimeSpentInput, currentProjectSelect, currentEstimationTimeInput) {
             taskCard.classList.remove('editing');
             const newTitle = currentTitleInput.value.trim();
             const newDescription = currentDescriptionTextarea.value.trim();
             const newTaskDate = currentTaskDateInput.value;
             const newTimeSpent = currentTimeSpentInput.value.trim() || '0';
+            const newEstimationTime = currentEstimationTimeInput.value.trim() || '0';
             const newProjectId = currentProjectSelect.value ? parseInt(currentProjectSelect.value) : null;
             // Get project name from selected option text, or use "N/A"
             const newProjectName = newProjectId ? currentProjectSelect.options[currentProjectSelect.selectedIndex].text : "N/A";
@@ -704,6 +720,7 @@ document.addEventListener('DOMContentLoaded', () => {
             taskCard.setAttribute('data-description', newDescription);
             taskCard.setAttribute('data-task-date', newTaskDate);
             taskCard.setAttribute('data-time-spent', newTimeSpent);
+            taskCard.setAttribute('data-estimation-time', newEstimationTime);
             taskCard.setAttribute('data-project-id', newProjectId || '');
             taskCard.setAttribute('data-project-name', newProjectName);
 
@@ -742,6 +759,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 description: newDescription,
                 task_date: newTaskDate,
                 time_spent_hours: parseFloat(newTimeSpent),
+                estimation_time_hours: parseFloat(newEstimationTime),
                 project_id: newProjectId // Add project_id to API call
             };
             console.log(`Task ${taskCard.dataset.taskId} updated with data:`, updateData);
@@ -805,6 +823,7 @@ document.addEventListener('DOMContentLoaded', () => {
             <select class="new-task-project">${projectOptionsHtml}</select>
             <input type="date" placeholder="Task Date" class="new-task-date">
             <input type="number" placeholder="Time Spent (Hours)" class="new-task-time-spent" min="0" step="0.1">
+            <input type="number" placeholder="Estimation Time (Hours)" class="new-task-estimation-time" min="0" step="0.1">
             <div class="form-actions">
                 <button class="save-new-task-btn">Save Task</button>
                 <button class="cancel-new-task-btn">Cancel</button>
@@ -821,6 +840,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const projectSelect = form.querySelector('.new-task-project');
         const dateInput = form.querySelector('.new-task-date');
         const timeSpentInput = form.querySelector('.new-task-time-spent');
+        const estimationTimeInput = form.querySelector('.new-task-estimation-time');
 
         const saveNewTaskHandler = async () => {
             const title = titleInput.value.trim();
@@ -828,6 +848,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const projectId = projectSelect.value ? parseInt(projectSelect.value) : null;
             const taskDate = dateInput.value;
             const timeSpentHours = timeSpentInput.value ? parseFloat(timeSpentInput.value) : 0;
+            const estimationTimeHours = estimationTimeInput.value ? parseFloat(estimationTimeInput.value) : 0;
 
             if (title) {
                 // The createTaskAPI (which calls /add_todo/) expects 'project' as the field name for the ID.
@@ -838,7 +859,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     status,
                     project: projectId,
                     task_date: taskDate,
-                    time_spent_hours: timeSpentHours
+                    time_spent_hours: timeSpentHours,
+                    estimation_time_hours: estimationTimeHours
                 };
                 const createdTask = await createTaskAPI(newTaskData); // createTaskAPI should return the full task object
                 if (createdTask) { // Check if task creation was successful and returned data

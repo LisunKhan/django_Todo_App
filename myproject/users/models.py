@@ -15,6 +15,7 @@ class TodoItem(models.Model):
     description = models.TextField()
     project = models.ForeignKey('Project', on_delete=models.SET_NULL, null=True, blank=True, related_name='todo_items')
     time_spent = models.IntegerField(default=0)  # Stored in minutes
+    estimation_time = models.IntegerField(default=0) # Stored in minutes
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     task_date = models.DateField(null=True, blank=True)
@@ -36,6 +37,12 @@ class TodoItem(models.Model):
         if self.time_spent is None:
             return 0
         return self.time_spent / 60
+
+    @property
+    def estimation_time_hours(self):
+        if self.estimation_time is None:
+            return 0
+        return self.estimation_time / 60
 
     def __str__(self):
         return self.title

@@ -45,6 +45,11 @@
                         <div class="invalid-feedback" id="error_time_spent_hours_modal"></div>
                     </div>
                     <div class="mb-3">
+                        <label for="id_estimation_time_hours_modal" class="form-label">Estimation Time (hours)</label>
+                        <input type="number" step="0.1" name="estimation_time_hours" class="form-control" id="id_estimation_time_hours_modal" placeholder="e.g., 2.0">
+                        <div class="invalid-feedback" id="error_estimation_time_hours_modal"></div>
+                    </div>
+                    <div class="mb-3">
                         <label for="id_status_modal" class="form-label">Status</label>
                         <select name="status" class="form-select" id="id_status_modal">
                             <option value="todo">To Do</option>
@@ -126,6 +131,7 @@
             </th>
             <th>Description</th> {# Assuming description is not a primary sort field #}
             <th>Time Spent (hours)</th>
+            <th>Estimation Time (hours)</th>
             <th>
                 <a href="?order_by={% if request.GET.order_by == 'task_date' %}-task_date{% else %}task_date{% endif %}&q={{ query | default:'' }}&start_date={{ selected_start_date|default:'' }}&end_date={{ selected_end_date|default:'' }}&status={{ selected_status|default:'' }}&project={{ selected_project_id|default:'' }}">
                     Task Date {% if request.GET.order_by == 'task_date' %}▲{% elif request.GET.order_by == '-task_date' %}▼{% endif %}
@@ -150,6 +156,7 @@
             <td data-field="title"><b><a href="{% url 'todo_detail' todo.id %}">{{ todo.title }}</a></b></td>
             <td data-field="description" title="{{ todo.description }}">{{ todo.description }}</td>
             <td data-field="time_spent">{{ todo.time_spent_hours|floatformat:2 }}h</td>
+            <td data-field="estimation_time">{{ todo.estimation_time_hours|floatformat:2 }}h</td>
             <td data-field="task_date">{{ todo.task_date|date:"Y-m-d"|default:"N/A" }}</td>
             <td data-field="status" data-value="{{ todo.status }}">
                 {% if todo.status == 'done' %}
@@ -385,6 +392,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
         const taskDateDisplay = todo.task_date ? new Date(todo.task_date + 'T00:00:00').toLocaleDateString('en-CA') : "N/A"; // Format to YYYY-MM-DD or N/A
         const timeSpentDisplay = todo.time_spent_hours != null ? `${parseFloat(todo.time_spent_hours).toFixed(2)}h` : "0.00h";
+        const estimationTimeDisplay = todo.estimation_time_hours != null ? `${parseFloat(todo.estimation_time_hours).toFixed(2)}h` : "0.00h";
         const projectNameDisplay = todo.project_name || "N/A";
         const projectIdAttribute = todo.project_id || "";
 
@@ -392,6 +400,7 @@ document.addEventListener('DOMContentLoaded', function () {
             <td data-field="title">${titleHtml}</td>
             <td data-field="description" title="${todo.description || ''}">${todo.description || ''}</td>
             <td data-field="time_spent">${timeSpentDisplay}</td>
+            <td data-field="estimation_time">${estimationTimeDisplay}</td>
             <td data-field="task_date">${taskDateDisplay}</td>
             <td data-field="status">${statusHtml}</td>
             <td data-field="project" data-project-id="${projectIdAttribute}">${projectNameDisplay}</td>
@@ -605,6 +614,25 @@ document.addEventListener('DOMContentLoaded', function () {
         timeCell.innerHTML = '';
         timeCell.appendChild(timeInput);
 
+        // Estimation Time (hours)
+        const estimationTimeCell = row.querySelector('td[data-field="estimation_time"]');
+        const currentEstimationTimeText = estimationTimeCell.textContent.trim().replace('h', '');
+        const currentEstimationTime = parseFloat(currentEstimationTimeText) || 0;
+        row.dataset.originalHtmlEstimationTime = estimationTimeCell.innerHTML;
+        const estimationTimeInput = document.createElement('input');
+        estimationTimeInput.type = 'number';
+        estimationTimeInput.step = '0.1';
+        estimationTimeInput.className = 'form-control form-control-sm';
+        estimationTimeInput.value = currentEstimationTime;
+        estimationTimeInput.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                saveChanges(row, row.dataset.id);
+            }
+        });
+        estimationTimeCell.innerHTML = '';
+        estimationTimeCell.appendChild(estimationTimeInput);
+
         // Task Date
         const taskDateCell = row.querySelector('td[data-field="task_date"]');
         const currentTaskDate = taskDateCell.textContent.trim();
@@ -741,6 +769,10 @@ document.addEventListener('DOMContentLoaded', function () {
         const timeCell = row.querySelector('td[data-field="time_spent"]');
         timeCell.textContent = `${parseFloat(newValues.time_spent_hours).toFixed(2)}h`;
 
+        // Estimation Time
+        const estimationTimeCell = row.querySelector('td[data-field="estimation_time"]');
+        estimationTimeCell.textContent = `${parseFloat(newValues.estimation_time_hours).toFixed(2)}h`;
+
         // Task Date
         const taskDateCell = row.querySelector('td[data-field="task_date"]');
         // Format date as YYYY-MM-DD or show N/A
@@ -802,6 +834,7 @@ document.addEventListener('DOMContentLoaded', function () {
         row.querySelector('td[data-field="title"]').innerHTML = row.dataset.originalHtmlTitle;
         row.querySelector('td[data-field="description"]').innerHTML = row.dataset.originalHtmlDescription;
         row.querySelector('td[data-field="time_spent"]').innerHTML = row.dataset.originalHtmlTime;
+        row.querySelector('td[data-field="estimation_time"]').innerHTML = row.dataset.originalHtmlEstimationTime;
         row.querySelector('td[data-field="task_date"]').innerHTML = row.dataset.originalHtmlTaskDate; // Restore task_date
         row.querySelector('td[data-field="status"]').innerHTML = row.dataset.originalHtmlStatus;
         row.querySelector('td[data-field="project"]').innerHTML = row.dataset.originalHtmlProject; // Restore project
@@ -824,6 +857,7 @@ document.addEventListener('DOMContentLoaded', function () {
         const title = row.querySelector('td[data-field="title"] input').value;
         const description = row.querySelector('td[data-field="description"] textarea').value;
         const time_spent_hours = parseFloat(row.querySelector('td[data-field="time_spent"] input').value);
+        const estimation_time_hours = parseFloat(row.querySelector('td[data-field="estimation_time"] input').value);
         const task_date_input = row.querySelector('td[data-field="task_date"] input').value;
         const task_date = task_date_input ? task_date_input : null;
         const status = row.querySelector('td[data-field="status"] select').value;
@@ -835,6 +869,7 @@ document.addEventListener('DOMContentLoaded', function () {
             title: title,
             description: description,
             time_spent_hours: time_spent_hours,
+            estimation_time_hours: estimation_time_hours,
             task_date: task_date,
             status: status,
             project_id: project_id, // Send project_id

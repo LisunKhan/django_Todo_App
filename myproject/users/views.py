@@ -372,6 +372,19 @@ def inline_edit_todo(request, todo_id):
             except ValueError:
                 return JsonResponse({'success': False, 'error': 'Invalid time format for time_spent_hours.'}, status=400)
 
+        if 'estimation_time_hours' in data:
+            try:
+                hours_str = data['estimation_time_hours']
+                if hours_str is None or str(hours_str).strip() == '':
+                    todo.estimation_time = 0
+                else:
+                    hours = float(hours_str)
+                    if hours < 0:
+                        return JsonResponse({'success': False, 'error': 'Estimation time cannot be negative.'}, status=400)
+                    todo.estimation_time = int(hours * 60)
+            except ValueError:
+                return JsonResponse({'success': False, 'error': 'Invalid time format for estimation_time_hours.'}, status=400)
+
         todo.save()
         todo.refresh_from_db()
 
@@ -577,6 +590,7 @@ def api_get_kanban_tasks(request):
             "get_status_display": task.get_status_display(),
             "task_date": task.task_date.strftime('%Y-%m-%d') if task.task_date else None,
             "time_spent_hours": task.time_spent_hours,
+            "estimation_time_hours": task.estimation_time_hours,
             "project_id": task.project.id if task.project else None,
             "project_name": task.project.name if task.project else None,
             "user": {

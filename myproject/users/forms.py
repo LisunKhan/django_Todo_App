@@ -41,6 +41,7 @@ class CustomAuthenticationForm(AuthenticationForm):
 
 class TodoForm(forms.ModelForm):
     time_spent_hours = forms.FloatField(label="Time Spent (hours)", required=False)
+    estimation_time_hours = forms.FloatField(label="Estimation Time (hours)", required=False)
     task_date = forms.DateField(widget=forms.DateInput(attrs={'type': 'date'}), required=False)
 
     class Meta:
@@ -69,7 +70,10 @@ class TodoForm(forms.ModelForm):
         else:
             # Provide a default for time_spent_hours if no instance or time_spent is None
             self.initial['time_spent_hours'] = self.fields['time_spent_hours'].initial if self.fields['time_spent_hours'].initial is not None else 0
-
+        if self.instance and self.instance.pk and self.instance.estimation_time is not None:
+            self.initial['estimation_time_hours'] = self.instance.estimation_time / 60
+        else:
+            self.initial['estimation_time_hours'] = self.fields['estimation_time_hours'].initial if self.fields['estimation_time_hours'].initial is not None else 0
         # Make status not required in the form, model default will be used
         self.fields['status'].required = False
         # Set initial for status if it's a new form and status is not already in initial data
@@ -86,11 +90,22 @@ class TodoForm(forms.ModelForm):
             raise forms.ValidationError("Time spent cannot be negative.")
         return hours
 
+    def clean_estimation_time_hours(self):
+        hours = self.cleaned_data.get('estimation_time_hours')
+        if hours is None:
+            return 0
+        if hours < 0:
+            raise forms.ValidationError("Estimation time cannot be negative.")
+        return hours
+
     def save(self, commit=True):
         # Get the hours from the cleaned data
         hours = self.cleaned_data.get('time_spent_hours', 0)
         # Convert hours to minutes and set it on the instance
         self.instance.time_spent = int((hours or 0) * 60)
+
+        estimation_hours = self.cleaned_data.get('estimation_time_hours', 0)
+        self.instance.estimation_time = int((estimation_hours or 0) * 60)
 
         # Call the superclass's save method to save the instance
         # but ensure 'time_spent_hours' is not passed to the model's constructor

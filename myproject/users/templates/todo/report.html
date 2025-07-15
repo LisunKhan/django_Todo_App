@@ -84,6 +84,7 @@
                     Time Spent (hours) {% if request.GET.order_by == 'time_spent' %}▲{% elif request.GET.order_by == '-time_spent' %}▼{% endif %}
                 </a>
             </th>
+            <th>Estimation Time (hours)</th>
         </tr>
     </thead>
     <tbody>
@@ -103,6 +104,7 @@
             </td>
             <td>{{ task.project.name | default:"N/A" }}</td>
             <td>{{ task.time_spent_hours|floatformat:2 }}h</td>
+            <td>{{ task.estimation_time_hours|floatformat:2 }}h</td>
         </tr>
         {% empty %}
         <tr>
