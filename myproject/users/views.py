@@ -326,7 +326,6 @@ def inline_edit_task(request, task_id):
                 'description': task.description,
                 'status': task.status,
                 'get_status_display': task.get_status_display(),
-                'task_date': task.task_date.strftime('%Y-%m-%d') if task.task_date else None,
                 'estimation_time': task.estimation_time,
                 'total_spent_hours': task.total_spent_hours,
                 'project_id': task.project.id if task.project else None,
@@ -378,43 +377,40 @@ def download_csv_report(request):
     try:
         profile = user.profile
         user_bio = profile.bio if profile else ""
-    except UserProfile.DoesNotExist: # Django raises User.profile.RelatedObjectDoesNotExist if profile doesn't exist
+    except UserProfile.DoesNotExist:
         user_bio = ""
 
-    todo_items = TodoItem.objects.filter(user=user, time_spent__gt=0) # Only include todos with time spent
+    tasks = Task.objects.filter(user=user, logs__isnull=False).distinct()
 
     response = HttpResponse(content_type='text/csv')
-    response['Content-Disposition'] = 'attachment; filename="todo_report.csv"'
+    response['Content-Disposition'] = 'attachment; filename="task_report.csv"'
 
     writer = csv.writer(response)
 
-    # Write header row
     writer.writerow([
         'Username', 'Email', 'Bio',
-        'Todo Title', 'Todo Description', 'Project Name', 'Status',
-        'Time Spent (hours)', 'Created At', 'Updated At', 'Task Date'
+        'Task Title', 'Task Description', 'Project Name', 'Status',
+        'Total Spent Hours', 'Created At', 'Updated At'
     ])
 
-    if not todo_items.exists():
-        # Write a row with user info even if there are no todos
+    if not tasks.exists():
         writer.writerow([
             user.username, user.email, user_bio,
-            'N/A', 'N/A', 'N/A', 'N/A', 'N/A', 'N/A', 'N/A', 'N/A'
+            'N/A', 'N/A', 'N/A', 'N/A', 'N/A', 'N/A', 'N/A'
         ])
     else:
-        for item in todo_items:
+        for task in tasks:
             writer.writerow([
                 user.username,
                 user.email,
                 user_bio,
-                item.title,
-                item.description,
-                item.project.name if item.project else 'N/A', # Project Name
-                item.get_status_display(),
-                item.time_spent_hours,
-                item.created_at.strftime('%Y-%m-%d %H:%M:%S') if item.created_at else '',
-                item.updated_at.strftime('%Y-%m-%d %H:%M:%S') if item.updated_at else '',
-                item.task_date.strftime('%Y-%m-%d') if item.task_date else ''
+                task.title,
+                task.description,
+                task.project.name if task.project else 'N/A',
+                task.get_status_display(),
+                task.total_spent_hours,
+                task.created_at.strftime('%Y-%m-%d %H:%M:%S') if task.created_at else '',
+                task.updated_at.strftime('%Y-%m-%d %H:%M:%S') if task.updated_at else '',
             ])
 
     return response
