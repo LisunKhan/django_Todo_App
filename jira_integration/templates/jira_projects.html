@@ -1,0 +1,14 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Jira Projects</title>
+</head>
+<body>
+    <h1>Jira Projects</h1>
+    <ul>
+        {% for project in projects %}
+            <li>{{ project.name }} ({{ project.key }})</li>
+        {% endfor %}
+    </ul>
+</body>
+</html>

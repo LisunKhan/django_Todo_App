@@ -44,6 +44,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'users',
     'crispy_forms',  # Add crispy_forms
+    'jira_integration',
 ]
 
 CRISPY_ALLOWED_TEMPLATE_PACKS = "bootstrap4" # Define allowed template packs

@@ -25,6 +25,7 @@ urlpatterns = [
     path('accounts/', include('django.contrib.auth.urls')),  # Include Django's built-in auth URLs
     path('', RedirectView.as_view(pattern_name='login'), name='home'),  # Redirect to register page
     path('', include('users.urls')),
+    path('integrations/jira/', include('jira_integration.urls')),
 ]
 
 # Serve media files during development
