@@ -18,7 +18,6 @@ class TodoItem(models.Model):
     estimation_time = models.IntegerField(default=0) # Stored in minutes
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    task_date = models.DateField(null=True, blank=True)
 
     STATUS_CHOICES = [
         ('todo', 'To Do'),
@@ -48,6 +47,15 @@ class TodoItem(models.Model):
         return self.title
 
 # Project and ProjectMembership Models
+
+class TodoLog(models.Model):
+    todo_item = models.ForeignKey(TodoItem, on_delete=models.CASCADE, related_name='logs')
+    log_time = models.FloatField(default=0)
+    task_date = models.DateField(null=True, blank=True)
+    notes = models.TextField(blank=True, null=True)
+
+    def __str__(self):
+        return f"Log for {self.todo_item.title} on {self.task_date}"
 
 class Project(models.Model):
     name = models.CharField(max_length=200, unique=True)

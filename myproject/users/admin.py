@@ -25,10 +25,19 @@ class ProjectMembershipAdmin(admin.ModelAdmin):
     list_filter = ('project', 'user', 'date_joined')
     autocomplete_fields = ['project', 'user']
 
+from .models import TodoItem, Project, ProjectMembership, UserProfile, TodoLog
+
+@admin.register(TodoLog)
+class TodoLogAdmin(admin.ModelAdmin):
+    list_display = ('todo_item', 'task_date', 'log_time', 'notes')
+    list_filter = ('task_date', 'todo_item__project')
+    search_fields = ('notes', 'todo_item__title')
+    autocomplete_fields = ['todo_item']
+
 @admin.register(TodoItem)
 class TodoItemAdmin(admin.ModelAdmin):
-    list_display = ('title', 'project', 'status', 'user', 'created_at', 'updated_at', 'task_date')
-    list_filter = ('status', 'project', 'user', 'created_at', 'updated_at', 'task_date')
+    list_display = ('title', 'project', 'status', 'user', 'created_at', 'updated_at')
+    list_filter = ('status', 'project', 'user', 'created_at', 'updated_at')
     search_fields = ('title', 'description')
     readonly_fields = ('created_at', 'updated_at')
     autocomplete_fields = ['user', 'project']
