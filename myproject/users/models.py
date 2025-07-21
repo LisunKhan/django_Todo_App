@@ -46,6 +46,11 @@ class TodoItem(models.Model):
     def __str__(self):
         return self.title
 
+    def update_time_spent(self):
+        total_time = self.logs.aggregate(total=models.Sum('log_time'))['total'] or 0
+        self.time_spent = total_time
+        self.save()
+
 # Project and ProjectMembership Models
 
 class TodoLog(models.Model):
@@ -80,8 +85,13 @@ class ProjectMembership(models.Model):
         return f'{self.user.username} - {self.project.name}'
 
 from django.conf import settings
-from django.db.models.signals import post_save
+from django.db.models.signals import post_save, post_delete
 from django.dispatch import receiver
+
+@receiver(post_save, sender='users.TodoLog')
+@receiver(post_delete, sender='users.TodoLog')
+def update_todo_time_spent(sender, instance, **kwargs):
+    instance.todo_item.update_time_spent()
 
 class UserProfile(models.Model):
     user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='profile')

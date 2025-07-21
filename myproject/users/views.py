@@ -3,7 +3,7 @@ from django.contrib.auth import login
 from .forms import CustomUserCreationForm, CustomAuthenticationForm
 from django.contrib.auth.decorators import login_required
 from .models import TodoItem, UserProfile
-from .forms import TodoForm
+from .forms import TodoForm, TodoLogForm
 from django.db.models import Sum, Q
 from django.urls import reverse
 from django.core.paginator import Paginator
@@ -136,16 +136,23 @@ def add_todo(request):
                 data = json.loads(request.body)
                 # Pass user to form for project filtering if applicable
                 form = TodoForm(data, user=request.user)
+                log_form = TodoLogForm(data)
             except json.JSONDecodeError:
                 return JsonResponse({'success': False, 'error': 'Invalid JSON.'}, status=400)
         else:
             # Pass user to form for project filtering
             form = TodoForm(request.POST, user=request.user)
+            log_form = TodoLogForm(request.POST)
 
         if form.is_valid():
             todo = form.save(commit=False)
             todo.user = request.user
             todo.save()
+
+            if log_form.is_valid() and log_form.cleaned_data.get('log_time'):
+                log = log_form.save(commit=False)
+                log.todo_item = todo
+                log.save()
 
             if is_ajax:
                 # Serialize necessary fields for the frontend
@@ -173,12 +180,13 @@ def add_todo(request):
     else: # GET request
         # Pass user to form for project filtering for GET requests as well
         form = TodoForm(user=request.user)
+        log_form = TodoLogForm()
         if is_ajax:
             # Typically, a GET to an 'add' endpoint via AJAX might not be standard,
             # but if needed, could return form structure or similar.
             # For now, let's assume GET AJAX calls are not expected for this view or return an error.
             return JsonResponse({'error': 'GET request not supported for AJAX here'}, status=405) # Method Not Allowed
-        return render(request, 'todo/add_todo.html', {'form': form})
+        return render(request, 'todo/add_todo.html', {'form': form, 'log_form': log_form})
 
 @login_required
 def delete_todo(request, todo_id):
@@ -294,15 +302,41 @@ def task_report(request):
 def edit_todo(request, todo_id):
     todo = get_object_or_404(TodoItem, id=todo_id, user=request.user)
     if request.method == 'POST':
-        # Pass user to form for project filtering
         form = TodoForm(request.POST, instance=todo, user=request.user)
+        log_form = TodoLogForm(request.POST)
         if form.is_valid():
             form.save()
+            if log_form.is_valid() and log_form.cleaned_data.get('log_time'):
+                log = log_form.save(commit=False)
+                log.todo_item = todo
+                log.save()
             return redirect(reverse('todo_detail', args=[todo.id]))
     else:
-        # Pass user to form for project filtering
         form = TodoForm(instance=todo, user=request.user)
-    return render(request, 'todo/edit_todo.html', {'form': form, 'todo': todo})
+        log_form = TodoLogForm()
+    return render(request, 'todo/edit_todo.html', {'form': form, 'log_form': log_form, 'todo': todo})
+
+
+@login_required
+def delete_log(request, log_id):
+    log = get_object_or_404(TodoLog, id=log_id, todo_item__user=request.user)
+    todo_id = log.todo_item.id
+    log.delete()
+    return redirect('todo_detail', todo_id=todo_id)
+
+
+@login_required
+def edit_log(request, log_id):
+    log = get_object_or_404(TodoLog, id=log_id, todo_item__user=request.user)
+    if request.method == 'POST':
+        form = TodoLogForm(request.POST, instance=log)
+        if form.is_valid():
+            form.save()
+            return redirect('todo_detail', todo_id=log.todo_item.id)
+    else:
+        form = TodoLogForm(instance=log)
+    return render(request, 'todo/edit_log.html', {'form': form, 'log': log})
+
 
 import json
 from django.http import JsonResponse

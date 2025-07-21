@@ -1,0 +1,12 @@
+{% extends 'todo/base.html' %}
+
+{% block title %}Delete Log{% endblock %}
+
+{% block content %}
+<h1>Are you sure you want to delete this log?</h1>
+<form method="post">
+    {% csrf_token %}
+    <button type="submit">Yes, delete</button>
+</form>
+<a href="{% url 'todo_detail' log.todo_item.id %}">No, cancel</a>
+{% endblock %}

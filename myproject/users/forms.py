@@ -1,5 +1,5 @@
 from django import forms
-from .models import TodoItem
+from .models import TodoItem, TodoLog
 from django.contrib.auth.forms import UserCreationForm, AuthenticationForm
 # from django.contrib.auth.models import User # Not strictly required for this change, Django handles User model internally for forms
 
@@ -130,3 +130,12 @@ class UserProfileForm(forms.ModelForm):
         # Make fields not required by default, as users may not want to update all fields at once
         self.fields['bio'].required = False
         self.fields['profile_picture'].required = False
+
+
+class TodoLogForm(forms.ModelForm):
+    class Meta:
+        model = TodoLog
+        fields = ['log_time', 'task_date', 'notes']
+        widgets = {
+            'task_date': forms.DateInput(attrs={'type': 'date'}),
+        }
