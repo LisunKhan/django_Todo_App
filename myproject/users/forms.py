@@ -42,13 +42,12 @@ class CustomAuthenticationForm(AuthenticationForm):
 class TodoForm(forms.ModelForm):
     time_spent_hours = forms.FloatField(label="Time Spent (hours)", required=False)
     estimation_time_hours = forms.FloatField(label="Estimation Time (hours)", required=False)
-    task_date = forms.DateField(widget=forms.DateInput(attrs={'type': 'date'}), required=False)
 
     class Meta:
         model = TodoItem
         # Include all model fields that the form should handle directly or indirectly.
         # 'time_spent' is the actual model field.
-        fields = ['title', 'description', 'project', 'status', 'task_date']
+        fields = ['title', 'description', 'project', 'status']
 
     def __init__(self, *args, **kwargs):
         # Pop 'user' from kwargs before calling super(), as ModelForm doesn't expect it.

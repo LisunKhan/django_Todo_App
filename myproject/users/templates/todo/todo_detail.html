@@ -25,9 +25,6 @@
                 {% endif %}
 
                 <dl class="row">
-                    <dt class="col-sm-4">Task Date</dt>
-                    <dd class="col-sm-8">{{ todo.task_date|date:"l, F j, Y"|default:"Not set" }}</dd>
-
                     <dt class="col-sm-4">Time Spent</dt>
                     <dd class="col-sm-8">{{ todo.time_spent_hours|floatformat:2 }} hour(s)</dd>
 

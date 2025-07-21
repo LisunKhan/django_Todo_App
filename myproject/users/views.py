@@ -386,6 +386,7 @@ def inline_edit_todo(request, todo_id):
                 'status': todo.status,
                 'get_status_display': todo.get_status_display(),
                 'time_spent_hours': todo.time_spent_hours,
+                'estimation_time_hours': todo.estimation_time_hours,
                 'project_id': todo.project.id if todo.project else None,
                 'project_name': todo.project.name if todo.project else None,
             }
