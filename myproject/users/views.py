@@ -55,12 +55,12 @@ def todo_list(request):
         )
 
     # Ordering
-    order_by = request.GET.get('order_by', 'task_date') # Default order by task_date
+    order_by = request.GET.get('order_by', '-created_at') # Default order by created_at
     # Update allowed_ordering_fields to use 'status' instead of 'completed'
-    allowed_ordering_fields = ['title', 'task_date', 'status', 'project__name',
-                               '-title', '-task_date', '-status', '-project__name']
+    allowed_ordering_fields = ['title', 'status', 'project__name',
+                               '-title', '-status', '-project__name', 'created_at', '-created_at']
     if order_by not in allowed_ordering_fields:
-        order_by = 'task_date' # Fallback to default if invalid field is provided
+        order_by = '-created_at' # Fallback to default if invalid field is provided
 
     # Get new filter parameters
     status_filter = request.GET.get('status', '')
@@ -72,9 +72,9 @@ def todo_list(request):
     if status_filter:
         todo_items = todo_items.filter(status=status_filter)
     if start_date_filter:
-        todo_items = todo_items.filter(task_date__gte=start_date_filter)
+        todo_items = todo_items.filter(created_at__gte=start_date_filter)
     if end_date_filter:
-        todo_items = todo_items.filter(task_date__lte=end_date_filter)
+        todo_items = todo_items.filter(created_at__lte=end_date_filter)
     if project_filter_id:
         todo_items = todo_items.filter(project_id=project_filter_id)
 
@@ -155,7 +155,6 @@ def add_todo(request):
                     'description': todo.description,
                     'status': todo.status,
                     'get_status_display': todo.get_status_display(),
-                    'task_date': todo.task_date.strftime('%Y-%m-%d') if todo.task_date else None,
                     'time_spent_hours': todo.time_spent_hours,
                     'estimation_time_hours': todo.estimation_time_hours,
                     'project_id': todo.project.id if todo.project else None,
@@ -216,7 +215,7 @@ def todo_detail(request, todo_id):
 def task_report(request):
     # Calculate total time spent on tasks for today by the user
     today = date.today()
-    todays_tasks = TodoItem.objects.filter(user=request.user, task_date=today)
+    todays_tasks = TodoItem.objects.filter(user=request.user, created_at__date=today)
     total_time_spent_today_minutes = todays_tasks.aggregate(total_time=Sum('time_spent'))['total_time'] or 0
     total_time_spent_today_hours = total_time_spent_today_minutes / 60
 
@@ -234,11 +233,11 @@ def task_report(request):
         )
 
     # Ordering
-    order_by = request.GET.get('order_by', 'task_date') # Default order
-    allowed_ordering_fields = ['title', 'task_date', 'status', 'time_spent', 'project__name',
-                               '-title', '-task_date', '-status', '-time_spent', '-project__name']
+    order_by = request.GET.get('order_by', '-created_at') # Default order
+    allowed_ordering_fields = ['title', 'status', 'time_spent', 'project__name',
+                               '-title', '-status', '-time_spent', '-project__name', 'created_at', '-created_at']
     if order_by not in allowed_ordering_fields:
-        order_by = 'task_date' # Fallback to default
+        order_by = '-created_at' # Fallback to default
 
     # Get filter parameters
     status_filter = request.GET.get('status', '') # This will be 'todo', 'inprogress', or 'done'
@@ -251,9 +250,9 @@ def task_report(request):
         # Filter by the new status field
         tasks_for_display = tasks_for_display.filter(status=status_filter)
     if start_date_filter:
-        tasks_for_display = tasks_for_display.filter(task_date__gte=start_date_filter)
+        tasks_for_display = tasks_for_display.filter(created_at__gte=start_date_filter)
     if end_date_filter:
-        tasks_for_display = tasks_for_display.filter(task_date__lte=end_date_filter)
+        tasks_for_display = tasks_for_display.filter(created_at__lte=end_date_filter)
     if project_filter_id:
         tasks_for_display = tasks_for_display.filter(project_id=project_filter_id)
 
@@ -349,17 +348,6 @@ def inline_edit_todo(request, todo_id):
                     return JsonResponse({'success': False, 'error': f'Could not assign project: {str(e)}'}, status=500) # 500 for unexpected
         # If 'project_id' is not in data, todo.project remains unchanged by this block.
 
-        task_date_str = data.get('task_date')
-        if 'task_date' in data: # Check if task_date key is in the payload
-            if task_date_str: # Correctly indented
-                try:
-                    todo.task_date = task_date_str # Django's DateField can parse 'YYYY-MM-DD'
-                except ValueError:
-                    return JsonResponse({'success': False, 'error': 'Invalid date format for task_date. Use YYYY-MM-DD.'}, status=400)
-        elif 'task_date' in data and task_date_str is None: # Explicitly setting task_date to null
-            todo.task_date = None
-
-
         if 'time_spent_hours' in data:
             try:
                 hours_str = data['time_spent_hours']
@@ -397,7 +385,6 @@ def inline_edit_todo(request, todo_id):
                 'description': todo.description,
                 'status': todo.status,
                 'get_status_display': todo.get_status_display(),
-                'task_date': todo.task_date.strftime('%Y-%m-%d') if todo.task_date else None,
                 'time_spent_hours': todo.time_spent_hours,
                 'project_id': todo.project.id if todo.project else None,
                 'project_name': todo.project.name if todo.project else None,
@@ -463,14 +450,14 @@ def download_csv_report(request):
     writer.writerow([
         'Username', 'Email', 'Bio',
         'Todo Title', 'Todo Description', 'Project Name', 'Status',
-        'Time Spent (hours)', 'Created At', 'Updated At', 'Task Date'
+        'Time Spent (hours)', 'Created At', 'Updated At'
     ])
 
     if not todo_items.exists():
         # Write a row with user info even if there are no todos
         writer.writerow([
             user.username, user.email, user_bio,
-            'N/A', 'N/A', 'N/A', 'N/A', 'N/A', 'N/A', 'N/A', 'N/A'
+            'N/A', 'N/A', 'N/A', 'N/A', 'N/A', 'N/A', 'N/A'
         ])
     else:
         for item in todo_items:
@@ -484,8 +471,7 @@ def download_csv_report(request):
                 item.get_status_display(),
                 item.time_spent_hours,
                 item.created_at.strftime('%Y-%m-%d %H:%M:%S') if item.created_at else '',
-                item.updated_at.strftime('%Y-%m-%d %H:%M:%S') if item.updated_at else '',
-                item.task_date.strftime('%Y-%m-%d') if item.task_date else ''
+                item.updated_at.strftime('%Y-%m-%d %H:%M:%S') if item.updated_at else ''
             ])
 
     return response
@@ -589,7 +575,6 @@ def api_get_kanban_tasks(request):
             "description": task.description, # Still needed for edit functionality
             "status": task.status,
             "get_status_display": task.get_status_display(),
-            "task_date": task.task_date.strftime('%Y-%m-%d') if task.task_date else None,
             "time_spent_hours": task.time_spent_hours,
             "estimation_time_hours": task.estimation_time_hours,
             "project_id": task.project.id if task.project else None,
