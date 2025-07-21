@@ -80,6 +80,7 @@
     </div>
 </div>
 
+
 <!-- Search and Filter Form -->
 <form id="todoSearchForm" method="get" action="{% url 'todo_list' %}" class="mb-3">
     <div class="row g-2 align-items-end mb-3">
@@ -185,6 +186,7 @@
         {% endfor %}
     </tbody>
 </table>
+
 
 <!-- Pagination -->
 <nav aria-label="Page navigation">
@@ -856,10 +858,7 @@ document.addEventListener('DOMContentLoaded', function () {
     function saveChanges(row, todoId) {
         const title = row.querySelector('td[data-field="title"] input').value;
         const description = row.querySelector('td[data-field="description"] textarea').value;
-        const time_spent_hours = parseFloat(row.querySelector('td[data-field="time_spent"] input').value);
         const estimation_time_hours = parseFloat(row.querySelector('td[data-field="estimation_time"] input').value);
-        const task_date_input = row.querySelector('td[data-field="task_date"] input').value;
-        const task_date = task_date_input ? task_date_input : null;
         const status = row.querySelector('td[data-field="status"] select').value;
         const projectSelect = row.querySelector('td[data-field="project"] select');
         const project_id = projectSelect.value ? parseInt(projectSelect.value) : null;
@@ -868,9 +867,7 @@ document.addEventListener('DOMContentLoaded', function () {
         const data = {
             title: title,
             description: description,
-            time_spent_hours: time_spent_hours,
             estimation_time_hours: estimation_time_hours,
-            task_date: task_date,
             status: status,
             project_id: project_id, // Send project_id
         };
