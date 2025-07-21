@@ -56,12 +56,12 @@ def todo_list(request):
         )
 
     # Ordering
-    order_by = request.GET.get('order_by', 'task_date') # Default order by task_date
+    order_by = request.GET.get('order_by', 'created_at') # Default order by created_at
     # Update allowed_ordering_fields to use 'status' instead of 'completed'
-    allowed_ordering_fields = ['title', 'task_date', 'status', 'project__name',
-                               '-title', '-task_date', '-status', '-project__name']
+    allowed_ordering_fields = ['title', 'status', 'project__name',
+                               '-title', '-status', '-project__name']
     if order_by not in allowed_ordering_fields:
-        order_by = 'task_date' # Fallback to default if invalid field is provided
+        order_by = 'created_at' # Fallback to default if invalid field is provided
 
     # Get new filter parameters
     status_filter = request.GET.get('status', '')
