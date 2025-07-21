@@ -1,5 +1,5 @@
 from django import forms
-from .models import TodoItem
+from .models import TodoItem, TodoLog
 from django.contrib.auth.forms import UserCreationForm, AuthenticationForm
 # from django.contrib.auth.models import User # Not strictly required for this change, Django handles User model internally for forms
 
@@ -42,44 +42,27 @@ class CustomAuthenticationForm(AuthenticationForm):
 class TodoForm(forms.ModelForm):
     time_spent_hours = forms.FloatField(label="Time Spent (hours)", required=False)
     estimation_time_hours = forms.FloatField(label="Estimation Time (hours)", required=False)
-    task_date = forms.DateField(widget=forms.DateInput(attrs={'type': 'date'}), required=False)
 
     class Meta:
         model = TodoItem
         # Include all model fields that the form should handle directly or indirectly.
         # 'time_spent' is the actual model field.
-        fields = ['title', 'description', 'project', 'status', 'task_date']
+        fields = ['title', 'description', 'project', 'status']
+
+class TodoLogForm(forms.ModelForm):
+    class Meta:
+        model = TodoLog
+        fields = ['log_time', 'task_date', 'notes']
+        widgets = {
+            'task_date': forms.DateInput(attrs={'type': 'date'}),
+        }
 
     def __init__(self, *args, **kwargs):
-        # Pop 'user' from kwargs before calling super(), as ModelForm doesn't expect it.
-        user = kwargs.pop('user', None)
-        super().__init__(*args, **kwargs) # Populates self.initial for fields in Meta.fields
-
-        if user:
-            from .models import Project # Local import to avoid circular dependency if Project model imports forms
-            from django.db.models import Q # For OR queries
-            # Filter projects to those owned by or member of the user
-            user_projects = Project.objects.filter(
-                Q(owner=user) | Q(members=user)
-            ).distinct().order_by('name')
-            self.fields['project'].queryset = user_projects
-
-        # Set the initial value for 'time_spent_hours' in the form's initial data dictionary.
-        if self.instance and self.instance.pk and self.instance.time_spent is not None:
-            self.initial['time_spent_hours'] = self.instance.time_spent_hours
+        super().__init__(*args, **kwargs)
+        if self.instance and self.instance.pk:
+            self.initial['estimation_time_hours'] = self.instance.estimation_time_hours
         else:
-            # Provide a default for time_spent_hours if no instance or time_spent is None
-            self.initial['time_spent_hours'] = self.fields['time_spent_hours'].initial if self.fields['time_spent_hours'].initial is not None else 0
-        if self.instance and self.instance.pk and self.instance.estimation_time is not None:
-            self.initial['estimation_time_hours'] = self.instance.estimation_time / 60
-        else:
-            self.initial['estimation_time_hours'] = self.fields['estimation_time_hours'].initial if self.fields['estimation_time_hours'].initial is not None else 0
-        # Make status not required in the form, model default will be used
-        self.fields['status'].required = False
-        # Set initial for status if it's a new form and status is not already in initial data
-        # This helps the form display the default value even before saving.
-        if not self.initial.get('status') and not (self.instance and self.instance.pk):
-            self.initial['status'] = 'todo' # Corresponds to model default
+            self.initial['estimation_time_hours'] = 0
 
 
     def clean_time_spent_hours(self):

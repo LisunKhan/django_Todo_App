@@ -2,14 +2,15 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import login
 from .forms import CustomUserCreationForm, CustomAuthenticationForm
 from django.contrib.auth.decorators import login_required
-from .models import TodoItem, UserProfile
-from .forms import TodoForm
+from .models import TodoItem, UserProfile, TodoLog
+from .forms import TodoForm, TodoLogForm
 from django.db.models import Sum, Q
 from django.urls import reverse
 from django.core.paginator import Paginator
 from django.http import JsonResponse
 import json
 from datetime import date
+from django.views.decorators.http import require_POST
 
 def register(request):
     if request.method == 'POST':
@@ -72,9 +73,9 @@ def todo_list(request):
     if status_filter:
         todo_items = todo_items.filter(status=status_filter)
     if start_date_filter:
-        todo_items = todo_items.filter(task_date__gte=start_date_filter)
+        todo_items = todo_items.filter(logs__task_date__gte=start_date_filter)
     if end_date_filter:
-        todo_items = todo_items.filter(task_date__lte=end_date_filter)
+        todo_items = todo_items.filter(logs__task_date__lte=end_date_filter)
     if project_filter_id:
         todo_items = todo_items.filter(project_id=project_filter_id)
 
@@ -134,13 +135,11 @@ def add_todo(request):
         if is_ajax:
             try:
                 data = json.loads(request.body)
-                # Pass user to form for project filtering if applicable
-                form = TodoForm(data, user=request.user)
+                form = TodoForm(data)
             except json.JSONDecodeError:
                 return JsonResponse({'success': False, 'error': 'Invalid JSON.'}, status=400)
         else:
-            # Pass user to form for project filtering
-            form = TodoForm(request.POST, user=request.user)
+            form = TodoForm(request.POST)
 
         if form.is_valid():
             todo = form.save(commit=False)
@@ -172,12 +171,8 @@ def add_todo(request):
                 # For non-AJAX, re-render the page with form and errors
                 return render(request, 'todo/add_todo.html', {'form': form})
     else: # GET request
-        # Pass user to form for project filtering for GET requests as well
-        form = TodoForm(user=request.user)
+        form = TodoForm()
         if is_ajax:
-            # Typically, a GET to an 'add' endpoint via AJAX might not be standard,
-            # but if needed, could return form structure or similar.
-            # For now, let's assume GET AJAX calls are not expected for this view or return an error.
             return JsonResponse({'error': 'GET request not supported for AJAX here'}, status=405) # Method Not Allowed
         return render(request, 'todo/add_todo.html', {'form': form})
 
@@ -209,20 +204,31 @@ def delete_todo(request, todo_id):
 
 @login_required
 def todo_detail(request, todo_id):
-    todo = get_object_or_404(TodoItem, id=todo_id)
-    return render(request, 'todo/todo_detail.html', {'todo': todo})
+    todo = get_object_or_404(TodoItem, id=todo_id, user=request.user)
+    log_form = TodoLogForm()
+    return render(request, 'todo/todo_detail.html', {'todo': todo, 'log_form': log_form})
+
+@login_required
+@require_POST
+def add_log_to_todo(request, todo_id):
+    todo = get_object_or_404(TodoItem, id=todo_id, user=request.user)
+    form = TodoLogForm(request.POST)
+    if form.is_valid():
+        log = form.save(commit=False)
+        log.todo_item = todo
+        log.save()
+    return redirect('todo_detail', todo_id=todo_id)
 
 @login_required
 def task_report(request):
     # Calculate total time spent on tasks for today by the user
     today = date.today()
-    todays_tasks = TodoItem.objects.filter(user=request.user, task_date=today)
-    total_time_spent_today_minutes = todays_tasks.aggregate(total_time=Sum('time_spent'))['total_time'] or 0
-    total_time_spent_today_hours = total_time_spent_today_minutes / 60
+    todays_logs = TodoLog.objects.filter(todo_item__user=request.user, task_date=today)
+    total_time_spent_today = todays_logs.aggregate(total_time=Sum('log_time'))['total_time'] or 0
 
     # Get tasks for display, apply search and ordering
     # This part remains the same, for the main list of tasks displayed in the table
-    tasks_for_display = TodoItem.objects.filter(user=request.user, time_spent__gt=0)
+    tasks_for_display = TodoItem.objects.filter(user=request.user, logs__isnull=False).distinct()
 
     # Search
     query = request.GET.get('q')
@@ -251,9 +257,9 @@ def task_report(request):
         # Filter by the new status field
         tasks_for_display = tasks_for_display.filter(status=status_filter)
     if start_date_filter:
-        tasks_for_display = tasks_for_display.filter(task_date__gte=start_date_filter)
+        tasks_for_display = tasks_for_display.filter(logs__task_date__gte=start_date_filter)
     if end_date_filter:
-        tasks_for_display = tasks_for_display.filter(task_date__lte=end_date_filter)
+        tasks_for_display = tasks_for_display.filter(logs__task_date__lte=end_date_filter)
     if project_filter_id:
         tasks_for_display = tasks_for_display.filter(project_id=project_filter_id)
 
@@ -279,7 +285,7 @@ def task_report(request):
 
     context = {
         'page_obj': page_obj, # Paginated tasks
-        'total_time_spent_today_hours': total_time_spent_today_hours, # Aggregation for today's tasks
+        'total_time_spent_today_hours': total_time_spent_today / 60, # Aggregation for today's tasks
         'query': query,
         'current_order_by': order_by,
         'status_options': status_options,
@@ -295,14 +301,12 @@ def task_report(request):
 def edit_todo(request, todo_id):
     todo = get_object_or_404(TodoItem, id=todo_id, user=request.user)
     if request.method == 'POST':
-        # Pass user to form for project filtering
-        form = TodoForm(request.POST, instance=todo, user=request.user)
+        form = TodoForm(request.POST, instance=todo)
         if form.is_valid():
             form.save()
             return redirect(reverse('todo_detail', args=[todo.id]))
     else:
-        # Pass user to form for project filtering
-        form = TodoForm(instance=todo, user=request.user)
+        form = TodoForm(instance=todo)
     return render(request, 'todo/edit_todo.html', {'form': form, 'todo': todo})
 
 import json
@@ -350,14 +354,6 @@ def inline_edit_todo(request, todo_id):
         # If 'project_id' is not in data, todo.project remains unchanged by this block.
 
         task_date_str = data.get('task_date')
-        if 'task_date' in data: # Check if task_date key is in the payload
-            if task_date_str: # Correctly indented
-                try:
-                    todo.task_date = task_date_str # Django's DateField can parse 'YYYY-MM-DD'
-                except ValueError:
-                    return JsonResponse({'success': False, 'error': 'Invalid date format for task_date. Use YYYY-MM-DD.'}, status=400)
-        elif 'task_date' in data and task_date_str is None: # Explicitly setting task_date to null
-            todo.task_date = None
 
 
         if 'time_spent_hours' in data:
@@ -397,7 +393,6 @@ def inline_edit_todo(request, todo_id):
                 'description': todo.description,
                 'status': todo.status,
                 'get_status_display': todo.get_status_display(),
-                'task_date': todo.task_date.strftime('%Y-%m-%d') if todo.task_date else None,
                 'time_spent_hours': todo.time_spent_hours,
                 'project_id': todo.project.id if todo.project else None,
                 'project_name': todo.project.name if todo.project else None,
@@ -452,7 +447,7 @@ def download_csv_report(request):
     except UserProfile.DoesNotExist: # Django raises User.profile.RelatedObjectDoesNotExist if profile doesn't exist
         user_bio = ""
 
-    todo_items = TodoItem.objects.filter(user=user, time_spent__gt=0) # Only include todos with time spent
+    todo_items = TodoItem.objects.filter(user=user, logs__isnull=False).distinct() # Only include todos with time spent
 
     response = HttpResponse(content_type='text/csv')
     response['Content-Disposition'] = 'attachment; filename="todo_report.csv"'
@@ -463,14 +458,14 @@ def download_csv_report(request):
     writer.writerow([
         'Username', 'Email', 'Bio',
         'Todo Title', 'Todo Description', 'Project Name', 'Status',
-        'Time Spent (hours)', 'Created At', 'Updated At', 'Task Date'
+        'Time Spent (hours)', 'Created At', 'Updated At'
     ])
 
     if not todo_items.exists():
         # Write a row with user info even if there are no todos
         writer.writerow([
             user.username, user.email, user_bio,
-            'N/A', 'N/A', 'N/A', 'N/A', 'N/A', 'N/A', 'N/A', 'N/A'
+            'N/A', 'N/A', 'N/A', 'N/A', 'N/A', 'N/A', 'N/A'
         ])
     else:
         for item in todo_items:
@@ -485,7 +480,6 @@ def download_csv_report(request):
                 item.time_spent_hours,
                 item.created_at.strftime('%Y-%m-%d %H:%M:%S') if item.created_at else '',
                 item.updated_at.strftime('%Y-%m-%d %H:%M:%S') if item.updated_at else '',
-                item.task_date.strftime('%Y-%m-%d') if item.task_date else ''
             ])
 
     return response
@@ -589,7 +583,6 @@ def api_get_kanban_tasks(request):
             "description": task.description, # Still needed for edit functionality
             "status": task.status,
             "get_status_display": task.get_status_display(),
-            "task_date": task.task_date.strftime('%Y-%m-%d') if task.task_date else None,
             "time_spent_hours": task.time_spent_hours,
             "estimation_time_hours": task.estimation_time_hours,
             "project_id": task.project.id if task.project else None,
