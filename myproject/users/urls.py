@@ -28,4 +28,14 @@ urlpatterns = [
     path('kanban/', views.kanban_board_view, name='kanban_board'),
     # API URL for fetching Kanban tasks
     path('api/kanban_tasks/', views.api_get_kanban_tasks, name='api_kanban_tasks'),
+    # Dashboard
+    path('dashboard/project/<int:project_id>/', views.dashboard_view, name='dashboard'),
+    # Dashboard APIs
+    path('api/dashboard/project/<int:project_id>/users/', views.UserList.as_view(), name='dashboard_user_list'),
+    path('api/dashboard/project/<int:project_id>/tasks/', views.ProjectTasks.as_view(), name='dashboard_project_tasks'),
+    path('api/dashboard/project/<int:project_id>/logs/', views.ProjectLogs.as_view(), name='dashboard_project_logs'),
+    path('api/dashboard/project/<int:project_id>/blockers/', views.ProjectBlockers.as_view(), name='dashboard_project_blockers'),
+    path('api/dashboard/task/create/', views.CreateTodoItem.as_view(), name='dashboard_create_task'),
+    path('api/dashboard/log/create/', views.CreateTodoLog.as_view(), name='dashboard_create_log'),
+    path('api/dashboard/task/update/<int:pk>/', views.UpdateTask.as_view(), name='dashboard_update_task'),
 ]

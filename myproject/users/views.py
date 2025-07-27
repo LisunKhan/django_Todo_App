@@ -674,3 +674,61 @@ class ProjectDetailView(LoginRequiredMixin, UserPassesTestMixin, DetailView):
         # Add tasks associated with this project to the context
         context['tasks'] = TodoItem.objects.filter(project=project).order_by('status', 'created_at')
         return context
+
+@login_required
+def dashboard_view(request, project_id):
+    project = get_object_or_404(Project, id=project_id)
+    return render(request, 'dashboard/dashboard.html', {'project': project})
+
+from rest_framework import generics
+from .serializers import UserSerializer, TodoItemSerializer, TodoLogSerializer
+from django.contrib.auth.models import User
+from rest_framework.response import Response
+from rest_framework.views import APIView
+from datetime import date, timedelta
+
+class UserList(generics.ListAPIView):
+    serializer_class = UserSerializer
+
+    def get_queryset(self):
+        project_id = self.kwargs['project_id']
+        project = get_object_or_404(Project, id=project_id)
+        return project.members.all()
+
+class ProjectTasks(generics.ListAPIView):
+    serializer_class = TodoItemSerializer
+
+    def get_queryset(self):
+        project_id = self.kwargs['project_id']
+        return TodoItem.objects.filter(project_id=project_id)
+
+class ProjectLogs(APIView):
+    def get(self, request, project_id):
+        log_date_str = request.query_params.get('date')
+        if log_date_str == 'yesterday':
+            log_date = date.today() - timedelta(days=1)
+        elif log_date_str == 'today':
+            log_date = date.today()
+        else:
+            return Response({"error": "Invalid date parameter"}, status=400)
+
+        logs = TodoLog.objects.filter(todo_item__project_id=project_id, task_date=log_date)
+        serializer = TodoLogSerializer(logs, many=True)
+        return Response(serializer.data)
+
+class ProjectBlockers(generics.ListAPIView):
+    serializer_class = TodoItemSerializer
+
+    def get_queryset(self):
+        project_id = self.kwargs['project_id']
+        return TodoItem.objects.filter(project_id=project_id, status='blocker')
+
+class CreateTodoItem(generics.CreateAPIView):
+    serializer_class = TodoItemSerializer
+
+class CreateTodoLog(generics.CreateAPIView):
+    serializer_class = TodoLogSerializer
+
+class UpdateTask(generics.UpdateAPIView):
+    serializer_class = TodoItemSerializer
+    queryset = TodoItem.objects.all()
