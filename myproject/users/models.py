@@ -14,8 +14,8 @@ class TodoItem(models.Model):
     title = models.CharField(max_length=100)
     description = models.TextField()
     project = models.ForeignKey('Project', on_delete=models.SET_NULL, null=True, blank=True, related_name='todo_items')
-    time_spent = models.IntegerField(default=0)  # Stored in minutes
-    estimation_time = models.IntegerField(default=0) # Stored in minutes
+    time_spent = models.FloatField(default=0)  # Stored in hours
+    estimation_time = models.FloatField(default=0) # Stored in hours
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -33,22 +33,18 @@ class TodoItem(models.Model):
 
     @property
     def time_spent_hours(self):
-        if self.time_spent is None:
-            return 0
-        return self.time_spent / 60
+        return self.time_spent
 
     @property
     def estimation_time_hours(self):
-        if self.estimation_time is None:
-            return 0
-        return self.estimation_time / 60
+        return self.estimation_time
 
     def __str__(self):
         return self.title
 
     def update_time_spent(self):
         total_time_hours = self.logs.aggregate(total=models.Sum('log_time'))['total'] or 0
-        self.time_spent = total_time_hours * 60
+        self.time_spent = total_time_hours
         self.save()
 
 # Project and ProjectMembership Models

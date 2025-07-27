@@ -224,8 +224,7 @@ def task_report(request):
     # Calculate total time spent on tasks for today by the user
     today = date.today()
     todays_tasks = TodoItem.objects.filter(user=request.user, created_at__date=today)
-    total_time_spent_today_minutes = todays_tasks.aggregate(total_time=Sum('time_spent'))['total_time'] or 0
-    total_time_spent_today_hours = total_time_spent_today_minutes / 60
+    total_time_spent_today_hours = todays_tasks.aggregate(total_time=Sum('time_spent'))['total_time'] or 0
 
     # Get tasks for display, apply search and ordering
     # This part remains the same, for the main list of tasks displayed in the table
@@ -400,13 +399,13 @@ def inline_edit_todo(request, todo_id):
         if 'time_spent_hours' in data:
             try:
                 hours_str = data['time_spent_hours']
-                if hours_str is None or str(hours_str).strip() == '': # Handle null or empty string for time_spent
-                    todo.time_spent = 0 # Or None, depending on model definition for time_spent (it's IntegerField default 0)
+                if hours_str is None or str(hours_str).strip() == '':
+                    todo.time_spent = 0
                 else:
                     hours = float(hours_str)
                     if hours < 0:
                         return JsonResponse({'success': False, 'error': 'Time spent cannot be negative.'}, status=400)
-                    todo.time_spent = int(hours * 60)
+                    todo.time_spent = hours
             except ValueError:
                 return JsonResponse({'success': False, 'error': 'Invalid time format for time_spent_hours.'}, status=400)
 
@@ -419,7 +418,7 @@ def inline_edit_todo(request, todo_id):
                     hours = float(hours_str)
                     if hours < 0:
                         return JsonResponse({'success': False, 'error': 'Estimation time cannot be negative.'}, status=400)
-                    todo.estimation_time = int(hours * 60)
+                    todo.estimation_time = hours
             except ValueError:
                 return JsonResponse({'success': False, 'error': 'Invalid time format for estimation_time_hours.'}, status=400)
 

@@ -98,20 +98,8 @@ class TodoForm(forms.ModelForm):
         return hours
 
     def save(self, commit=True):
-        # Get the hours from the cleaned data
-        hours = self.cleaned_data.get('time_spent_hours', 0)
-        # Convert hours to minutes and set it on the instance
-        self.instance.time_spent = int((hours or 0) * 60)
-
-        estimation_hours = self.cleaned_data.get('estimation_time_hours', 0)
-        self.instance.estimation_time = int((estimation_hours or 0) * 60)
-
-        # Call the superclass's save method to save the instance
-        # but ensure 'time_spent_hours' is not passed to the model's constructor
-        # if it's not a model field.
-        # Since 'time_spent_hours' is not a model field, we should pop it
-        # if we were directly passing self.cleaned_data to model.
-        # However, ModelForm's save() handles this by only using fields that exist on the model.
+        self.instance.time_spent = self.cleaned_data.get('time_spent_hours', 0)
+        self.instance.estimation_time = self.cleaned_data.get('estimation_time_hours', 0)
         return super().save(commit)
 
 
