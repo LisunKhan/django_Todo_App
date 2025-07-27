@@ -18,6 +18,7 @@ urlpatterns = [
     path('todo/inline_edit/<int:todo_id>/', views.inline_edit_todo, name='inline_edit_todo'),
     path('log/<int:log_id>/delete/', views.delete_log, name='delete_log'),
     path('log/<int:log_id>/edit/', views.edit_log, name='edit_log'),
+    path('todo/<int:todo_id>/add_log/', views.add_log, name='add_log'),
     path('report/', views.task_report, name='task_report'),
     # Profile URLs
     path('profile/', views.profile_view, name='profile_view'),

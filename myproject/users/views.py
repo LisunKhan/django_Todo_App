@@ -338,6 +338,21 @@ def edit_log(request, log_id):
     return render(request, 'todo/edit_log.html', {'form': form, 'log': log})
 
 
+@login_required
+def add_log(request, todo_id):
+    todo = get_object_or_404(TodoItem, id=todo_id, user=request.user)
+    if request.method == 'POST':
+        form = TodoLogForm(request.POST)
+        if form.is_valid():
+            log = form.save(commit=False)
+            log.todo_item = todo
+            log.save()
+            return redirect('todo_detail', todo_id=todo.id)
+    else:
+        form = TodoLogForm()
+    return render(request, 'todo/add_log.html', {'form': form, 'todo': todo})
+
+
 import json
 from django.http import JsonResponse
 from django.views.decorators.http import require_POST
