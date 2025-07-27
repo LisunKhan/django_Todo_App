@@ -202,9 +202,9 @@ document.addEventListener('DOMContentLoaded', () => {
         taskCard.appendChild(estimation);
 
         const totalTime = document.createElement('p');
-        const response = await fetch(`/api/ds_board/task/${task.id}/total_time/`);
-        const data = await response.json();
-        totalTime.textContent = `Total Time Spent: ${data.total_time.toFixed(2)}h`;
+        const totalTimeResponse = await fetch(`/api/ds_board/task/${task.id}/total_time/`);
+        const totalTimeData = await totalTimeResponse.json();
+        totalTime.textContent = `Total Time Spent: ${totalTimeData.total_time.toFixed(2)}h`;
         taskCard.appendChild(totalTime);
 
         const logTimeButton = document.createElement('button');
