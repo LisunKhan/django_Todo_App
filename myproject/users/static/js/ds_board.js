@@ -353,6 +353,9 @@ document.addEventListener('DOMContentLoaded', () => {
         event.preventDefault();
         const taskId = event.dataTransfer.getData('text/plain');
         const taskCard = document.querySelector(`[data-task-id='${taskId}']`);
+        if (!taskCard) {
+            return;
+        }
         const taskUserId = parseInt(taskCard.dataset.userId);
 
         if (taskUserId !== currentUserId) {
