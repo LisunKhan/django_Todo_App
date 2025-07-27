@@ -89,7 +89,8 @@ document.addEventListener('DOMContentLoaded', () => {
         column.innerHTML = `<h4>${title}</h4>`;
         if (isToday) {
             const addTaskButton = document.createElement('button');
-            addTaskButton.textContent = '+ Add Task';
+            addTaskButton.classList.add('add-task-button');
+            addTaskButton.textContent = '+ Add a card';
             addTaskButton.addEventListener('click', handleAddTask);
             column.appendChild(addTaskButton);
         }
@@ -187,7 +188,60 @@ document.addEventListener('DOMContentLoaded', () => {
         estimation.textContent = `Estimation: ${task.estimation_time}h`;
         taskCard.appendChild(estimation);
 
+        const logTimeButton = document.createElement('button');
+        logTimeButton.textContent = 'Log Time';
+        logTimeButton.addEventListener('click', () => showLogTimeInput(taskCard, task.id));
+        taskCard.appendChild(logTimeButton);
+
         return taskCard;
+    }
+
+    function showLogTimeInput(taskCard, taskId) {
+        const existingLogTimeInput = taskCard.querySelector('.log-time-input');
+        if (existingLogTimeInput) {
+            return;
+        }
+
+        const logTimeInput = document.createElement('input');
+        logTimeInput.type = 'number';
+        logTimeInput.min = '0';
+        logTimeInput.step = '0.5';
+        logTimeInput.placeholder = 'Hours';
+        logTimeInput.classList.add('log-time-input');
+
+        const saveLogButton = document.createElement('button');
+        saveLogButton.textContent = 'Save';
+        saveLogButton.addEventListener('click', () => saveLogTime(taskCard, taskId, logTimeInput.value));
+
+        taskCard.appendChild(logTimeInput);
+        taskCard.appendChild(saveLogButton);
+    }
+
+    async function saveLogTime(taskCard, taskId, logTime) {
+        const response = await fetch('/api/ds_board/log_time/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: JSON.stringify({
+                task_id: taskId,
+                log_time: logTime
+            })
+        });
+
+        if (response.ok) {
+            const logTimeInput = taskCard.querySelector('.log-time-input');
+            const saveLogButton = taskCard.querySelector('button');
+            taskCard.removeChild(logTimeInput);
+            taskCard.removeChild(saveLogButton);
+
+            const userRow = taskCard.closest('.user-row');
+            const totalTimeColumn = userRow.querySelector('.total-time');
+            const currentTotalTime = parseFloat(totalTimeColumn.textContent.replace('Total Time (min): ', '')) || 0;
+            const newTotalTime = currentTotalTime + parseFloat(logTime) * 60;
+            totalTimeColumn.textContent = `Total Time (min): ${newTotalTime}`;
+        }
     }
 
     function handleAddTask(event) {

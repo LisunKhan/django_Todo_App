@@ -86,3 +86,18 @@ def user_profile_picture_api(request, user_id):
     if profile.profile_picture:
         return JsonResponse({'profile_picture_url': profile.profile_picture.url})
     return JsonResponse({'profile_picture_url': None})
+
+@login_required
+def log_time_api(request):
+    if request.method == 'POST':
+        data = json.loads(request.body)
+        task_id = data['task_id']
+        log_time = data['log_time']
+        task = TodoItem.objects.get(id=task_id)
+        TodoLog.objects.create(
+            todo_item=task,
+            log_time=log_time,
+            task_date=date.today()
+        )
+        return JsonResponse({'success': True})
+    return JsonResponse({'error': 'Invalid request method'}, status=405)

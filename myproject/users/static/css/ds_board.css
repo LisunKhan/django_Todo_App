@@ -45,6 +45,23 @@ body {
     padding-bottom: 10px;
 }
 
+.add-task-button {
+    background-color: #f4f5f7;
+    color: #5e6c84;
+    border: none;
+    border-radius: 3px;
+    padding: 10px;
+    cursor: pointer;
+    width: 100%;
+    text-align: left;
+    font-size: 14px;
+    margin-top: 10px;
+}
+
+.add-task-button:hover {
+    background-color: #e2e4e9;
+}
+
 /* Modal Styles */
 .modal {
     display: none;
