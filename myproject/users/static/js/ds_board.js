@@ -183,10 +183,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
         taskCard.appendChild(header);
 
-        const description = document.createElement('p');
-        description.textContent = task.description;
-        taskCard.appendChild(description);
-
         const estimation = document.createElement('p');
         estimation.textContent = `Estimation: ${task.estimation_time}h`;
         taskCard.appendChild(estimation);
