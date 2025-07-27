@@ -64,3 +64,17 @@ def project_blockers_api(request, project_id):
         'user_id': blocker.user.id
     } for blocker in blockers]
     return JsonResponse(blockers_data, safe=False)
+
+@login_required
+def create_task_api(request):
+    if request.method == 'POST':
+        data = json.loads(request.body)
+        task = TodoItem.objects.create(
+            title=data['title'],
+            estimation_time=data['estimation_time'],
+            project_id=data['project_id'],
+            user=request.user,
+            status='todo'
+        )
+        return JsonResponse({'id': task.id, 'title': task.title, 'description': task.description, 'estimation_time': task.estimation_time, 'status': task.status, 'user_id': task.user.id})
+    return JsonResponse({'error': 'Invalid request method'}, status=405)

@@ -1,6 +1,8 @@
 document.addEventListener('DOMContentLoaded', () => {
     const dsBoardContainer = document.getElementById('ds-board-container');
     const projectFilterSelect = document.getElementById('project-filter-select');
+    const modal = document.getElementById('add-task-modal');
+    const closeButton = document.querySelector('.close-button');
     let currentUserId;
 
     async function fetchCurrentUser() {
@@ -192,17 +194,74 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        const taskTitle = prompt('Enter task title:');
-        if (taskTitle) {
-            const task = {
-                id: Date.now(), // temporary ID
-                title: taskTitle,
-                status: 'todo',
-                user_id: userId
-            };
-            const taskCard = createTaskCard(task);
-            todayColumn.appendChild(taskCard);
+        const taskProjectSelect = document.getElementById('task-project');
+        taskProjectSelect.innerHTML = '';
+        const projects = Array.from(projectFilterSelect.options).slice(1);
+        projects.forEach(option => {
+            const newOption = document.createElement('option');
+            newOption.value = option.value;
+            newOption.textContent = option.textContent;
+            taskProjectSelect.appendChild(newOption);
+        });
+
+        modal.style.display = 'block';
+    }
+
+    closeButton.addEventListener('click', () => {
+        modal.style.display = 'none';
+    });
+
+    window.addEventListener('click', (event) => {
+        if (event.target === modal) {
+            modal.style.display = 'none';
         }
+    });
+
+    const addTaskForm = document.getElementById('add-task-form');
+    addTaskForm.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        const title = document.getElementById('task-title').value;
+        const estimationTime = document.getElementById('task-estimation').value;
+        const projectId = document.getElementById('task-project').value;
+
+        const response = await fetch('/api/ds_board/create_task/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: JSON.stringify({
+                title: title,
+                estimation_time: estimationTime,
+                project_id: projectId
+            })
+        });
+
+        if (response.ok) {
+            const task = await response.json();
+            const taskCard = createTaskCard(task);
+            const userRow = document.querySelector(`.user-row[data-user-id='${task.user_id}']`);
+            if (userRow) {
+                userRow.children[2].appendChild(taskCard);
+            }
+            modal.style.display = 'none';
+            addTaskForm.reset();
+        }
+    });
+
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
     }
 
     function addDragAndDropListeners() {
