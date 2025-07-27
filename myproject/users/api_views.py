@@ -87,6 +87,8 @@ def user_profile_picture_api(request, user_id):
         return JsonResponse({'profile_picture_url': profile.profile_picture.url})
     return JsonResponse({'profile_picture_url': None})
 
+from django.db.models import Sum
+
 @login_required
 def log_time_api(request):
     if request.method == 'POST':
@@ -101,3 +103,9 @@ def log_time_api(request):
         )
         return JsonResponse({'success': True})
     return JsonResponse({'error': 'Invalid request method'}, status=405)
+
+@login_required
+def task_total_time_api(request, task_id):
+    task = TodoItem.objects.get(id=task_id)
+    total_time = task.logs.aggregate(Sum('log_time'))['log_time__sum'] or 0
+    return JsonResponse({'total_time': total_time})

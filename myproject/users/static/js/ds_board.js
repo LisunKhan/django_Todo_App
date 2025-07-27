@@ -69,16 +69,6 @@ document.addEventListener('DOMContentLoaded', () => {
             const todayTasksColumn = createColumn("Today's Tasks", true);
             userRow.appendChild(todayTasksColumn);
 
-            const totalTimeColumn = createColumn('Total Time (min)');
-            let totalTime = 0;
-            todayLogs.forEach(log => {
-                if (log.user_id === user.id) {
-                    totalTime += log.log_time;
-                }
-            });
-            totalTimeColumn.textContent += totalTime.toFixed(2);
-            userRow.appendChild(totalTimeColumn);
-
             const blockersColumn = createColumn('Blockers');
             userRow.appendChild(blockersColumn);
 
@@ -108,6 +98,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     async function populateTasks(tasks, yesterdayLogs, todayLogs, blockers) {
+        const renderedTaskIds = new Set();
         const userRows = document.querySelectorAll('.user-row');
         userRows.forEach(userRow => {
             for (let i = 1; i < userRow.children.length; i++) {
@@ -120,22 +111,24 @@ document.addEventListener('DOMContentLoaded', () => {
 
         for (const log of yesterdayLogs) {
             const task = tasks.find(t => t.id === log.task_id);
-            if (task) {
+            if (task && !renderedTaskIds.has(task.id)) {
                 const taskCard = await createTaskCard(task);
                 const userRow = document.querySelector(`.user-row[data-user-id='${task.user_id}']`);
                 if (userRow) {
                     userRow.children[1].appendChild(taskCard);
+                    renderedTaskIds.add(task.id);
                 }
             }
         }
 
         for (const log of todayLogs) {
             const task = tasks.find(t => t.id === log.task_id);
-            if (task) {
+            if (task && !renderedTaskIds.has(task.id)) {
                 const taskCard = await createTaskCard(task);
                 const userRow = document.querySelector(`.user-row[data-user-id='${task.user_id}']`);
                 if (userRow) {
                     userRow.children[2].appendChild(taskCard);
+                    renderedTaskIds.add(task.id);
                 }
             }
         }
@@ -208,6 +201,12 @@ document.addEventListener('DOMContentLoaded', () => {
         estimation.textContent = `Estimation: ${task.estimation_time}h`;
         taskCard.appendChild(estimation);
 
+        const totalTime = document.createElement('p');
+        const response = await fetch(`/api/ds_board/task/${task.id}/total_time/`);
+        const data = await response.json();
+        totalTime.textContent = `Total Time Spent: ${data.total_time.toFixed(2)}h`;
+        taskCard.appendChild(totalTime);
+
         const logTimeButton = document.createElement('button');
         logTimeButton.textContent = 'Log Time';
         logTimeButton.addEventListener('click', () => showLogTimeInput(taskCard, task.id));
@@ -256,11 +255,10 @@ document.addEventListener('DOMContentLoaded', () => {
             taskCard.removeChild(logTimeInput);
             taskCard.removeChild(saveLogButton);
 
-            const userRow = taskCard.closest('.user-row');
-            const totalTimeColumn = userRow.querySelector('.task-column:nth-child(4)');
-            let currentTotalTime = parseFloat(totalTimeColumn.textContent.split(':')[1]) || 0;
-            currentTotalTime += parseFloat(logTime);
-            totalTimeColumn.innerHTML = `<h4>Total Time (hours)</h4>${currentTotalTime.toFixed(2)}`;
+            const totalTimeElement = taskCard.querySelector('p:nth-child(3)');
+            const response = await fetch(`/api/ds_board/task/${taskId}/total_time/`);
+            const data = await response.json();
+            totalTimeElement.textContent = `Total Time Spent: ${data.total_time.toFixed(2)}h`;
         }
     }
 
