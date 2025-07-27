@@ -96,36 +96,36 @@ document.addEventListener('DOMContentLoaded', () => {
         return column;
     }
 
-    function populateTasks(tasks, yesterdayLogs, todayLogs, blockers) {
-        yesterdayLogs.forEach(log => {
+    async function populateTasks(tasks, yesterdayLogs, todayLogs, blockers) {
+        for (const log of yesterdayLogs) {
             const task = tasks.find(t => t.id === log.task_id);
             if (task) {
-                const taskCard = createTaskCard(task);
+                const taskCard = await createTaskCard(task);
                 const userRow = document.querySelector(`.user-row[data-user-id='${task.user_id}']`);
                 if (userRow) {
                     userRow.children[1].appendChild(taskCard);
                 }
             }
-        });
+        }
 
-        todayLogs.forEach(log => {
+        for (const log of todayLogs) {
             const task = tasks.find(t => t.id === log.task_id);
             if (task) {
-                const taskCard = createTaskCard(task);
+                const taskCard = await createTaskCard(task);
                 const userRow = document.querySelector(`.user-row[data-user-id='${task.user_id}']`);
                 if (userRow) {
                     userRow.children[2].appendChild(taskCard);
                 }
             }
-        });
+        }
 
-        blockers.forEach(blocker => {
-            const taskCard = createTaskCard(blocker);
+        for (const blocker of blockers) {
+            const taskCard = await createTaskCard(blocker);
             const userRow = document.querySelector(`.user-row[data-user-id='${blocker.user_id}']`);
             if (userRow) {
                 userRow.children[4].appendChild(taskCard);
             }
-        });
+        }
     }
 
     function renderTaskPool(tasks) {
