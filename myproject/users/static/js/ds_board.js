@@ -70,6 +70,13 @@ document.addEventListener('DOMContentLoaded', () => {
             userRow.appendChild(todayTasksColumn);
 
             const totalTimeColumn = createColumn('Total Time (min)');
+            let totalTime = 0;
+            todayLogs.forEach(log => {
+                if (log.user_id === user.id) {
+                    totalTime += log.log_time;
+                }
+            });
+            totalTimeColumn.textContent += totalTime.toFixed(2);
             userRow.appendChild(totalTimeColumn);
 
             const blockersColumn = createColumn('Blockers');
@@ -101,6 +108,16 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     async function populateTasks(tasks, yesterdayLogs, todayLogs, blockers) {
+        const userRows = document.querySelectorAll('.user-row');
+        userRows.forEach(userRow => {
+            for (let i = 1; i < userRow.children.length; i++) {
+                const column = userRow.children[i];
+                while (column.children.length > 1) {
+                    column.removeChild(column.lastChild);
+                }
+            }
+        });
+
         for (const log of yesterdayLogs) {
             const task = tasks.find(t => t.id === log.task_id);
             if (task) {
@@ -241,9 +258,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const userRow = taskCard.closest('.user-row');
             const totalTimeColumn = userRow.querySelector('.task-column:nth-child(4)');
-            const currentTotalTime = parseFloat(totalTimeColumn.textContent.replace('Total Time (hours): ', '')) || 0;
-            const newTotalTime = currentTotalTime + parseFloat(logTime);
-            totalTimeColumn.textContent = `Total Time (hours): ${newTotalTime.toFixed(2)}`;
+            let currentTotalTime = parseFloat(totalTimeColumn.textContent.split(':')[1]) || 0;
+            currentTotalTime += parseFloat(logTime);
+            totalTimeColumn.innerHTML = `<h4>Total Time (hours)</h4>${currentTotalTime.toFixed(2)}`;
         }
     }
 
