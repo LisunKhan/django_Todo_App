@@ -128,7 +128,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    function renderTaskPool(tasks) {
+    async function renderTaskPool(tasks) {
         const taskPool = document.createElement('div');
         taskPool.classList.add('task-pool');
         taskPool.innerHTML = '<h3>Task Pool</h3>';
@@ -138,22 +138,22 @@ document.addEventListener('DOMContentLoaded', () => {
         const doneTasks = tasks.filter(task => task.status === 'done');
 
         taskPool.innerHTML += '<h4>To Do</h4>';
-        todoTasks.forEach(task => {
-            const taskCard = createTaskCard(task);
+        for (const task of todoTasks) {
+            const taskCard = await createTaskCard(task);
             taskPool.appendChild(taskCard);
-        });
+        }
 
         taskPool.innerHTML += '<h4>In Progress</h4>';
-        inProgressTasks.forEach(task => {
-            const taskCard = createTaskCard(task);
+        for (const task of inProgressTasks) {
+            const taskCard = await createTaskCard(task);
             taskPool.appendChild(taskCard);
-        });
+        }
 
         taskPool.innerHTML += '<h4>Done</h4>';
-        doneTasks.forEach(task => {
-            const taskCard = createTaskCard(task);
+        for (const task of doneTasks) {
+            const taskCard = await createTaskCard(task);
             taskPool.appendChild(taskCard);
-        });
+        }
 
         dsBoardContainer.appendChild(taskPool);
     }
@@ -172,12 +172,14 @@ document.addEventListener('DOMContentLoaded', () => {
         title.textContent = task.title;
         header.appendChild(title);
 
-        const avatar = document.createElement('img');
-        avatar.classList.add('user-avatar');
         const response = await fetch(`/api/ds_board/user/${task.user_id}/profile_picture/`);
         const data = await response.json();
-        avatar.src = data.profile_picture_url || '/static/images/default_avatar.png';
-        header.appendChild(avatar);
+        if (data.profile_picture_url) {
+            const avatar = document.createElement('img');
+            avatar.classList.add('user-avatar');
+            avatar.src = data.profile_picture_url;
+            header.appendChild(avatar);
+        }
 
         taskCard.appendChild(header);
 
