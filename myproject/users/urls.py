@@ -1,5 +1,5 @@
 from django.urls import path
-from . import views
+from . import views, api_views
 
 urlpatterns = [
     # path('', views.home, name='home'),
@@ -26,6 +26,13 @@ urlpatterns = [
     path('download_csv_report/', views.download_csv_report, name='download_csv_report'),
     # Kanban Board URL
     path('kanban/', views.kanban_board_view, name='kanban_board'),
+    # DS Board URL
+    path('ds_board/', views.ds_board_view, name='ds_board'),
     # API URL for fetching Kanban tasks
     path('api/kanban_tasks/', views.api_get_kanban_tasks, name='api_kanban_tasks'),
+    # DS Board APIs
+    path('api/ds_board/project/<int:project_id>/users/', api_views.project_users_api, name='project_users_api'),
+    path('api/ds_board/project/<int:project_id>/tasks/', api_views.project_tasks_api, name='project_tasks_api'),
+    path('api/ds_board/project/<int:project_id>/logs/', api_views.project_logs_api, name='project_logs_api'),
+    path('api/ds_board/project/<int:project_id>/blockers/', api_views.project_blockers_api, name='project_blockers_api'),
 ]

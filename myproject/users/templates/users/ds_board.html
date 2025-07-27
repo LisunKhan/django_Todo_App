@@ -1,0 +1,21 @@
+{% extends 'todo/base.html' %}
+{% load static %}
+
+{% block title %}DS Board{% endblock title %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="row mb-3">
+        <div class="col">
+            <h1>DS Board</h1>
+        </div>
+    </div>
+
+    <div id="ds-board-container">
+        <!-- DS Board will be rendered here by ds_board.js -->
+    </div>
+</div>
+
+<link rel="stylesheet" href="{% static 'css/ds_board.css' %}">
+<script src="{% static 'js/ds_board.js' %}"></script>
+{% endblock content %}

@@ -1,0 +1,46 @@
+#ds-board-container {
+    display: flex;
+    flex-direction: column;
+}
+
+.user-row {
+    display: flex;
+    border-bottom: 1px solid #ccc;
+}
+
+.user-info {
+    width: 150px;
+    padding: 10px;
+    font-weight: bold;
+}
+
+.task-column {
+    width: 200px;
+    padding: 10px;
+    border-left: 1px solid #ccc;
+}
+
+.task-card {
+    background-color: #f4f4f4;
+    padding: 5px;
+    margin-bottom: 5px;
+    border-radius: 3px;
+}
+
+.total-time {
+    width: 100px;
+    padding: 10px;
+    border-left: 1px solid #ccc;
+}
+
+.blockers-column {
+    width: 200px;
+    padding: 10px;
+    border-left: 1px solid #ccc;
+}
+
+.task-pool {
+    width: 200px;
+    padding: 10px;
+    border-left: 1px solid #ccc;
+}

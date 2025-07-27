@@ -67,6 +67,12 @@
                             Task Board
                         </a>
                     </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.resolver_match.url_name == 'ds_board' %}active{% endif %}" href="{% url 'ds_board' %}">
+                            <i class="fas fa-tachometer-alt"></i>
+                            DS Board
+                        </a>
+                    </li>
                     {% if user.is_authenticated %}
                     <li class="nav-item">
                         <a class="nav-link {% if request.resolver_match.url_name == 'project_list' or request.resolver_match.url_name == 'project_detail' %}active{% endif %}" href="{% url 'project_list' %}">

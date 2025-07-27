@@ -674,3 +674,10 @@ class ProjectDetailView(LoginRequiredMixin, UserPassesTestMixin, DetailView):
         # Add tasks associated with this project to the context
         context['tasks'] = TodoItem.objects.filter(project=project).order_by('status', 'created_at')
         return context
+
+@login_required
+def ds_board_view(request):
+    """
+    View to render the DS board page.
+    """
+    return render(request, 'users/ds_board.html')
