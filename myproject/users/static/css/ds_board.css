@@ -164,6 +164,32 @@ body {
     border-radius: 50%;
 }
 
+.log-time-input {
+    width: 60px;
+    padding: 5px;
+    border: 1px solid #ccc;
+    border-radius: 3px;
+    margin-right: 5px;
+}
+
+.log-time-input:focus {
+    outline: none;
+    border-color: #007bff;
+}
+
+.task-card button {
+    background-color: #007bff;
+    color: #fff;
+    border: none;
+    border-radius: 3px;
+    padding: 5px 10px;
+    cursor: pointer;
+}
+
+.task-card button:hover {
+    background-color: #0056b3;
+}
+
 .task-card h5 {
     margin-top: 0;
     margin-bottom: 5px;

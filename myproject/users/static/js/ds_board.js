@@ -86,6 +86,9 @@ document.addEventListener('DOMContentLoaded', () => {
     function createColumn(title, isToday = false) {
         const column = document.createElement('div');
         column.classList.add('task-column');
+        if (title === 'Total Time (min)') {
+            title = 'Total Time (hours)';
+        }
         column.innerHTML = `<h4>${title}</h4>`;
         if (isToday) {
             const addTaskButton = document.createElement('button');
@@ -237,10 +240,10 @@ document.addEventListener('DOMContentLoaded', () => {
             taskCard.removeChild(saveLogButton);
 
             const userRow = taskCard.closest('.user-row');
-            const totalTimeColumn = userRow.querySelector('.total-time');
-            const currentTotalTime = parseFloat(totalTimeColumn.textContent.replace('Total Time (min): ', '')) || 0;
-            const newTotalTime = currentTotalTime + parseFloat(logTime) * 60;
-            totalTimeColumn.textContent = `Total Time (min): ${newTotalTime}`;
+            const totalTimeColumn = userRow.querySelector('.task-column:nth-child(4)');
+            const currentTotalTime = parseFloat(totalTimeColumn.textContent.replace('Total Time (hours): ', '')) || 0;
+            const newTotalTime = currentTotalTime + parseFloat(logTime);
+            totalTimeColumn.textContent = `Total Time (hours): ${newTotalTime.toFixed(2)}`;
         }
     }
 
