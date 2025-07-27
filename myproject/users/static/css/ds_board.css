@@ -1,23 +1,48 @@
+body {
+    background-color: #f0f2f5;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
 #ds-board-container {
     display: flex;
     flex-direction: column;
+    gap: 30px;
+    padding: 20px;
 }
 
 .user-row {
     display: flex;
-    border-bottom: 1px solid #ccc;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    background-color: #f9f9f9;
+    padding: 15px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
 }
 
 .user-info {
     width: 150px;
     padding: 10px;
     font-weight: bold;
+    font-size: 18px;
+    text-align: center;
 }
 
 .task-column {
-    width: 200px;
+    width: 220px;
     padding: 10px;
-    border-left: 1px solid #ccc;
+    border-left: 1px solid #e0e0e0;
+    background-color: #fff;
+    border-radius: 5px;
+    margin: 0 10px;
+}
+
+.task-column h4 {
+    text-align: center;
+    color: #333;
+    font-size: 16px;
+    margin-bottom: 15px;
+    border-bottom: 2px solid #007bff;
+    padding-bottom: 10px;
 }
 
 /* Modal Styles */
@@ -76,11 +101,50 @@
 
 .task-card {
     background-color: #fff;
-    border: 1px solid #ccc;
+    border-left: 5px solid #007bff;
     border-radius: 5px;
-    padding: 10px;
+    padding: 15px;
     margin-bottom: 10px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    transition: transform 0.2s;
+}
+
+.task-card:hover {
+    transform: translateY(-3px);
+}
+
+.task-card.status-todo {
+    border-left-color: #ffc107;
+}
+
+.task-card.status-inprogress {
+    border-left-color: #17a2b8;
+}
+
+.task-card.status-done {
+    border-left-color: #28a745;
+}
+
+.task-card.status-blocked {
+    border-left-color: #dc3545;
+}
+
+.task-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.task-card-header h5 {
+    margin: 0;
+    font-size: 16px;
+}
+
+.user-avatar {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
 }
 
 .task-card h5 {

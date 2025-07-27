@@ -38,4 +38,5 @@ urlpatterns = [
     path('api/ds_board/project/<int:project_id>/logs/', api_views.project_logs_api, name='project_logs_api'),
     path('api/ds_board/project/<int:project_id>/blockers/', api_views.project_blockers_api, name='project_blockers_api'),
     path('api/ds_board/create_task/', api_views.create_task_api, name='create_task_api'),
+    path('api/ds_board/user/<int:user_id>/profile_picture/', api_views.user_profile_picture_api, name='user_profile_picture_api'),
 ]

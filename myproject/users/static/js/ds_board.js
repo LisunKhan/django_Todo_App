@@ -158,16 +158,28 @@ document.addEventListener('DOMContentLoaded', () => {
         dsBoardContainer.appendChild(taskPool);
     }
 
-    function createTaskCard(task) {
+    async function createTaskCard(task) {
         const taskCard = document.createElement('div');
-        taskCard.classList.add('task-card');
+        taskCard.classList.add('task-card', `status-${task.status}`);
         taskCard.setAttribute('draggable', true);
         taskCard.setAttribute('data-task-id', task.id);
         taskCard.setAttribute('data-user-id', task.user_id);
 
+        const header = document.createElement('div');
+        header.classList.add('task-card-header');
+
         const title = document.createElement('h5');
         title.textContent = task.title;
-        taskCard.appendChild(title);
+        header.appendChild(title);
+
+        const avatar = document.createElement('img');
+        avatar.classList.add('user-avatar');
+        const response = await fetch(`/api/ds_board/user/${task.user_id}/profile_picture/`);
+        const data = await response.json();
+        avatar.src = data.profile_picture_url || '/static/images/default_avatar.png';
+        header.appendChild(avatar);
+
+        taskCard.appendChild(header);
 
         const description = document.createElement('p');
         description.textContent = task.description;
@@ -176,10 +188,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const estimation = document.createElement('p');
         estimation.textContent = `Estimation: ${task.estimation_time}h`;
         taskCard.appendChild(estimation);
-
-        const status = document.createElement('p');
-        status.textContent = `Status: ${task.status}`;
-        taskCard.appendChild(status);
 
         return taskCard;
     }

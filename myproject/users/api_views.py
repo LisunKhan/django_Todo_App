@@ -78,3 +78,11 @@ def create_task_api(request):
         )
         return JsonResponse({'id': task.id, 'title': task.title, 'description': task.description, 'estimation_time': task.estimation_time, 'status': task.status, 'user_id': task.user.id})
     return JsonResponse({'error': 'Invalid request method'}, status=405)
+
+@login_required
+def user_profile_picture_api(request, user_id):
+    user = User.objects.get(id=user_id)
+    profile = user.profile
+    if profile.profile_picture:
+        return JsonResponse({'profile_picture_url': profile.profile_picture.url})
+    return JsonResponse({'profile_picture_url': None})
