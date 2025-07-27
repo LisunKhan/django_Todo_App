@@ -274,7 +274,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const saveButton = document.createElement('button');
         saveButton.textContent = 'Save';
-        saveButton.addEventListener('click', () => updateLog(logId, logTimeInput.value, logNotesInput.value));
+        saveButton.addEventListener('click', () => updateLog(logId, logTimeInput.value, logNotesInput.value, logElement));
 
         logElement.innerHTML = '';
         logElement.appendChild(logTimeInput);
@@ -282,7 +282,7 @@ document.addEventListener('DOMContentLoaded', () => {
         logElement.appendChild(saveButton);
     }
 
-    async function updateLog(logId, logTime, logNotes) {
+    async function updateLog(logId, logTime, logNotes, logElement) {
         const response = await fetch(`/api/ds_board/log/${logId}/update/`, {
             method: 'POST',
             headers: {
@@ -296,7 +296,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         if (response.ok) {
-            const logElement = document.querySelector(`[data-log-id='${logId}']`);
             const taskId = logElement.closest('.task-card').dataset.taskId;
             showLogList(taskId);
             const taskCard = document.querySelector(`[data-task-id='${taskId}']`);
