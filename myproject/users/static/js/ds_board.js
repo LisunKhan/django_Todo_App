@@ -154,7 +154,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     async function createTaskCard(task) {
         const taskCard = document.createElement('div');
-        taskCard.classList.add('task-card', `status-${task.status}`);
+        taskCard.classList.add('task-card');
         taskCard.setAttribute('draggable', true);
         taskCard.setAttribute('data-task-id', task.id);
         taskCard.setAttribute('data-user-id', task.user_id);
