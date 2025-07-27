@@ -164,6 +164,32 @@ body {
     border-radius: 50%;
 }
 
+.task-status {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    padding: 3px 8px;
+    border-radius: 12px;
+    font-size: 12px;
+    color: #fff;
+}
+
+.status-todo {
+    background-color: #ffc107;
+}
+
+.status-inprogress {
+    background-color: #17a2b8;
+}
+
+.status-done {
+    background-color: #28a745;
+}
+
+.status-blocked {
+    background-color: #dc3545;
+}
+
 .log-time-input {
     width: 60px;
     padding: 5px;

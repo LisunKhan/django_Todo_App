@@ -75,8 +75,10 @@ document.addEventListener('DOMContentLoaded', () => {
             dsBoardContainer.appendChild(userRow);
         });
 
-        populateTasks(tasks, yesterdayLogs, todayLogs, blockers);
-        renderTaskPool(tasks);
+        const allTasksColumn = createColumn('All Tasks');
+        dsBoardContainer.appendChild(allTasksColumn);
+
+        populateTasks(tasks, yesterdayLogs, todayLogs, blockers, allTasksColumn);
         addDragAndDropListeners();
     }
 
@@ -97,7 +99,7 @@ document.addEventListener('DOMContentLoaded', () => {
         return column;
     }
 
-    async function populateTasks(tasks, yesterdayLogs, todayLogs, blockers) {
+    async function populateTasks(tasks, yesterdayLogs, todayLogs, blockers, allTasksColumn) {
         const renderedTaskIds = new Set();
         const userRows = document.querySelectorAll('.user-row');
         userRows.forEach(userRow => {
@@ -140,37 +142,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 userRow.children[4].appendChild(taskCard);
             }
         }
+
+        for (const task of tasks) {
+            if (!renderedTaskIds.has(task.id)) {
+                const taskCard = await createTaskCard(task);
+                allTasksColumn.appendChild(taskCard);
+            }
+        }
     }
 
-    async function renderTaskPool(tasks) {
-        const taskPool = document.createElement('div');
-        taskPool.classList.add('task-pool');
-        taskPool.innerHTML = '<h3>Task Pool</h3>';
-
-        const todoTasks = tasks.filter(task => task.status === 'todo');
-        const inProgressTasks = tasks.filter(task => task.status === 'inprogress');
-        const doneTasks = tasks.filter(task => task.status === 'done');
-
-        taskPool.innerHTML += '<h4>To Do</h4>';
-        for (const task of todoTasks) {
-            const taskCard = await createTaskCard(task);
-            taskPool.appendChild(taskCard);
-        }
-
-        taskPool.innerHTML += '<h4>In Progress</h4>';
-        for (const task of inProgressTasks) {
-            const taskCard = await createTaskCard(task);
-            taskPool.appendChild(taskCard);
-        }
-
-        taskPool.innerHTML += '<h4>Done</h4>';
-        for (const task of doneTasks) {
-            const taskCard = await createTaskCard(task);
-            taskPool.appendChild(taskCard);
-        }
-
-        dsBoardContainer.appendChild(taskPool);
-    }
 
     async function createTaskCard(task) {
         const taskCard = document.createElement('div');
@@ -185,6 +165,11 @@ document.addEventListener('DOMContentLoaded', () => {
         const title = document.createElement('h5');
         title.textContent = task.title;
         header.appendChild(title);
+
+        const status = document.createElement('div');
+        status.classList.add('task-status', `status-${task.status}`);
+        status.textContent = task.status;
+        header.appendChild(status);
 
         const response = await fetch(`/api/ds_board/user/${task.user_id}/profile_picture/`);
         const data = await response.json();
@@ -344,7 +329,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function addDragAndDropListeners() {
         const taskCards = document.querySelectorAll('.task-card');
-        const columns = document.querySelectorAll('.task-column');
+        const columns = document.querySelectorAll('.task-column, .task-pool');
 
         taskCards.forEach(card => {
             card.addEventListener('dragstart', handleDragStart);
@@ -375,9 +360,18 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        const targetColumn = event.target.closest('.task-column');
+        const targetColumn = event.target.closest('.task-column, .task-pool');
         if (targetColumn) {
-            targetColumn.appendChild(taskCard);
+            const originalColumn = taskCard.parentElement;
+            if (originalColumn.classList.contains('task-pool') && !targetColumn.classList.contains('task-pool')) {
+                // Task moved from pool to a user's column
+                targetColumn.appendChild(taskCard);
+            } else if (!originalColumn.classList.contains('task-pool') && targetColumn.classList.contains('task-pool')) {
+                // Task moved from a user's column to the pool
+                targetColumn.appendChild(taskCard);
+            } else {
+                targetColumn.appendChild(taskCard);
+            }
         }
     }
 
