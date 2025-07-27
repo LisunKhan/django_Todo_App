@@ -41,4 +41,7 @@ urlpatterns = [
     path('api/ds_board/user/<int:user_id>/profile_picture/', api_views.user_profile_picture_api, name='user_profile_picture_api'),
     path('api/ds_board/log_time/', api_views.log_time_api, name='log_time_api'),
     path('api/ds_board/task/<int:task_id>/total_time/', api_views.task_total_time_api, name='task_total_time_api'),
+    path('api/ds_board/task/<int:task_id>/logs/', api_views.task_logs_api, name='task_logs_api'),
+    path('api/ds_board/log/<int:log_id>/update/', api_views.update_log_api, name='update_log_api'),
+    path('api/ds_board/log/<int:log_id>/delete/', api_views.delete_log_api, name='delete_log_api'),
 ]

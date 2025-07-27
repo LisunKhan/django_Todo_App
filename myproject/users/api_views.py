@@ -109,3 +109,29 @@ def task_total_time_api(request, task_id):
     task = TodoItem.objects.get(id=task_id)
     total_time = task.logs.aggregate(Sum('log_time'))['log_time__sum'] or 0
     return JsonResponse({'total_time': total_time})
+
+@login_required
+def task_logs_api(request, task_id):
+    task = TodoItem.objects.get(id=task_id)
+    logs = task.logs.all()
+    logs_data = [{'id': log.id, 'log_time': log.log_time, 'notes': log.notes, 'task_date': log.task_date} for log in logs]
+    return JsonResponse(logs_data, safe=False)
+
+@login_required
+def update_log_api(request, log_id):
+    if request.method == 'POST':
+        data = json.loads(request.body)
+        log = TodoLog.objects.get(id=log_id)
+        log.log_time = data['log_time']
+        log.notes = data['notes']
+        log.save()
+        return JsonResponse({'success': True})
+    return JsonResponse({'error': 'Invalid request method'}, status=405)
+
+@login_required
+def delete_log_api(request, log_id):
+    if request.method == 'POST':
+        log = TodoLog.objects.get(id=log_id)
+        log.delete()
+        return JsonResponse({'success': True})
+    return JsonResponse({'error': 'Invalid request method'}, status=405)
