@@ -47,8 +47,8 @@ class TodoItem(models.Model):
         return self.title
 
     def update_time_spent(self):
-        total_time = self.logs.aggregate(total=models.Sum('log_time'))['total'] or 0
-        self.time_spent = total_time
+        total_time_hours = self.logs.aggregate(total=models.Sum('log_time'))['total'] or 0
+        self.time_spent = total_time_hours * 60
         self.save()
 
 # Project and ProjectMembership Models
