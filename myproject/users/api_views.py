@@ -4,6 +4,17 @@ from .models import Project, TodoItem, TodoLog
 from django.contrib.auth.models import User
 from datetime import date, timedelta
 import json
+from django.http import JsonResponse
+
+@login_required
+def current_user_api(request):
+    return JsonResponse({'user_id': request.user.id})
+
+@login_required
+def project_list_api(request):
+    projects = Project.objects.filter(members=request.user)
+    projects_data = [{'id': project.id, 'name': project.name} for project in projects]
+    return JsonResponse(projects_data, safe=False)
 
 @login_required
 def project_users_api(request, project_id):

@@ -1,8 +1,35 @@
 document.addEventListener('DOMContentLoaded', () => {
     const dsBoardContainer = document.getElementById('ds-board-container');
-    const projectId = 1; // This should be dynamically set
+    const projectFilterSelect = document.getElementById('project-filter-select');
+    let currentUserId;
 
-    async function fetchProjectData() {
+    async function fetchCurrentUser() {
+        const response = await fetch('/api/ds_board/current_user/');
+        const data = await response.json();
+        currentUserId = data.user_id;
+    }
+
+    async function fetchProjects() {
+        const projectsResponse = await fetch('/api/ds_board/projects/');
+        const projects = await projectsResponse.json();
+        populateProjectFilter(projects);
+    }
+
+    function populateProjectFilter(projects) {
+        projects.forEach(project => {
+            const option = document.createElement('option');
+            option.value = project.id;
+            option.textContent = project.name;
+            projectFilterSelect.appendChild(option);
+        });
+    }
+
+    async function fetchProjectData(projectId) {
+        if (!projectId || projectId === 'all') {
+            dsBoardContainer.innerHTML = '';
+            return;
+        }
+
         const usersResponse = await fetch(`/api/ds_board/project/${projectId}/users/`);
         const users = await usersResponse.json();
 
@@ -132,20 +159,46 @@ document.addEventListener('DOMContentLoaded', () => {
     function createTaskCard(task) {
         const taskCard = document.createElement('div');
         taskCard.classList.add('task-card');
-        taskCard.textContent = task.title;
         taskCard.setAttribute('draggable', true);
         taskCard.setAttribute('data-task-id', task.id);
+        taskCard.setAttribute('data-user-id', task.user_id);
+
+        const title = document.createElement('h5');
+        title.textContent = task.title;
+        taskCard.appendChild(title);
+
+        const description = document.createElement('p');
+        description.textContent = task.description;
+        taskCard.appendChild(description);
+
+        const estimation = document.createElement('p');
+        estimation.textContent = `Estimation: ${task.estimation_time}h`;
+        taskCard.appendChild(estimation);
+
+        const status = document.createElement('p');
+        status.textContent = `Status: ${task.status}`;
+        taskCard.appendChild(status);
+
         return taskCard;
     }
 
     function handleAddTask(event) {
         const todayColumn = event.target.parentElement;
+        const userRow = todayColumn.parentElement;
+        const userId = parseInt(userRow.dataset.userId);
+
+        if (userId !== currentUserId) {
+            alert("You can only add tasks to your own board.");
+            return;
+        }
+
         const taskTitle = prompt('Enter task title:');
         if (taskTitle) {
             const task = {
                 id: Date.now(), // temporary ID
                 title: taskTitle,
-                status: 'todo'
+                status: 'todo',
+                user_id: userId
             };
             const taskCard = createTaskCard(task);
             todayColumn.appendChild(taskCard);
@@ -178,11 +231,25 @@ document.addEventListener('DOMContentLoaded', () => {
         event.preventDefault();
         const taskId = event.dataTransfer.getData('text/plain');
         const taskCard = document.querySelector(`[data-task-id='${taskId}']`);
+        const taskUserId = parseInt(taskCard.dataset.userId);
+
+        if (taskUserId !== currentUserId) {
+            alert("You can only move your own tasks.");
+            return;
+        }
+
         const targetColumn = event.target.closest('.task-column');
         if (targetColumn) {
             targetColumn.appendChild(taskCard);
         }
     }
 
-    fetchProjectData();
+    projectFilterSelect.addEventListener('change', () => {
+        const selectedProjectId = projectFilterSelect.value;
+        fetchProjectData(selectedProjectId);
+    });
+
+    fetchCurrentUser().then(() => {
+        fetchProjects();
+    });
 });
