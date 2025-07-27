@@ -580,24 +580,6 @@ document.addEventListener('DOMContentLoaded', function () {
         row.dataset.originalHtmlDescription = descriptionCell.innerHTML;
         descriptionCell.innerHTML = `<textarea class="form-control form-control-sm">${currentDescription}</textarea>`;
 
-        // Time Spent (hours)
-        const timeCell = row.querySelector('td[data-field="time_spent"]');
-        const currentTimeText = timeCell.textContent.trim().replace('h', '');
-        const currentTime = parseFloat(currentTimeText) || 0;
-        row.dataset.originalHtmlTime = timeCell.innerHTML;
-        const timeInput = document.createElement('input');
-        timeInput.type = 'number';
-        timeInput.step = '0.1';
-        timeInput.className = 'form-control form-control-sm';
-        timeInput.value = currentTime;
-        timeInput.addEventListener('keydown', function(e) {
-            if (e.key === 'Enter') {
-                e.preventDefault();
-                saveChanges(row, row.dataset.id);
-            }
-        });
-        timeCell.innerHTML = '';
-        timeCell.appendChild(timeInput);
 
         // Estimation Time (hours)
         const estimationTimeCell = row.querySelector('td[data-field="estimation_time"]');
@@ -730,10 +712,6 @@ document.addEventListener('DOMContentLoaded', function () {
         const descriptionCell = row.querySelector('td[data-field="description"]');
         descriptionCell.textContent = newValues.description;
 
-        // Time Spent
-        const timeCell = row.querySelector('td[data-field="time_spent"]');
-        timeCell.textContent = `${parseFloat(newValues.time_spent_hours).toFixed(2)}h`;
-
         // Estimation Time
         const estimationTimeCell = row.querySelector('td[data-field="estimation_time"]');
         estimationTimeCell.textContent = `${parseFloat(newValues.estimation_time_hours).toFixed(2)}h`;
@@ -808,7 +786,6 @@ document.addEventListener('DOMContentLoaded', function () {
     function saveChanges(row, todoId) {
         const title = row.querySelector('td[data-field="title"] input').value;
         const description = row.querySelector('td[data-field="description"] textarea').value;
-        const time_spent_hours = parseFloat(row.querySelector('td[data-field="time_spent"] input').value);
         const estimation_time_hours = parseFloat(row.querySelector('td[data-field="estimation_time"] input').value);
         const status = row.querySelector('td[data-field="status"] select').value;
         const projectSelect = row.querySelector('td[data-field="project"] select');
@@ -818,7 +795,6 @@ document.addEventListener('DOMContentLoaded', function () {
         const data = {
             title: title,
             description: description,
-            time_spent_hours: time_spent_hours,
             estimation_time_hours: estimation_time_hours,
             status: status,
             project_id: project_id, // Send project_id

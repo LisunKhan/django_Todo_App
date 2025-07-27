@@ -40,7 +40,6 @@ class CustomAuthenticationForm(AuthenticationForm):
         self.error_messages['inactive'] = "This account is inactive. Please contact support."
 
 class TodoForm(forms.ModelForm):
-    time_spent_hours = forms.FloatField(label="Time Spent (hours)", required=False)
     estimation_time_hours = forms.FloatField(label="Estimation Time (hours)", required=False)
 
     class Meta:
@@ -63,12 +62,6 @@ class TodoForm(forms.ModelForm):
             ).distinct().order_by('name')
             self.fields['project'].queryset = user_projects
 
-        # Set the initial value for 'time_spent_hours' in the form's initial data dictionary.
-        if self.instance and self.instance.pk and self.instance.time_spent is not None:
-            self.initial['time_spent_hours'] = self.instance.time_spent_hours
-        else:
-            # Provide a default for time_spent_hours if no instance or time_spent is None
-            self.initial['time_spent_hours'] = self.fields['time_spent_hours'].initial if self.fields['time_spent_hours'].initial is not None else 0
         if self.instance and self.instance.pk and self.instance.estimation_time is not None:
             self.initial['estimation_time_hours'] = self.instance.estimation_time / 60
         else:
@@ -81,14 +74,6 @@ class TodoForm(forms.ModelForm):
             self.initial['status'] = 'todo' # Corresponds to model default
 
 
-    def clean_time_spent_hours(self):
-        hours = self.cleaned_data.get('time_spent_hours')
-        if hours is None:
-            return 0  # Default to 0 if not provided
-        if hours < 0:
-            raise forms.ValidationError("Time spent cannot be negative.")
-        return hours
-
     def clean_estimation_time_hours(self):
         hours = self.cleaned_data.get('estimation_time_hours')
         if hours is None:
@@ -98,7 +83,6 @@ class TodoForm(forms.ModelForm):
         return hours
 
     def save(self, commit=True):
-        self.instance.time_spent = self.cleaned_data.get('time_spent_hours', 0)
         self.instance.estimation_time = self.cleaned_data.get('estimation_time_hours', 0)
         return super().save(commit)
 
