@@ -4,11 +4,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const modal = document.getElementById('add-task-modal');
     const editLogModal = document.getElementById('edit-log-modal');
     const closeButtons = document.querySelectorAll('.close-button');
-    const taskSearchInput = document.getElementById('task-search-input');
-    const loadMoreTasksBtn = document.getElementById('load-more-tasks-btn');
     let currentUserId;
-    let currentPage = 1;
-    let currentSearchQuery = '';
 
     closeButtons.forEach(button => {
         button.addEventListener('click', () => {
@@ -38,7 +34,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    async function fetchProjectData(projectId, search = '', page = 1) {
+    async function fetchProjectData(projectId, search = '', page = 1, append = false) {
         if (!projectId || projectId === 'all') {
             dsBoardContainer.innerHTML = '';
             return;
@@ -60,16 +56,19 @@ document.addEventListener('DOMContentLoaded', () => {
         const blockersResponse = await fetch(`/api/ds_board/project/${projectId}/blockers/`);
         const blockers = await blockersResponse.json();
 
-        if (page === 1) {
+        if (!append) {
             renderDSBoard(users, tasks, yesterdayLogs, todayLogs, blockers);
         } else {
-            populateTasks(tasks, yesterdayLogs, todayLogs, blockers, false);
+            populateTasks(tasks, [], [], [], false);
         }
 
-        if (tasksData.has_more) {
-            loadMoreTasksBtn.style.display = 'block';
-        } else {
-            loadMoreTasksBtn.style.display = 'none';
+        const loadMoreBtn = document.querySelector('.load-more-tasks-btn');
+        if (loadMoreBtn) {
+            if (tasksData.has_more) {
+                loadMoreBtn.style.display = 'block';
+            } else {
+                loadMoreBtn.style.display = 'none';
+            }
         }
     }
 
@@ -113,6 +112,19 @@ document.addEventListener('DOMContentLoaded', () => {
             title = 'Total Time (hours)';
         }
         column.innerHTML = `<h4>${title}</h4>`;
+        if (title === 'All Tasks') {
+            const searchInput = document.createElement('input');
+            searchInput.type = 'text';
+            searchInput.placeholder = 'Search tasks...';
+            searchInput.classList.add('task-search-input');
+            column.appendChild(searchInput);
+
+            const loadMoreBtn = document.createElement('button');
+            loadMoreBtn.textContent = 'Load More';
+            loadMoreBtn.classList.add('load-more-tasks-btn');
+            loadMoreBtn.style.display = 'none';
+            column.appendChild(loadMoreBtn);
+        }
         if (isToday) {
             const addTaskButton = document.createElement('button');
             addTaskButton.classList.add('add-task-button');
@@ -129,14 +141,20 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (clear) {
             userRows.forEach(userRow => {
-                for (let i = 1; i < userRow.children.length; i++) {
-                    const column = userRow.children[i];
-                    while (column.children.length > 1) {
-                        column.removeChild(column.lastChild);
-                    }
-                }
+                const allTasksColumn = userRow.querySelector('.task-pool');
+                const yesterdayTasksColumn = userRow.children[2];
+                const todayTasksColumn = userRow.children[3];
+                const blockersColumn = userRow.children[4];
+
+                // Clear only task cards, not the search/load more buttons
+                const columnsToClear = [allTasksColumn, yesterdayTasksColumn, todayTasksColumn, blockersColumn];
+                columnsToClear.forEach(column => {
+                    const taskCards = column.querySelectorAll('.task-card');
+                    taskCards.forEach(card => card.remove());
+                });
             });
         }
+
 
         for (const log of yesterdayLogs) {
             const task = tasks.find(t => t.id === log.task_id);
@@ -470,6 +488,8 @@ document.addEventListener('DOMContentLoaded', () => {
     function initializeSortable() {
         const columns = document.querySelectorAll('.task-column');
         const taskPools = document.querySelectorAll('.task-pool');
+        let currentPage = 1;
+        let currentSearchQuery = '';
 
         columns.forEach(column => {
             new Sortable(column, {
@@ -528,27 +548,30 @@ document.addEventListener('DOMContentLoaded', () => {
                 sort: false
             });
         });
+
+        const searchInputs = document.querySelectorAll('.task-search-input');
+        searchInputs.forEach(searchInput => {
+            searchInput.addEventListener('input', () => {
+                const selectedProjectId = projectFilterSelect.value;
+                currentPage = 1;
+                currentSearchQuery = searchInput.value;
+                fetchProjectData(selectedProjectId, currentSearchQuery, currentPage);
+            });
+        });
+
+        const loadMoreBtns = document.querySelectorAll('.load-more-tasks-btn');
+        loadMoreBtns.forEach(loadMoreBtn => {
+            loadMoreBtn.addEventListener('click', () => {
+                const selectedProjectId = projectFilterSelect.value;
+                currentPage++;
+                fetchProjectData(selectedProjectId, currentSearchQuery, currentPage, true);
+            });
+        });
     }
 
     projectFilterSelect.addEventListener('change', () => {
         const selectedProjectId = projectFilterSelect.value;
-        currentPage = 1;
-        currentSearchQuery = '';
-        taskSearchInput.value = '';
-        fetchProjectData(selectedProjectId, currentSearchQuery, currentPage);
-    });
-
-    taskSearchInput.addEventListener('input', () => {
-        const selectedProjectId = projectFilterSelect.value;
-        currentPage = 1;
-        currentSearchQuery = taskSearchInput.value;
-        fetchProjectData(selectedProjectId, currentSearchQuery, currentPage);
-    });
-
-    loadMoreTasksBtn.addEventListener('click', () => {
-        const selectedProjectId = projectFilterSelect.value;
-        currentPage++;
-        fetchProjectData(selectedProjectId, currentSearchQuery, currentPage);
+        fetchProjectData(selectedProjectId);
     });
 
     fetchCurrentUser().then(() => {
