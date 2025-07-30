@@ -84,10 +84,11 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         const allTasksColumn = createColumn('All Tasks');
+        allTasksColumn.classList.add('task-pool');
         dsBoardContainer.appendChild(allTasksColumn);
 
         populateTasks(tasks, yesterdayLogs, todayLogs, blockers, allTasksColumn);
-        addDragAndDropListeners();
+        initializeSortable();
     }
 
     function createColumn(title, isToday = false) {
@@ -429,55 +430,48 @@ document.addEventListener('DOMContentLoaded', () => {
         return cookieValue;
     }
 
-    function addDragAndDropListeners() {
-        const taskCards = document.querySelectorAll('.task-card');
+
+    async function updateTaskLog(taskId, date) {
+        await fetch('/api/ds_board/update_task_log/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken'),
+            },
+            body: JSON.stringify({
+                task_id: taskId,
+                date: date,
+            }),
+        });
+    }
+
+    function initializeSortable() {
         const columns = document.querySelectorAll('.task-column, .task-pool');
-
-        taskCards.forEach(card => {
-            card.addEventListener('dragstart', handleDragStart);
-        });
-
         columns.forEach(column => {
-            column.addEventListener('dragover', handleDragOver);
-            column.addEventListener('drop', handleDrop);
+            new Sortable(column, {
+                group: 'tasks',
+                animation: 150,
+                ghostClass: 'sortable-ghost',
+                chosenClass: 'sortable-chosen',
+                dragClass: 'sortable-drag',
+                onEnd: (event) => {
+                    const taskId = event.item.dataset.taskId;
+                    const toColumn = event.to;
+                    const fromColumn = event.from;
+
+                    let date;
+                    if (toColumn.children[0].textContent === "Today's Tasks") {
+                        date = 'today';
+                    } else if (toColumn.children[0].textContent === "Yesterday's Tasks") {
+                        date = 'yesterday';
+                    } else {
+                        date = null; // Task is in the pool
+                    }
+
+                    updateTaskLog(taskId, date);
+                }
+            });
         });
-    }
-
-    function handleDragStart(event) {
-        event.dataTransfer.setData('text/plain', event.target.dataset.taskId);
-    }
-
-    function handleDragOver(event) {
-        event.preventDefault();
-    }
-
-    function handleDrop(event) {
-        event.preventDefault();
-        const taskId = event.dataTransfer.getData('text/plain');
-        const taskCard = document.querySelector(`[data-task-id='${taskId}']`);
-        if (!taskCard) {
-            return;
-        }
-        const taskUserId = parseInt(taskCard.dataset.userId);
-
-        if (taskUserId !== currentUserId) {
-            alert("You can only move your own tasks.");
-            return;
-        }
-
-        const targetColumn = event.target.closest('.task-column, .task-pool');
-        if (targetColumn) {
-            const originalColumn = taskCard.parentElement;
-            if (originalColumn.classList.contains('task-pool') && !targetColumn.classList.contains('task-pool')) {
-                // Task moved from pool to a user's column
-                targetColumn.appendChild(taskCard);
-            } else if (!originalColumn.classList.contains('task-pool') && targetColumn.classList.contains('task-pool')) {
-                // Task moved from a user's column to the pool
-                targetColumn.appendChild(taskCard);
-            } else {
-                targetColumn.appendChild(taskCard);
-            }
-        }
     }
 
     projectFilterSelect.addEventListener('change', () => {
