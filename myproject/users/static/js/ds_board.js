@@ -251,7 +251,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 <button class="delete-log-button">Delete</button>
             `;
             logElement.querySelector('.edit-log-button').addEventListener('click', () => editLog(log.id, logElement, taskId));
-            logElement.querySelector('.delete-log-button').addEventListener('click', () => deleteLog(log.id, logElement));
+            logElement.querySelector('.delete-log-button').addEventListener('click', () => deleteLog(log.id, logElement, taskId));
             logList.appendChild(logElement);
         });
         const modal = document.getElementById('edit-log-modal');
@@ -305,9 +305,8 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    async function deleteLog(logId, logElement) {
+    async function deleteLog(logId, logElement, taskId) {
         if (confirm('Are you sure you want to delete this log?')) {
-            const taskId = logElement.closest('.task-card').dataset.taskId;
             await fetch(`/api/ds_board/log/${logId}/delete/`, {
                 method: 'POST',
                 headers: {
