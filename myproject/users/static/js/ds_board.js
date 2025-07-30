@@ -71,6 +71,10 @@ document.addEventListener('DOMContentLoaded', () => {
             userInfo.textContent = user.username;
             userRow.appendChild(userInfo);
 
+            const allTasksColumn = createColumn('All Tasks');
+            allTasksColumn.classList.add('task-pool');
+            userRow.appendChild(allTasksColumn);
+
             const yesterdayTasksColumn = createColumn("Yesterday's Tasks");
             userRow.appendChild(yesterdayTasksColumn);
 
@@ -83,11 +87,7 @@ document.addEventListener('DOMContentLoaded', () => {
             dsBoardContainer.appendChild(userRow);
         });
 
-        const allTasksColumn = createColumn('All Tasks');
-        allTasksColumn.classList.add('task-pool');
-        dsBoardContainer.appendChild(allTasksColumn);
-
-        populateTasks(tasks, yesterdayLogs, todayLogs, blockers, allTasksColumn);
+        populateTasks(tasks, yesterdayLogs, todayLogs, blockers);
         initializeSortable();
     }
 
@@ -108,7 +108,7 @@ document.addEventListener('DOMContentLoaded', () => {
         return column;
     }
 
-    async function populateTasks(tasks, yesterdayLogs, todayLogs, blockers, allTasksColumn) {
+    async function populateTasks(tasks, yesterdayLogs, todayLogs, blockers) {
         const renderedTaskIds = new Set();
         const userRows = document.querySelectorAll('.user-row');
         userRows.forEach(userRow => {
@@ -126,7 +126,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const taskCard = await createTaskCard(task);
                 const userRow = document.querySelector(`.user-row[data-user-id='${task.user_id}']`);
                 if (userRow) {
-                    userRow.children[1].appendChild(taskCard);
+                    userRow.children[2].appendChild(taskCard);
                     renderedTaskIds.add(task.id);
                 }
             }
@@ -138,7 +138,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const taskCard = await createTaskCard(task);
                 const userRow = document.querySelector(`.user-row[data-user-id='${task.user_id}']`);
                 if (userRow) {
-                    userRow.children[2].appendChild(taskCard);
+                    userRow.children[3].appendChild(taskCard);
                     renderedTaskIds.add(task.id);
                 }
             }
@@ -155,7 +155,10 @@ document.addEventListener('DOMContentLoaded', () => {
         for (const task of tasks) {
             if (!renderedTaskIds.has(task.id)) {
                 const taskCard = await createTaskCard(task);
-                allTasksColumn.appendChild(taskCard);
+                const userRow = document.querySelector(`.user-row[data-user-id='${task.user_id}']`);
+                if (userRow) {
+                    userRow.children[1].appendChild(taskCard);
+                }
             }
         }
     }
