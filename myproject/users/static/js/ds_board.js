@@ -343,9 +343,14 @@ document.addEventListener('DOMContentLoaded', () => {
             saveLogButton.parentElement.removeChild(saveLogButton);
 
             const totalTimeElement = taskCard.querySelector('p:nth-child(3)');
-            const response = await fetch(`/api/ds_board/task/${taskId}/total_time/`);
-            const data = await response.json();
-            totalTimeElement.textContent = `Total Time Spent: ${data.total_time.toFixed(2)}h`;
+            const totalTimeResponse = await fetch(`/api/ds_board/task/${taskId}/total_time/`);
+            const totalTimeData = await totalTimeResponse.json();
+            totalTimeElement.textContent = `Total Time Spent: ${totalTimeData.total_time.toFixed(2)}h`;
+
+            const editLogButton = document.createElement('button');
+            editLogButton.textContent = 'Edit Log';
+            editLogButton.addEventListener('click', () => showLogList(taskId));
+            totalTimeElement.appendChild(editLogButton);
         }
     }
 
