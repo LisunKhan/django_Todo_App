@@ -451,6 +451,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function addDragAndDropListenersToElement(element) {
         element.addEventListener('dragstart', handleDragStart);
+        const children = element.children;
+        for (let i = 0; i < children.length; i++) {
+            addDragAndDropListenersToElement(children[i]);
+        }
     }
 
     function handleDragStart(event) {
