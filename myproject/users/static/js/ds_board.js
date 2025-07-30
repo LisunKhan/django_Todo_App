@@ -71,6 +71,9 @@ document.addEventListener('DOMContentLoaded', () => {
             userInfo.textContent = user.username;
             userRow.appendChild(userInfo);
 
+            const allTasksColumn = createColumn('All Tasks');
+            userRow.appendChild(allTasksColumn);
+
             const yesterdayTasksColumn = createColumn("Yesterday's Tasks");
             userRow.appendChild(yesterdayTasksColumn);
 
@@ -83,10 +86,7 @@ document.addEventListener('DOMContentLoaded', () => {
             dsBoardContainer.appendChild(userRow);
         });
 
-        const allTasksColumn = createColumn('All Tasks');
-        dsBoardContainer.appendChild(allTasksColumn);
-
-        populateTasks(tasks, yesterdayLogs, todayLogs, blockers, allTasksColumn);
+        populateTasks(tasks, yesterdayLogs, todayLogs, blockers);
         addDragAndDropListeners();
     }
 
@@ -107,11 +107,23 @@ document.addEventListener('DOMContentLoaded', () => {
         return column;
     }
 
-    async function populateTasks(tasks, yesterdayLogs, todayLogs, blockers, allTasksColumn) {
+    async function populateTasks(tasks, yesterdayLogs, todayLogs, blockers) {
         const renderedTaskIds = new Set();
         const userRows = document.querySelectorAll('.user-row');
-        userRows.forEach(userRow => {
-            for (let i = 1; i < userRow.children.length; i++) {
+        userRows.forEach(async userRow => {
+            const userId = userRow.dataset.userId;
+            const allTasksColumn = userRow.querySelector('.task-column:nth-child(2)');
+            while (allTasksColumn.children.length > 1) {
+                allTasksColumn.removeChild(allTasksColumn.lastChild);
+            }
+            for (const task of tasks) {
+                if (task.user_id == userId) {
+                    const taskCard = await createTaskCard(task);
+                    allTasksColumn.appendChild(taskCard);
+                }
+            }
+
+            for (let i = 2; i < userRow.children.length; i++) {
                 const column = userRow.children[i];
                 while (column.children.length > 1) {
                     column.removeChild(column.lastChild);
@@ -465,15 +477,12 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        const targetColumn = event.target.closest('.task-column, .task-pool');
+        const targetColumn = event.target.closest('.task-column');
         if (targetColumn) {
             const originalColumn = taskCard.parentElement;
-            if (originalColumn.classList.contains('task-pool') && !targetColumn.classList.contains('task-pool')) {
-                // Task moved from pool to a user's column
-                targetColumn.appendChild(taskCard);
-            } else if (!originalColumn.classList.contains('task-pool') && targetColumn.classList.contains('task-pool')) {
-                // Task moved from a user's column to the pool
-                targetColumn.appendChild(taskCard);
+            if (originalColumn.children[0].textContent === 'All Tasks') {
+                const clonedTaskCard = taskCard.cloneNode(true);
+                targetColumn.appendChild(clonedTaskCard);
             } else {
                 targetColumn.appendChild(taskCard);
             }
