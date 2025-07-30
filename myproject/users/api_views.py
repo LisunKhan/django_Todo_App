@@ -95,11 +95,18 @@ def log_time_api(request):
         data = json.loads(request.body)
         task_id = data['task_id']
         log_time = data['log_time']
+        log_date_str = data.get('date')
+
+        if log_date_str:
+            log_date = date.fromisoformat(log_date_str)
+        else:
+            log_date = date.today()
+
         task = TodoItem.objects.get(id=task_id)
         TodoLog.objects.create(
             todo_item=task,
             log_time=log_time,
-            task_date=date.today()
+            task_date=log_date
         )
         return JsonResponse({'success': True})
     return JsonResponse({'error': 'Invalid request method'}, status=405)
@@ -141,14 +148,20 @@ def log_task_placement_api(request):
     if request.method == 'POST':
         data = json.loads(request.body)
         task_id = data['task_id']
+        log_date_str = data.get('date')
+
+        if log_date_str:
+            log_date = date.fromisoformat(log_date_str)
+        else:
+            log_date = date.today()
+
         task = TodoItem.objects.get(id=task_id)
 
-        # Check if a log for this task and today's date already exists
-        today = date.today()
-        existing_log = TodoLog.objects.filter(todo_item=task, task_date=today).exists()
+        # Check if a log for this task and date already exists
+        existing_log = TodoLog.objects.filter(todo_item=task, task_date=log_date).exists()
 
         if not existing_log:
-            TodoLog.objects.create(todo_item=task, task_date=today, log_time=0)
+            TodoLog.objects.create(todo_item=task, task_date=log_date, log_time=0)
             return JsonResponse({'success': True}, status=201)
         else:
             return JsonResponse({'success': True}, status=200)

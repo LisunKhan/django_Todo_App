@@ -230,7 +230,7 @@ document.addEventListener('DOMContentLoaded', () => {
         return taskCard;
     }
 
-    function showLogTimeInput(taskCard, taskId) {
+    function showLogTimeInput(taskCard, taskId, log_date = null) {
         const existingLogTimeInput = taskCard.querySelector('.log-time-input');
         if (existingLogTimeInput) {
             return;
@@ -245,10 +245,42 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const saveLogButton = document.createElement('button');
         saveLogButton.textContent = 'Save';
-        saveLogButton.addEventListener('click', () => saveLogTime(taskCard, taskId, logTimeInput.value));
+        saveLogButton.addEventListener('click', () => saveLogTime(taskCard, taskId, logTimeInput.value, log_date));
 
         taskCard.appendChild(logTimeInput);
         taskCard.appendChild(saveLogButton);
+    }
+
+    async function saveLogTime(taskCard, taskId, logTime, log_date = null) {
+        const response = await fetch('/api/ds_board/log_time/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: JSON.stringify({
+                task_id: taskId,
+                log_time: logTime,
+                date: log_date ? log_date.toISOString().split('T')[0] : null
+            })
+        });
+
+        if (response.ok) {
+            const logTimeInput = taskCard.querySelector('.log-time-input');
+            const saveLogButton = logTimeInput.nextElementSibling;
+            logTimeInput.parentElement.removeChild(logTimeInput);
+            saveLogButton.parentElement.removeChild(saveLogButton);
+
+            const totalTimeElement = taskCard.querySelector('p:nth-child(3)');
+            const totalTimeResponse = await fetch(`/api/ds_board/task/${taskId}/total_time/`);
+            const totalTimeData = await totalTimeResponse.json();
+            totalTimeElement.textContent = `Total Time Spent: ${totalTimeData.total_time.toFixed(2)}h`;
+
+            const editLogButton = document.createElement('button');
+            editLogButton.textContent = 'Edit Log';
+            editLogButton.addEventListener('click', () => showLogList(taskId));
+            totalTimeElement.appendChild(editLogButton);
+        }
     }
 
     async function showLogList(taskId) {
@@ -451,7 +483,6 @@ document.addEventListener('DOMContentLoaded', () => {
             new Sortable(column, {
                 group: {
                     name: 'shared',
-                    pull: 'clone',
                     put: (to, from) => {
                         return !from.el.classList.contains('all-tasks-column') || !to.el.classList.contains('all-tasks-column');
                     }
@@ -460,22 +491,38 @@ document.addEventListener('DOMContentLoaded', () => {
                 ghostClass: 'sortable-ghost',
                 chosenClass: 'sortable-chosen',
                 dragClass: 'sortable-drag',
+                onStart: function (evt) {
+                    if (evt.from.classList.contains('all-tasks-column')) {
+                        evt.item.classList.add('cloned-task');
+                    }
+                },
                 onEnd: async function (evt) {
                     const item = evt.item;
                     const to = evt.to;
-                    if (evt.from.classList.contains('all-tasks-column')) {
-                        item.classList.remove('sortable-drag');
-                        const taskId = item.dataset.taskId;
-                        await fetch('/api/ds_board/log_task_placement/', {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json',
-                                'X-CSRFToken': getCookie('csrftoken')
-                            },
-                            body: JSON.stringify({
-                                task_id: taskId
-                            })
-                        });
+                    if (item.classList.contains('cloned-task')) {
+                        item.classList.remove('cloned-task');
+                        const originalItem = document.querySelector(`[data-task-id='${item.dataset.taskId}'].task-card`);
+                        const clonedItem = item.cloneNode(true);
+                        to.replaceChild(clonedItem, item);
+
+                        const taskId = clonedItem.dataset.taskId;
+                        let log_date = new Date();
+                        if (to.parentElement.cells[2] === to) { // Yesterday's column
+                            log_date.setDate(log_date.getDate() - 1);
+                            showLogTimeInput(clonedItem, taskId, log_date);
+                        } else {
+                            await fetch('/api/ds_board/log_task_placement/', {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    'X-CSRFToken': getCookie('csrftoken')
+                                },
+                                body: JSON.stringify({
+                                    task_id: taskId,
+                                    date: log_date.toISOString().split('T')[0]
+                                })
+                            });
+                        }
                     }
                 }
             });
