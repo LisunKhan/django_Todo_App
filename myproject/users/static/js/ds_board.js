@@ -250,7 +250,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 <button class="edit-log-button">Edit</button>
                 <button class="delete-log-button">Delete</button>
             `;
-            logElement.querySelector('.edit-log-button').addEventListener('click', () => editLog(log.id, logElement));
+            logElement.querySelector('.edit-log-button').addEventListener('click', () => editLog(log.id, logElement, taskId));
             logElement.querySelector('.delete-log-button').addEventListener('click', () => deleteLog(log.id, logElement));
             logList.appendChild(logElement);
         });
@@ -258,12 +258,11 @@ document.addEventListener('DOMContentLoaded', () => {
         modal.style.display = 'block';
     }
 
-    function editLog(logId, logElement) {
+    function editLog(logId, logElement, taskId) {
         const logTimeElement = logElement.querySelector('.log-time');
         const logNotesElement = logElement.querySelector('.log-notes');
         const logTime = parseFloat(logTimeElement.textContent);
         const logNotes = logNotesElement.textContent;
-        const taskId = logElement.closest('.task-card').dataset.taskId;
 
         const logTimeInput = document.createElement('input');
         logTimeInput.type = 'number';
