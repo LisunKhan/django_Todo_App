@@ -25,18 +25,7 @@ def project_users_api(request, project_id):
 
 @login_required
 def project_tasks_api(request, project_id):
-    search_query = request.GET.get('search', '')
-    page = int(request.GET.get('page', 1))
-    page_size = 10  # Number of tasks per page
-
     tasks = TodoItem.objects.filter(project_id=project_id)
-    if search_query:
-        tasks = tasks.filter(title__icontains=search_query)
-
-    start = (page - 1) * page_size
-    end = start + page_size
-    paginated_tasks = tasks[start:end]
-
     tasks_data = [{
         'id': task.id,
         'title': task.title,
@@ -44,12 +33,8 @@ def project_tasks_api(request, project_id):
         'status': task.status,
         'user_id': task.user.id,
         'estimation_time': task.estimation_time
-    } for task in paginated_tasks]
-
-    return JsonResponse({
-        'tasks': tasks_data,
-        'has_more': tasks.count() > end
-    })
+    } for task in tasks]
+    return JsonResponse(tasks_data, safe=False)
 
 @login_required
 def project_logs_api(request, project_id):

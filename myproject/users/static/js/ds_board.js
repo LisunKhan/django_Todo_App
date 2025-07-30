@@ -45,7 +45,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const users = await usersResponse.json();
 
         const tasksResponse = await fetch(`/api/ds_board/project/${projectId}/tasks/`);
-        allTasks = await tasksResponse.json();
+        const tasksData = await tasksResponse.json();
+        allTasks = tasksData;
 
         const yesterdayLogsResponse = await fetch(`/api/ds_board/project/${projectId}/logs/?date=yesterday`);
         const yesterdayLogs = await yesterdayLogsResponse.json();
