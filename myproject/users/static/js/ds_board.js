@@ -103,7 +103,7 @@ document.addEventListener('DOMContentLoaded', () => {
         dsBoardContainer.appendChild(table);
 
         populateTasks(tasks, yesterdayLogs, todayLogs, blockers);
-        addDragAndDropListeners();
+        initializeSortable();
     }
 
     async function populateTasks(tasks, yesterdayLogs, todayLogs, blockers) {
@@ -436,74 +436,30 @@ document.addEventListener('DOMContentLoaded', () => {
         return cookieValue;
     }
 
-    function addDragAndDropListeners() {
-        const taskCards = document.querySelectorAll('.task-card');
-        taskCards.forEach(card => {
-            addDragAndDropListenersToElement(card);
-        });
-
-        const columns = document.querySelectorAll('.task-column');
-        columns.forEach(column => {
-            column.addEventListener('dragover', handleDragOver);
-            column.addEventListener('drop', handleDrop);
-        });
-    }
-
-    function addDragAndDropListenersToElement(element) {
-        element.addEventListener('dragstart', handleDragStart);
-        const children = element.children;
-        for (let i = 0; i < children.length; i++) {
-            addDragAndDropListenersToElement(children[i]);
-        }
-    }
-
-    function handleDragStart(event) {
-        const taskCard = event.target;
-        const fromAllTasks = taskCard.parentElement.classList.contains('all-tasks-column');
-        event.dataTransfer.setData('text/plain', taskCard.dataset.taskId);
-        if (fromAllTasks) {
-            event.dataTransfer.setData('fromAllTasks', 'true');
-        }
-    }
-
-    function handleDragOver(event) {
-        event.preventDefault();
-    }
-
-    function handleDrop(event) {
-        event.preventDefault();
-        const taskId = event.dataTransfer.getData('text/plain');
-        const fromAllTasks = event.dataTransfer.getData('fromAllTasks') === 'true';
-        let taskCard = document.querySelector(`[data-task-id='${taskId}']`);
-        if (!taskCard) {
-            return;
-        }
-        const taskUserId = parseInt(taskCard.dataset.userId);
-
-        if (taskUserId !== currentUserId) {
-            alert("You can only move your own tasks.");
-            return;
-        }
-
-        const targetColumn = event.target.closest('.task-column');
-        if (targetColumn) {
-            if (fromAllTasks) {
-                if (targetColumn.classList.contains('all-tasks-column')) {
-                    // Prevent dropping cloned tasks back into the "All Tasks" column
-                    return;
+    function initializeSortable() {
+        const taskColumns = document.querySelectorAll('.task-column');
+        taskColumns.forEach(column => {
+            new Sortable(column, {
+                group: {
+                    name: 'shared',
+                    pull: 'clone',
+                    put: (to, from) => {
+                        return !from.el.classList.contains('all-tasks-column') || !to.el.classList.contains('all-tasks-column');
+                    }
+                },
+                animation: 150,
+                ghostClass: 'sortable-ghost',
+                chosenClass: 'sortable-chosen',
+                dragClass: 'sortable-drag',
+                onEnd: function (evt) {
+                    const item = evt.item;
+                    const to = evt.to;
+                    if (evt.from.classList.contains('all-tasks-column')) {
+                        item.classList.remove('sortable-drag');
+                    }
                 }
-                const clonedCard = taskCard.cloneNode(true);
-                addDragAndDropListenersToElement(clonedCard);
-                targetColumn.appendChild(clonedCard);
-            } else {
-                // This allows moving tasks between "Yesterday's Tasks", "Today's Tasks", and "Blockers"
-                if (targetColumn.classList.contains('all-tasks-column')) {
-                    // Prevent moving tasks back to the "All Tasks" column
-                    return;
-                }
-                targetColumn.appendChild(taskCard);
-            }
-        }
+            });
+        });
     }
 
     projectFilterSelect.addEventListener('change', () => {
