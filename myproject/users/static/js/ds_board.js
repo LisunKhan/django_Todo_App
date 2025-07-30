@@ -34,8 +34,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    let allTasks = [];
-    async function fetchProjectData(projectId) {
+    async function fetchProjectData(projectId, search = '', page = 1, append = false) {
         if (!projectId || projectId === 'all') {
             dsBoardContainer.innerHTML = '';
             return;
@@ -44,9 +43,9 @@ document.addEventListener('DOMContentLoaded', () => {
         const usersResponse = await fetch(`/api/ds_board/project/${projectId}/users/`);
         const users = await usersResponse.json();
 
-        const tasksResponse = await fetch(`/api/ds_board/project/${projectId}/tasks/`);
+        const tasksResponse = await fetch(`/api/ds_board/project/${projectId}/all_tasks/?search=${search}&page=${page}`);
         const tasksData = await tasksResponse.json();
-        allTasks = tasksData;
+        const tasks = tasksData.tasks;
 
         const yesterdayLogsResponse = await fetch(`/api/ds_board/project/${projectId}/logs/?date=yesterday`);
         const yesterdayLogs = await yesterdayLogsResponse.json();
@@ -57,7 +56,20 @@ document.addEventListener('DOMContentLoaded', () => {
         const blockersResponse = await fetch(`/api/ds_board/project/${projectId}/blockers/`);
         const blockers = await blockersResponse.json();
 
-        renderDSBoard(users, allTasks, yesterdayLogs, todayLogs, blockers);
+        if (!append) {
+            renderDSBoard(users, tasks, yesterdayLogs, todayLogs, blockers);
+        } else {
+            populateTasks(tasks, [], [], [], false);
+        }
+
+        const loadMoreBtn = document.querySelector('.load-more-tasks-btn');
+        if (loadMoreBtn) {
+            if (tasksData.has_more) {
+                loadMoreBtn.style.display = 'block';
+            } else {
+                loadMoreBtn.style.display = 'none';
+            }
+        }
     }
 
     function renderDSBoard(users, tasks, yesterdayLogs, todayLogs, blockers) {
@@ -105,11 +117,13 @@ document.addEventListener('DOMContentLoaded', () => {
             searchInput.type = 'text';
             searchInput.placeholder = 'Search tasks...';
             searchInput.classList.add('task-search-input');
-            searchInput.addEventListener('input', (e) => {
-                const searchQuery = e.target.value.toLowerCase();
-                filterAllTasks(searchQuery);
-            });
             column.appendChild(searchInput);
+
+            const loadMoreBtn = document.createElement('button');
+            loadMoreBtn.textContent = 'Load More';
+            loadMoreBtn.classList.add('load-more-tasks-btn');
+            loadMoreBtn.style.display = 'none';
+            column.appendChild(loadMoreBtn);
         }
         if (isToday) {
             const addTaskButton = document.createElement('button');
@@ -121,36 +135,16 @@ document.addEventListener('DOMContentLoaded', () => {
         return column;
     }
 
-    function filterAllTasks(searchQuery) {
-        const userRows = document.querySelectorAll('.user-row');
-        userRows.forEach(userRow => {
-            const allTasksColumn = userRow.querySelector('.task-pool');
-            const taskCards = allTasksColumn.querySelectorAll('.task-card');
-            taskCards.forEach(taskCard => {
-                const title = taskCard.querySelector('h5').textContent.toLowerCase();
-                if (title.includes(searchQuery)) {
-                    taskCard.style.display = '';
-                } else {
-                    taskCard.style.display = 'none';
-                }
-            });
-        });
-    }
-
     async function populateTasks(tasks, yesterdayLogs, todayLogs, blockers) {
         const renderedTaskIds = new Set();
         const userRows = document.querySelectorAll('.user-row');
         userRows.forEach(userRow => {
-            const allTasksColumn = userRow.querySelector('.task-pool');
-            const yesterdayTasksColumn = userRow.children[2];
-            const todayTasksColumn = userRow.children[3];
-            const blockersColumn = userRow.children[4];
-
-            const columnsToClear = [allTasksColumn, yesterdayTasksColumn, todayTasksColumn, blockersColumn];
-            columnsToClear.forEach(column => {
-                const taskCards = column.querySelectorAll('.task-card');
-                taskCards.forEach(card => card.remove());
-            });
+            for (let i = 1; i < userRow.children.length; i++) {
+                const column = userRow.children[i];
+                while (column.children.length > 1) {
+                    column.removeChild(column.lastChild);
+                }
+            }
         });
 
         for (const log of yesterdayLogs) {
@@ -190,8 +184,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const taskCard = await createTaskCard(task);
                 const userRow = document.querySelector(`.user-row[data-user-id='${task.user_id}']`);
                 if (userRow) {
-                    const allTasksColumn = userRow.querySelector('.task-pool');
-                    allTasksColumn.appendChild(taskCard);
+                    userRow.children[1].appendChild(taskCard);
                 }
             }
         }
@@ -485,6 +478,8 @@ document.addEventListener('DOMContentLoaded', () => {
     function initializeSortable() {
         const columns = document.querySelectorAll('.task-column');
         const taskPools = document.querySelectorAll('.task-pool');
+        let currentPage = 1;
+        let currentSearchQuery = '';
 
         columns.forEach(column => {
             new Sortable(column, {
@@ -541,6 +536,25 @@ document.addEventListener('DOMContentLoaded', () => {
                 chosenClass: 'sortable-chosen',
                 dragClass: 'sortable-drag',
                 sort: false
+            });
+        });
+
+        const searchInputs = document.querySelectorAll('.task-search-input');
+        searchInputs.forEach(searchInput => {
+            searchInput.addEventListener('input', () => {
+                const selectedProjectId = projectFilterSelect.value;
+                currentPage = 1;
+                currentSearchQuery = searchInput.value;
+                fetchProjectData(selectedProjectId, currentSearchQuery, currentPage);
+            });
+        });
+
+        const loadMoreBtns = document.querySelectorAll('.load-more-tasks-btn');
+        loadMoreBtns.forEach(loadMoreBtn => {
+            loadMoreBtn.addEventListener('click', () => {
+                const selectedProjectId = projectFilterSelect.value;
+                currentPage++;
+                fetchProjectData(selectedProjectId, currentSearchQuery, currentPage, true);
             });
         });
     }
