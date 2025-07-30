@@ -339,9 +339,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (response.ok) {
             const logTimeInput = taskCard.querySelector('.log-time-input');
-            const saveLogButton = taskCard.querySelector('button');
-            taskCard.removeChild(logTimeInput);
-            taskCard.removeChild(saveLogButton);
+            const saveLogButton = logTimeInput.nextElementSibling;
+            logTimeInput.parentElement.removeChild(logTimeInput);
+            saveLogButton.parentElement.removeChild(saveLogButton);
 
             const totalTimeElement = taskCard.querySelector('p:nth-child(3)');
             const response = await fetch(`/api/ds_board/task/${taskId}/total_time/`);
