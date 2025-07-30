@@ -263,6 +263,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const logNotesElement = logElement.querySelector('.log-notes');
         const logTime = parseFloat(logTimeElement.textContent);
         const logNotes = logNotesElement.textContent;
+        const taskId = logElement.closest('.task-card').dataset.taskId;
 
         const logTimeInput = document.createElement('input');
         logTimeInput.type = 'number';
@@ -274,7 +275,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const saveButton = document.createElement('button');
         saveButton.textContent = 'Save';
-        saveButton.addEventListener('click', () => updateLog(logId, logTimeInput.value, logNotesInput.value, logElement));
+        saveButton.addEventListener('click', () => updateLog(logId, logTimeInput.value, logNotesInput.value, taskId));
 
         logElement.innerHTML = '';
         logElement.appendChild(logTimeInput);
@@ -282,7 +283,7 @@ document.addEventListener('DOMContentLoaded', () => {
         logElement.appendChild(saveButton);
     }
 
-    async function updateLog(logId, logTime, logNotes, logElement) {
+    async function updateLog(logId, logTime, logNotes, taskId) {
         const response = await fetch(`/api/ds_board/log/${logId}/update/`, {
             method: 'POST',
             headers: {
@@ -296,7 +297,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         if (response.ok) {
-            const taskId = logElement.closest('.task-card').dataset.taskId;
             showLogList(taskId);
             const taskCard = document.querySelector(`[data-task-id='${taskId}']`);
             const totalTimeElement = taskCard.querySelector('p:nth-child(3)');
