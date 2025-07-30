@@ -113,13 +113,15 @@ document.addEventListener('DOMContentLoaded', () => {
         userRows.forEach(async userRow => {
             const userId = userRow.dataset.userId;
             const allTasksColumn = userRow.querySelector('.task-column:nth-child(2)');
-            while (allTasksColumn.children.length > 1) {
-                allTasksColumn.removeChild(allTasksColumn.lastChild);
-            }
-            for (const task of tasks) {
-                if (task.user_id == userId) {
-                    const taskCard = await createTaskCard(task);
-                    allTasksColumn.appendChild(taskCard);
+            if (allTasksColumn) {
+                while (allTasksColumn.children.length > 1) {
+                    allTasksColumn.removeChild(allTasksColumn.lastChild);
+                }
+                for (const task of tasks) {
+                    if (task.user_id == userId) {
+                        const taskCard = await createTaskCard(task);
+                        allTasksColumn.appendChild(taskCard);
+                    }
                 }
             }
 
