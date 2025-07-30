@@ -86,7 +86,7 @@ document.addEventListener('DOMContentLoaded', () => {
             dsBoardContainer.appendChild(userRow);
         });
 
-        populateTasks(tasks, yesterdayLogs, todayLogs, blockers);
+        populateTasks(tasks, yesterdayLogs, todayLogs, blockers, document.querySelectorAll('.task-column:nth-child(2)'));
         addDragAndDropListeners();
     }
 
@@ -107,12 +107,12 @@ document.addEventListener('DOMContentLoaded', () => {
         return column;
     }
 
-    async function populateTasks(tasks, yesterdayLogs, todayLogs, blockers) {
+    async function populateTasks(tasks, yesterdayLogs, todayLogs, blockers, allTasksColumns) {
         const renderedTaskIds = new Set();
         const userRows = document.querySelectorAll('.user-row');
-        userRows.forEach(async userRow => {
+        userRows.forEach(async (userRow, index) => {
             const userId = userRow.dataset.userId;
-            const allTasksColumn = userRow.querySelector('.task-column:nth-child(2)');
+            const allTasksColumn = allTasksColumns[index];
             if (allTasksColumn) {
                 while (allTasksColumn.children.length > 1) {
                     allTasksColumn.removeChild(allTasksColumn.lastChild);
