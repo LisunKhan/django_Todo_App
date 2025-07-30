@@ -4,7 +4,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const modal = document.getElementById('add-task-modal');
     const editLogModal = document.getElementById('edit-log-modal');
     const closeButtons = document.querySelectorAll('.close-button');
+    const taskSearchInput = document.getElementById('task-search-input');
+    const loadMoreTasksBtn = document.getElementById('load-more-tasks-btn');
     let currentUserId;
+    let currentPage = 1;
+    let currentSearchQuery = '';
 
     closeButtons.forEach(button => {
         button.addEventListener('click', () => {
@@ -34,7 +38,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    async function fetchProjectData(projectId) {
+    async function fetchProjectData(projectId, search = '', page = 1) {
         if (!projectId || projectId === 'all') {
             dsBoardContainer.innerHTML = '';
             return;
@@ -43,8 +47,9 @@ document.addEventListener('DOMContentLoaded', () => {
         const usersResponse = await fetch(`/api/ds_board/project/${projectId}/users/`);
         const users = await usersResponse.json();
 
-        const tasksResponse = await fetch(`/api/ds_board/project/${projectId}/tasks/`);
-        const tasks = await tasksResponse.json();
+        const tasksResponse = await fetch(`/api/ds_board/project/${projectId}/tasks/?search=${search}&page=${page}`);
+        const tasksData = await tasksResponse.json();
+        const tasks = tasksData.tasks;
 
         const yesterdayLogsResponse = await fetch(`/api/ds_board/project/${projectId}/logs/?date=yesterday`);
         const yesterdayLogs = await yesterdayLogsResponse.json();
@@ -55,7 +60,17 @@ document.addEventListener('DOMContentLoaded', () => {
         const blockersResponse = await fetch(`/api/ds_board/project/${projectId}/blockers/`);
         const blockers = await blockersResponse.json();
 
-        renderDSBoard(users, tasks, yesterdayLogs, todayLogs, blockers);
+        if (page === 1) {
+            renderDSBoard(users, tasks, yesterdayLogs, todayLogs, blockers);
+        } else {
+            populateTasks(tasks, yesterdayLogs, todayLogs, blockers, false);
+        }
+
+        if (tasksData.has_more) {
+            loadMoreTasksBtn.style.display = 'block';
+        } else {
+            loadMoreTasksBtn.style.display = 'none';
+        }
     }
 
     function renderDSBoard(users, tasks, yesterdayLogs, todayLogs, blockers) {
@@ -108,17 +123,20 @@ document.addEventListener('DOMContentLoaded', () => {
         return column;
     }
 
-    async function populateTasks(tasks, yesterdayLogs, todayLogs, blockers) {
+    async function populateTasks(tasks, yesterdayLogs, todayLogs, blockers, clear = true) {
         const renderedTaskIds = new Set();
         const userRows = document.querySelectorAll('.user-row');
-        userRows.forEach(userRow => {
-            for (let i = 1; i < userRow.children.length; i++) {
-                const column = userRow.children[i];
-                while (column.children.length > 1) {
-                    column.removeChild(column.lastChild);
+
+        if (clear) {
+            userRows.forEach(userRow => {
+                for (let i = 1; i < userRow.children.length; i++) {
+                    const column = userRow.children[i];
+                    while (column.children.length > 1) {
+                        column.removeChild(column.lastChild);
+                    }
                 }
-            }
-        });
+            });
+        }
 
         for (const log of yesterdayLogs) {
             const task = tasks.find(t => t.id === log.task_id);
@@ -157,7 +175,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 const taskCard = await createTaskCard(task);
                 const userRow = document.querySelector(`.user-row[data-user-id='${task.user_id}']`);
                 if (userRow) {
-                    userRow.children[1].appendChild(taskCard);
+                    const allTasksColumn = userRow.querySelector('.task-pool');
+                    allTasksColumn.appendChild(taskCard);
                 }
             }
         }
@@ -513,7 +532,23 @@ document.addEventListener('DOMContentLoaded', () => {
 
     projectFilterSelect.addEventListener('change', () => {
         const selectedProjectId = projectFilterSelect.value;
-        fetchProjectData(selectedProjectId);
+        currentPage = 1;
+        currentSearchQuery = '';
+        taskSearchInput.value = '';
+        fetchProjectData(selectedProjectId, currentSearchQuery, currentPage);
+    });
+
+    taskSearchInput.addEventListener('input', () => {
+        const selectedProjectId = projectFilterSelect.value;
+        currentPage = 1;
+        currentSearchQuery = taskSearchInput.value;
+        fetchProjectData(selectedProjectId, currentSearchQuery, currentPage);
+    });
+
+    loadMoreTasksBtn.addEventListener('click', () => {
+        const selectedProjectId = projectFilterSelect.value;
+        currentPage++;
+        fetchProjectData(selectedProjectId, currentSearchQuery, currentPage);
     });
 
     fetchCurrentUser().then(() => {
