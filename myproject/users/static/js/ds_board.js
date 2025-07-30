@@ -459,7 +459,25 @@ document.addEventListener('DOMContentLoaded', () => {
                 ghostClass: 'sortable-ghost',
                 chosenClass: 'sortable-chosen',
                 dragClass: 'sortable-drag',
+                onAdd: (event) => {
+                    const taskId = event.item.dataset.taskId;
+                    const toColumn = event.to;
+
+                    let date;
+                    if (toColumn.children[0].textContent === "Today's Tasks") {
+                        date = 'today';
+                    } else if (toColumn.children[0].textContent === "Yesterday's Tasks") {
+                        date = 'yesterday';
+                    } else {
+                        date = null;
+                    }
+
+                    updateTaskLog(taskId, date);
+                },
                 onEnd: (event) => {
+                    if (event.from === event.to) {
+                        return; // Ignore if the item was moved within the same list
+                    }
                     const taskId = event.item.dataset.taskId;
                     const toColumn = event.to;
 
