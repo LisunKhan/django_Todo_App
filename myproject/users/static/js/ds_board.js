@@ -438,20 +438,28 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function addDragAndDropListeners() {
         const taskCards = document.querySelectorAll('.task-card');
-        const columns = document.querySelectorAll('.task-column, .task-pool');
-
         taskCards.forEach(card => {
-            card.addEventListener('dragstart', handleDragStart);
+            addDragAndDropListenersToElement(card);
         });
 
+        const columns = document.querySelectorAll('.task-column');
         columns.forEach(column => {
             column.addEventListener('dragover', handleDragOver);
             column.addEventListener('drop', handleDrop);
         });
     }
 
+    function addDragAndDropListenersToElement(element) {
+        element.addEventListener('dragstart', handleDragStart);
+    }
+
     function handleDragStart(event) {
-        event.dataTransfer.setData('text/plain', event.target.dataset.taskId);
+        const taskCard = event.target;
+        const fromAllTasks = taskCard.parentElement.classList.contains('all-tasks-column');
+        event.dataTransfer.setData('text/plain', taskCard.dataset.taskId);
+        if (fromAllTasks) {
+            event.dataTransfer.setData('fromAllTasks', 'true');
+        }
     }
 
     function handleDragOver(event) {
@@ -461,7 +469,8 @@ document.addEventListener('DOMContentLoaded', () => {
     function handleDrop(event) {
         event.preventDefault();
         const taskId = event.dataTransfer.getData('text/plain');
-        const taskCard = document.querySelector(`[data-task-id='${taskId}']`);
+        const fromAllTasks = event.dataTransfer.getData('fromAllTasks') === 'true';
+        let taskCard = document.querySelector(`[data-task-id='${taskId}']`);
         if (!taskCard) {
             return;
         }
@@ -472,16 +481,22 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        const targetColumn = event.target.closest('.task-column, .task-pool');
+        const targetColumn = event.target.closest('.task-column');
         if (targetColumn) {
-            const originalColumn = taskCard.parentElement;
-            if (originalColumn.classList.contains('task-pool') && !targetColumn.classList.contains('task-pool')) {
-                // Task moved from pool to a user's column
-                targetColumn.appendChild(taskCard);
-            } else if (!originalColumn.classList.contains('task-pool') && targetColumn.classList.contains('task-pool')) {
-                // Task moved from a user's column to the pool
-                targetColumn.appendChild(taskCard);
+            if (fromAllTasks) {
+                if (targetColumn.classList.contains('all-tasks-column')) {
+                    // Prevent dropping cloned tasks back into the "All Tasks" column
+                    return;
+                }
+                const clonedCard = taskCard.cloneNode(true);
+                addDragAndDropListenersToElement(clonedCard);
+                targetColumn.appendChild(clonedCard);
             } else {
+                // This allows moving tasks between "Yesterday's Tasks", "Today's Tasks", and "Blockers"
+                if (targetColumn.classList.contains('all-tasks-column')) {
+                    // Prevent moving tasks back to the "All Tasks" column
+                    return;
+                }
                 targetColumn.appendChild(taskCard);
             }
         }
