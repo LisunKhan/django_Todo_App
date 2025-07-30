@@ -34,7 +34,31 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    async function fetchProjectData(projectId, search = '', page = 1, append = false) {
+    let allTasks = [];
+    let yesterdayLogs = [];
+    let todayLogs = [];
+    let blockers = [];
+
+    async function fetchAllProjectTasks(projectId, search = '', page = 1, append = false) {
+        const response = await fetch(`/api/ds_board/project/${projectId}/all_tasks/?search=${search}&page=${page}`);
+        const data = await response.json();
+        if (append) {
+            allTasks = allTasks.concat(data.tasks);
+        } else {
+            allTasks = data.tasks;
+        }
+        const loadMoreBtn = document.querySelector('.load-more-tasks-btn');
+        if (loadMoreBtn) {
+            if (data.has_more) {
+                loadMoreBtn.style.display = 'block';
+            } else {
+                loadMoreBtn.style.display = 'none';
+            }
+        }
+        populateTasks(allTasks, yesterdayLogs, todayLogs, blockers, !append);
+    }
+
+    async function fetchProjectData(projectId) {
         if (!projectId || projectId === 'all') {
             dsBoardContainer.innerHTML = '';
             return;
@@ -43,33 +67,17 @@ document.addEventListener('DOMContentLoaded', () => {
         const usersResponse = await fetch(`/api/ds_board/project/${projectId}/users/`);
         const users = await usersResponse.json();
 
-        const tasksResponse = await fetch(`/api/ds_board/project/${projectId}/all_tasks/?search=${search}&page=${page}`);
-        const tasksData = await tasksResponse.json();
-        const tasks = tasksData.tasks;
-
         const yesterdayLogsResponse = await fetch(`/api/ds_board/project/${projectId}/logs/?date=yesterday`);
-        const yesterdayLogs = await yesterdayLogsResponse.json();
+        yesterdayLogs = await yesterdayLogsResponse.json();
 
         const todayLogsResponse = await fetch(`/api/ds_board/project/${projectId}/logs/?date=today`);
-        const todayLogs = await todayLogsResponse.json();
+        todayLogs = await todayLogsResponse.json();
 
         const blockersResponse = await fetch(`/api/ds_board/project/${projectId}/blockers/`);
-        const blockers = await blockersResponse.json();
+        blockers = await blockersResponse.json();
 
-        if (!append) {
-            renderDSBoard(users, tasks, yesterdayLogs, todayLogs, blockers);
-        } else {
-            populateTasks(tasks, [], [], [], false);
-        }
-
-        const loadMoreBtn = document.querySelector('.load-more-tasks-btn');
-        if (loadMoreBtn) {
-            if (tasksData.has_more) {
-                loadMoreBtn.style.display = 'block';
-            } else {
-                loadMoreBtn.style.display = 'none';
-            }
-        }
+        renderDSBoard(users, [], yesterdayLogs, todayLogs, blockers);
+        fetchAllProjectTasks(projectId);
     }
 
     function renderDSBoard(users, tasks, yesterdayLogs, todayLogs, blockers) {
@@ -101,7 +109,6 @@ document.addEventListener('DOMContentLoaded', () => {
             dsBoardContainer.appendChild(userRow);
         });
 
-        populateTasks(tasks, yesterdayLogs, todayLogs, blockers);
         initializeSortable();
     }
 
@@ -112,6 +119,7 @@ document.addEventListener('DOMContentLoaded', () => {
             title = 'Total Time (hours)';
         }
         column.innerHTML = `<h4>${title}</h4>`;
+
         if (title === 'All Tasks') {
             const searchInput = document.createElement('input');
             searchInput.type = 'text';
@@ -125,6 +133,7 @@ document.addEventListener('DOMContentLoaded', () => {
             loadMoreBtn.style.display = 'none';
             column.appendChild(loadMoreBtn);
         }
+
         if (isToday) {
             const addTaskButton = document.createElement('button');
             addTaskButton.classList.add('add-task-button');
@@ -135,17 +144,26 @@ document.addEventListener('DOMContentLoaded', () => {
         return column;
     }
 
-    async function populateTasks(tasks, yesterdayLogs, todayLogs, blockers) {
+    async function populateTasks(tasks, yesterdayLogs, todayLogs, blockers, clearAll = true) {
         const renderedTaskIds = new Set();
         const userRows = document.querySelectorAll('.user-row');
-        userRows.forEach(userRow => {
-            for (let i = 1; i < userRow.children.length; i++) {
-                const column = userRow.children[i];
-                while (column.children.length > 1) {
-                    column.removeChild(column.lastChild);
-                }
-            }
-        });
+
+        if (clearAll) {
+            userRows.forEach(userRow => {
+                const columns = userRow.querySelectorAll('.task-column');
+                columns.forEach(column => {
+                    const taskCards = column.querySelectorAll('.task-card');
+                    taskCards.forEach(card => card.remove());
+                });
+            });
+        } else {
+            userRows.forEach(userRow => {
+                const allTasksColumn = userRow.querySelector('.task-pool');
+                const taskCards = allTasksColumn.querySelectorAll('.task-card');
+                taskCards.forEach(card => card.remove());
+            });
+        }
+
 
         for (const log of yesterdayLogs) {
             const task = tasks.find(t => t.id === log.task_id);
@@ -184,7 +202,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 const taskCard = await createTaskCard(task);
                 const userRow = document.querySelector(`.user-row[data-user-id='${task.user_id}']`);
                 if (userRow) {
-                    userRow.children[1].appendChild(taskCard);
+                    const allTasksColumn = userRow.querySelector('.task-pool');
+                    allTasksColumn.appendChild(taskCard);
                 }
             }
         }
@@ -545,7 +564,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const selectedProjectId = projectFilterSelect.value;
                 currentPage = 1;
                 currentSearchQuery = searchInput.value;
-                fetchProjectData(selectedProjectId, currentSearchQuery, currentPage);
+                fetchAllProjectTasks(selectedProjectId, currentSearchQuery, currentPage);
             });
         });
 
@@ -554,7 +573,7 @@ document.addEventListener('DOMContentLoaded', () => {
             loadMoreBtn.addEventListener('click', () => {
                 const selectedProjectId = projectFilterSelect.value;
                 currentPage++;
-                fetchProjectData(selectedProjectId, currentSearchQuery, currentPage, true);
+                fetchAllProjectTasks(selectedProjectId, currentSearchQuery, currentPage, true);
             });
         });
     }
