@@ -152,7 +152,7 @@ def update_task_log_api(request):
             log_date = date.today() - timedelta(days=1)
         else:
             # If date is null, it means the task is in the pool, so we delete any existing log for today or yesterday
-            TodoLog.objects.filter(todo_item=task, task_date__in=[date.today(), date.today() - timedelta(days=1)]).delete()
+            TodoLog.objects.filter(todo_item=task, task_date__in=[date.today(), date.today() - timedelta(days=1)], log_time=0).delete()
             return JsonResponse({'success': True})
 
         # Get or create a log for the task and date

@@ -449,7 +449,9 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function initializeSortable() {
-        const columns = document.querySelectorAll('.task-column, .task-pool');
+        const columns = document.querySelectorAll('.task-column');
+        const taskPools = document.querySelectorAll('.task-pool');
+
         columns.forEach(column => {
             new Sortable(column, {
                 group: 'tasks',
@@ -460,7 +462,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 onEnd: (event) => {
                     const taskId = event.item.dataset.taskId;
                     const toColumn = event.to;
-                    const fromColumn = event.from;
 
                     let date;
                     if (toColumn.children[0].textContent === "Today's Tasks") {
@@ -468,11 +469,26 @@ document.addEventListener('DOMContentLoaded', () => {
                     } else if (toColumn.children[0].textContent === "Yesterday's Tasks") {
                         date = 'yesterday';
                     } else {
-                        date = null; // Task is in the pool
+                        date = null;
                     }
 
                     updateTaskLog(taskId, date);
                 }
+            });
+        });
+
+        taskPools.forEach(pool => {
+            new Sortable(pool, {
+                group: {
+                    name: 'tasks',
+                    pull: 'clone',
+                    put: false
+                },
+                animation: 150,
+                ghostClass: 'sortable-ghost',
+                chosenClass: 'sortable-chosen',
+                dragClass: 'sortable-drag',
+                sort: false
             });
         });
     }
