@@ -61,71 +61,75 @@ document.addEventListener('DOMContentLoaded', () => {
     function renderDSBoard(users, tasks, yesterdayLogs, todayLogs, blockers) {
         dsBoardContainer.innerHTML = '';
 
-        users.forEach(user => {
-            const userRow = document.createElement('div');
-            userRow.classList.add('user-row');
-            userRow.setAttribute('data-user-id', user.id);
+        const table = document.createElement('table');
+        table.classList.add('ds-board-table');
 
-            const userInfo = document.createElement('div');
-            userInfo.classList.add('user-info');
-            userInfo.textContent = user.username;
-            userRow.appendChild(userInfo);
-
-            const yesterdayTasksColumn = createColumn("Yesterday's Tasks");
-            userRow.appendChild(yesterdayTasksColumn);
-
-            const todayTasksColumn = createColumn("Today's Tasks", true);
-            userRow.appendChild(todayTasksColumn);
-
-            const blockersColumn = createColumn('Blockers');
-            userRow.appendChild(blockersColumn);
-
-            dsBoardContainer.appendChild(userRow);
+        const header = table.createTHead();
+        const headerRow = header.insertRow();
+        const headers = ['Name', 'All Tasks', 'Yesterday', 'Today', 'Blockers'];
+        headers.forEach(text => {
+            const th = document.createElement('th');
+            th.textContent = text;
+            headerRow.appendChild(th);
         });
 
-        const allTasksColumn = createColumn('All Tasks');
-        dsBoardContainer.appendChild(allTasksColumn);
+        const body = table.createTBody();
+        users.forEach(user => {
+            const userRow = body.insertRow();
+            userRow.setAttribute('data-user-id', user.id);
 
-        populateTasks(tasks, yesterdayLogs, todayLogs, blockers, allTasksColumn);
-        addDragAndDropListeners();
-    }
+            const nameCell = userRow.insertCell();
+            nameCell.textContent = user.username;
 
-    function createColumn(title, isToday = false) {
-        const column = document.createElement('div');
-        column.classList.add('task-column');
-        if (title === 'Total Time (min)') {
-            title = 'Total Time (hours)';
-        }
-        column.innerHTML = `<h4>${title}</h4>`;
-        if (isToday) {
+            const allTasksCell = userRow.insertCell();
+            allTasksCell.classList.add('task-column', 'all-tasks-column');
+
+            const yesterdayCell = userRow.insertCell();
+            yesterdayCell.classList.add('task-column');
+
+            const todayCell = userRow.insertCell();
+            todayCell.classList.add('task-column', 'today-column');
+
+            const blockersCell = userRow.insertCell();
+            blockersCell.classList.add('task-column', 'blockers-column');
+
             const addTaskButton = document.createElement('button');
             addTaskButton.classList.add('add-task-button');
             addTaskButton.textContent = '+ Add a card';
             addTaskButton.addEventListener('click', handleAddTask);
-            column.appendChild(addTaskButton);
-        }
-        return column;
+            todayCell.appendChild(addTaskButton);
+        });
+
+        dsBoardContainer.appendChild(table);
+
+        populateTasks(tasks, yesterdayLogs, todayLogs, blockers);
+        addDragAndDropListeners();
     }
 
-    async function populateTasks(tasks, yesterdayLogs, todayLogs, blockers, allTasksColumn) {
+    async function populateTasks(tasks, yesterdayLogs, todayLogs, blockers) {
         const renderedTaskIds = new Set();
-        const userRows = document.querySelectorAll('.user-row');
+        const userRows = document.querySelectorAll('.ds-board-table tbody tr');
+
         userRows.forEach(userRow => {
-            for (let i = 1; i < userRow.children.length; i++) {
-                const column = userRow.children[i];
-                while (column.children.length > 1) {
-                    column.removeChild(column.lastChild);
+            const allTasksCell = userRow.querySelector('.all-tasks-column');
+            const yesterdayCell = userRow.cells[2];
+            const todayCell = userRow.cells[3];
+            const blockersCell = userRow.cells[4];
+
+            [allTasksCell, yesterdayCell, todayCell, blockersCell].forEach(cell => {
+                while (cell.children.length > (cell.classList.contains('today-column') ? 1 : 0)) {
+                    cell.removeChild(cell.lastChild);
                 }
-            }
+            });
         });
 
         for (const log of yesterdayLogs) {
             const task = tasks.find(t => t.id === log.task_id);
             if (task && !renderedTaskIds.has(task.id)) {
                 const taskCard = await createTaskCard(task);
-                const userRow = document.querySelector(`.user-row[data-user-id='${task.user_id}']`);
+                const userRow = document.querySelector(`tr[data-user-id='${task.user_id}']`);
                 if (userRow) {
-                    userRow.children[1].appendChild(taskCard);
+                    userRow.cells[2].appendChild(taskCard);
                     renderedTaskIds.add(task.id);
                 }
             }
@@ -135,9 +139,9 @@ document.addEventListener('DOMContentLoaded', () => {
             const task = tasks.find(t => t.id === log.task_id);
             if (task && !renderedTaskIds.has(task.id)) {
                 const taskCard = await createTaskCard(task);
-                const userRow = document.querySelector(`.user-row[data-user-id='${task.user_id}']`);
+                const userRow = document.querySelector(`tr[data-user-id='${task.user_id}']`);
                 if (userRow) {
-                    userRow.children[2].appendChild(taskCard);
+                    userRow.cells[3].appendChild(taskCard);
                     renderedTaskIds.add(task.id);
                 }
             }
@@ -145,16 +149,19 @@ document.addEventListener('DOMContentLoaded', () => {
 
         for (const blocker of blockers) {
             const taskCard = await createTaskCard(blocker);
-            const userRow = document.querySelector(`.user-row[data-user-id='${blocker.user_id}']`);
+            const userRow = document.querySelector(`tr[data-user-id='${blocker.user_id}']`);
             if (userRow) {
-                userRow.children[4].appendChild(taskCard);
+                userRow.cells[4].appendChild(taskCard);
             }
         }
 
         for (const task of tasks) {
             if (!renderedTaskIds.has(task.id)) {
                 const taskCard = await createTaskCard(task);
-                allTasksColumn.appendChild(taskCard);
+                const userRow = document.querySelector(`tr[data-user-id='${task.user_id}']`);
+                if (userRow) {
+                    userRow.querySelector('.all-tasks-column').appendChild(taskCard);
+                }
             }
         }
     }
@@ -354,8 +361,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function handleAddTask(event) {
-        const todayColumn = event.target.parentElement;
-        const userRow = todayColumn.parentElement;
+        const todayCell = event.target.parentElement;
+        const userRow = todayCell.parentElement;
         const userId = parseInt(userRow.dataset.userId);
 
         if (userId !== currentUserId) {
@@ -404,10 +411,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (response.ok) {
             const task = await response.json();
-            const taskCard = createTaskCard(task);
-            const userRow = document.querySelector(`.user-row[data-user-id='${task.user_id}']`);
+            const taskCard = await createTaskCard(task);
+            const userRow = document.querySelector(`tr[data-user-id='${task.user_id}']`);
             if (userRow) {
-                userRow.children[2].appendChild(taskCard);
+                userRow.cells[3].appendChild(taskCard);
             }
             modal.style.display = 'none';
             addTaskForm.reset();
