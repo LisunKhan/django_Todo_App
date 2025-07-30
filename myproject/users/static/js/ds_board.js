@@ -126,7 +126,7 @@ document.addEventListener('DOMContentLoaded', () => {
         for (const log of yesterdayLogs) {
             const task = tasks.find(t => t.id === log.task_id);
             if (task && !renderedTaskIds.has(task.id)) {
-                const taskCard = await createTaskCard(task);
+                const taskCard = await createTaskCard(task, false);
                 const userRow = document.querySelector(`tr[data-user-id='${task.user_id}']`);
                 if (userRow) {
                     userRow.cells[2].appendChild(taskCard);
@@ -138,7 +138,7 @@ document.addEventListener('DOMContentLoaded', () => {
         for (const log of todayLogs) {
             const task = tasks.find(t => t.id === log.task_id);
             if (task && !renderedTaskIds.has(task.id)) {
-                const taskCard = await createTaskCard(task);
+                const taskCard = await createTaskCard(task, false);
                 const userRow = document.querySelector(`tr[data-user-id='${task.user_id}']`);
                 if (userRow) {
                     userRow.cells[3].appendChild(taskCard);
@@ -148,7 +148,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         for (const blocker of blockers) {
-            const taskCard = await createTaskCard(blocker);
+            const taskCard = await createTaskCard(blocker, false);
             const userRow = document.querySelector(`tr[data-user-id='${blocker.user_id}']`);
             if (userRow) {
                 userRow.cells[4].appendChild(taskCard);
@@ -157,7 +157,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         for (const task of tasks) {
             if (!renderedTaskIds.has(task.id)) {
-                const taskCard = await createTaskCard(task);
+                const taskCard = await createTaskCard(task, true);
                 const userRow = document.querySelector(`tr[data-user-id='${task.user_id}']`);
                 if (userRow) {
                     userRow.querySelector('.all-tasks-column').appendChild(taskCard);
@@ -167,7 +167,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
 
-    async function createTaskCard(task) {
+    async function createTaskCard(task, fromAllTasks = false) {
         const taskCard = document.createElement('div');
         taskCard.classList.add('task-card');
         taskCard.setAttribute('draggable', true);
@@ -217,6 +217,15 @@ document.addEventListener('DOMContentLoaded', () => {
         logTimeButton.textContent = 'Log Time';
         logTimeButton.addEventListener('click', () => showLogTimeInput(taskCard, task.id));
         taskCard.appendChild(logTimeButton);
+
+        if (!fromAllTasks) {
+            const cancelButton = document.createElement('button');
+            cancelButton.textContent = 'Cancel';
+            cancelButton.addEventListener('click', () => {
+                taskCard.remove();
+            });
+            taskCard.appendChild(cancelButton);
+        }
 
         return taskCard;
     }
@@ -451,11 +460,22 @@ document.addEventListener('DOMContentLoaded', () => {
                 ghostClass: 'sortable-ghost',
                 chosenClass: 'sortable-chosen',
                 dragClass: 'sortable-drag',
-                onEnd: function (evt) {
+                onEnd: async function (evt) {
                     const item = evt.item;
                     const to = evt.to;
                     if (evt.from.classList.contains('all-tasks-column')) {
                         item.classList.remove('sortable-drag');
+                        const taskId = item.dataset.taskId;
+                        await fetch('/api/ds_board/log_task_placement/', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRFToken': getCookie('csrftoken')
+                            },
+                            body: JSON.stringify({
+                                task_id: taskId
+                            })
+                        });
                     }
                 }
             });

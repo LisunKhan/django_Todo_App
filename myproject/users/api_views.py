@@ -135,3 +135,21 @@ def delete_log_api(request, log_id):
         log.delete()
         return JsonResponse({'success': True})
     return JsonResponse({'error': 'Invalid request method'}, status=405)
+
+@login_required
+def log_task_placement_api(request):
+    if request.method == 'POST':
+        data = json.loads(request.body)
+        task_id = data['task_id']
+        task = TodoItem.objects.get(id=task_id)
+
+        # Check if a log for this task and today's date already exists
+        today = date.today()
+        existing_log = TodoLog.objects.filter(todo_item=task, task_date=today).exists()
+
+        if not existing_log:
+            TodoLog.objects.create(todo_item=task, task_date=today, log_time=0)
+            return JsonResponse({'success': True}, status=201)
+        else:
+            return JsonResponse({'success': True}, status=200)
+    return JsonResponse({'error': 'Invalid request method'}, status=405)
