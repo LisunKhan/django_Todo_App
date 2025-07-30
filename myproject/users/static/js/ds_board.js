@@ -34,7 +34,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    let allProjectTasks = [];
     async function fetchProjectData(projectId) {
         if (!projectId || projectId === 'all') {
             dsBoardContainer.innerHTML = '';
@@ -46,7 +45,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const tasksResponse = await fetch(`/api/ds_board/project/${projectId}/tasks/`);
         const tasks = await tasksResponse.json();
-        allProjectTasks = tasks;
 
         const yesterdayLogsResponse = await fetch(`/api/ds_board/project/${projectId}/logs/?date=yesterday`);
         const yesterdayLogs = await yesterdayLogsResponse.json();
@@ -100,13 +98,6 @@ document.addEventListener('DOMContentLoaded', () => {
             title = 'Total Time (hours)';
         }
         column.innerHTML = `<h4>${title}</h4>`;
-        if (title === 'All Tasks') {
-            const searchInput = document.createElement('input');
-            searchInput.type = 'text';
-            searchInput.placeholder = 'Search tasks...';
-            searchInput.classList.add('task-search-input');
-            column.appendChild(searchInput);
-        }
         if (isToday) {
             const addTaskButton = document.createElement('button');
             addTaskButton.classList.add('add-task-button');
@@ -117,22 +108,8 @@ document.addEventListener('DOMContentLoaded', () => {
         return column;
     }
 
-    function filterAllTasks(searchQuery) {
-        const userRows = document.querySelectorAll('.user-row');
-        userRows.forEach(userRow => {
-            const allTasksColumn = userRow.querySelector('.task-pool');
-            const taskCards = allTasksColumn.querySelectorAll('.task-card');
-            taskCards.forEach(taskCard => {
-                const title = taskCard.querySelector('h5').textContent.toLowerCase();
-                if (title.includes(searchQuery)) {
-                    taskCard.style.display = '';
-                } else {
-                    taskCard.style.display = 'none';
-                }
-            });
-        });
-    }
     async function populateTasks(tasks, yesterdayLogs, todayLogs, blockers) {
+        const renderedTaskIds = new Set();
         const userRows = document.querySelectorAll('.user-row');
         userRows.forEach(userRow => {
             for (let i = 1; i < userRow.children.length; i++) {
@@ -143,24 +120,36 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
 
+        const yesterdayTaskIds = new Set();
         for (const log of yesterdayLogs) {
-            const task = allProjectTasks.find(t => t.id === log.task_id);
+            if (yesterdayTaskIds.has(log.task_id)) {
+                continue;
+            }
+            const task = tasks.find(t => t.id === log.task_id);
             if (task) {
                 const taskCard = await createTaskCard(task);
                 const userRow = document.querySelector(`.user-row[data-user-id='${task.user_id}']`);
                 if (userRow) {
                     userRow.children[2].appendChild(taskCard);
+                    yesterdayTaskIds.add(task.id);
+                    renderedTaskIds.add(task.id);
                 }
             }
         }
 
+        const todayTaskIds = new Set();
         for (const log of todayLogs) {
-            const task = allProjectTasks.find(t => t.id === log.task_id);
+            if (todayTaskIds.has(log.task_id)) {
+                continue;
+            }
+            const task = tasks.find(t => t.id === log.task_id);
             if (task) {
                 const taskCard = await createTaskCard(task);
                 const userRow = document.querySelector(`.user-row[data-user-id='${task.user_id}']`);
                 if (userRow) {
                     userRow.children[3].appendChild(taskCard);
+                    todayTaskIds.add(task.id);
+                    renderedTaskIds.add(task.id);
                 }
             }
         }
@@ -173,11 +162,13 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
 
-        for (const task of allProjectTasks) {
-            const taskCard = await createTaskCard(task);
-            const userRow = document.querySelector(`.user-row[data-user-id='${task.user_id}']`);
-            if (userRow) {
-                userRow.children[1].appendChild(taskCard);
+        for (const task of tasks) {
+            if (!renderedTaskIds.has(task.id)) {
+                const taskCard = await createTaskCard(task);
+                const userRow = document.querySelector(`.user-row[data-user-id='${task.user_id}']`);
+                if (userRow) {
+                    userRow.children[1].appendChild(taskCard);
+                }
             }
         }
     }
@@ -526,14 +517,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 chosenClass: 'sortable-chosen',
                 dragClass: 'sortable-drag',
                 sort: false
-            });
-        });
-
-        const searchInputs = document.querySelectorAll('.task-search-input');
-        searchInputs.forEach(searchInput => {
-            searchInput.addEventListener('input', (e) => {
-                const searchQuery = e.target.value.toLowerCase();
-                filterAllTasks(searchQuery);
             });
         });
     }
