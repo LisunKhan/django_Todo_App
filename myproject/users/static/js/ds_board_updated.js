@@ -199,15 +199,19 @@ document.addEventListener('DOMContentLoaded', () => {
         fetchProjectData(currentProjectId, 1, searchQuery);
     });
 
-    paginationContainer.addEventListener('click', (event) => {
-        if (event.target.tagName === 'A') {
-            event.preventDefault();
-            const page = event.target.dataset.page;
-            if (page) {
-                fetchProjectData(currentProjectId, page, currentSearchQuery);
+    if (paginationContainer) {
+        paginationContainer.addEventListener('click', (event) => {
+            if (event.target.tagName === 'A') {
+                event.preventDefault();
+                const page = event.target.dataset.page;
+                if (page) {
+                    fetchProjectData(currentProjectId, page, currentSearchQuery);
+                }
             }
-        }
-    });
+        });
+    } else {
+        console.error('paginationContainer not found');
+    }
 
     fetchProjects();
     initializeSortable();
