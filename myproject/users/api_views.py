@@ -43,7 +43,8 @@ def project_tasks_api(request, project_id):
         'description': task.description,
         'status': task.status,
         'user_id': task.user.id,
-        'estimation_time': task.estimation_time
+        'estimation_time': task.estimation_time,
+        'time_spent': task.time_spent
     } for task in page_obj.object_list]
 
     return JsonResponse({

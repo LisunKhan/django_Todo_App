@@ -48,7 +48,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // Fetch tasks
         const tasksResponse = await fetch(`/api/ds_board/project/${projectId}/tasks/?page=${page}&search=${searchQuery}`);
         const tasksData = await tasksResponse.json();
-        renderTasks(tasksData.tasks);
+        renderTasks(tasksData.tasks, tasksContainer);
         renderPagination(tasksData);
     }
 
@@ -66,20 +66,25 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    function renderTasks(tasks) {
-        tasksContainer.innerHTML = '';
+    function renderTasks(tasks, container, showCancelButton = false) {
+        container.innerHTML = '';
         tasks.forEach(task => {
             const taskElement = document.createElement('div');
             taskElement.classList.add('card', 'mb-2');
             taskElement.setAttribute('data-task-id', task.id);
+            let cancelButton = '';
+            if (showCancelButton) {
+                cancelButton = `<button class="btn btn-danger btn-sm float-end cancel-task-btn">X</button>`;
+            }
             taskElement.innerHTML = `
                 <div class="card-body">
+                    ${cancelButton}
                     <h5 class="card-title">${task.title}</h5>
                     <p class="card-text">Estimation: ${task.estimation_time}h</p>
                     <p class="card-text">Total Time Spent: ${task.time_spent}h</p>
                 </div>
             `;
-            tasksContainer.appendChild(taskElement);
+            container.appendChild(taskElement);
         });
     }
 
@@ -126,7 +131,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 group: 'tasks',
                 animation: 150,
                 onAdd: (event) => {
-                    const taskId = event.item.dataset.taskId;
+                    const itemEl = event.item;
+                    const taskId = itemEl.dataset.taskId;
                     let date;
                     if (event.to.id === 'yesterday-tasks-container') {
                         date = 'yesterday';
@@ -134,6 +140,12 @@ document.addEventListener('DOMContentLoaded', () => {
                         date = 'today';
                     }
                     updateTaskLog(taskId, date);
+
+                    // Add cancel button
+                    const cancelButton = document.createElement('button');
+                    cancelButton.classList.add('btn', 'btn-danger', 'btn-sm', 'float-end', 'cancel-task-btn');
+                    cancelButton.innerText = 'X';
+                    itemEl.querySelector('.card-body').prepend(cancelButton);
                 }
             });
         });
@@ -167,6 +179,15 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         return cookieValue;
     }
+
+    document.getElementById('ds-board-container').addEventListener('click', (event) => {
+        if (event.target.classList.contains('cancel-task-btn')) {
+            const taskCard = event.target.closest('.card');
+            const taskId = taskCard.dataset.taskId;
+            taskCard.remove();
+            updateTaskLog(taskId, null);
+        }
+    });
 
     projectFilterSelect.addEventListener('change', () => {
         const selectedProjectId = projectFilterSelect.value;
