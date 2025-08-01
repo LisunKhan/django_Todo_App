@@ -141,11 +141,10 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                     updateTaskLog(taskId, date);
 
+                    console.log('onAdd triggered');
                     // Add cancel button
-                    const cancelButton = document.createElement('button');
-                    cancelButton.classList.add('btn', 'btn-danger', 'btn-sm', 'float-end', 'cancel-task-btn');
-                    cancelButton.innerText = 'X';
-                    itemEl.querySelector('.card-body').prepend(cancelButton);
+                    const cardBody = itemEl.querySelector('.card-body');
+                    cardBody.innerHTML = `<button class="btn btn-danger btn-sm float-end cancel-task-btn">X</button>` + cardBody.innerHTML;
                 }
             });
         });
