@@ -83,7 +83,7 @@ class TodoFormTests(TestCase):
         self.assertTrue(form.is_valid(), form.errors)
         todo = form.save(commit=False)
         self.assertEqual(todo.status, 'inprogress')
-        self.assertEqual(todo.time_spent, 45)
+        self.assertEqual(todo.time_spent, 0.75)
 
 
     def test_todo_form_valid_without_time_spent(self):
@@ -117,7 +117,7 @@ class TodoFormTests(TestCase):
         form = TodoForm(data=form_data)
         self.assertTrue(form.is_valid(), form.errors)
         todo_item = form.save(commit=False)
-        self.assertEqual(todo_item.time_spent, 60) # Check minutes in model
+        self.assertEqual(todo_item.time_spent, 1) # Check hours in model
         self.assertEqual(todo_item.status, 'done')
 
 
@@ -160,24 +160,24 @@ class TodoViewTests(TestCase):
         response = self.client.post(url, post_data)
         self.assertEqual(response.status_code, 302) # Should redirect after successful POST
         created_task = TodoItem.objects.get(user=self.user, title='View Add Task')
-        self.assertEqual(created_task.time_spent, 75)
+        self.assertEqual(created_task.time_spent, 1.25)
         self.assertEqual(created_task.status, 'inprogress')
 
     def test_todo_list_view_displays_time_spent_and_status(self):
         """
         Test that time_spent and status are displayed on the todo_list page.
         """
-        TodoItem.objects.create(user=self.user, title='List Task 1', description='Desc 1', time_spent=10, status='todo')
-        TodoItem.objects.create(user=self.user, title='List Task 2', description='Desc 2', time_spent=20, status='done')
+        TodoItem.objects.create(user=self.user, title='List Task 1', description='Desc 1', time_spent=0.17, status='todo')
+        TodoItem.objects.create(user=self.user, title='List Task 2', description='Desc 2', time_spent=0.33, status='done')
 
         url = reverse('todo_list')
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'List Task 1')
-        self.assertContains(response, '0.17h') # 10 / 60
+        self.assertContains(response, '0.17')
         self.assertContains(response, 'To Do')
         self.assertContains(response, 'List Task 2')
-        self.assertContains(response, '0.33h') # 20 / 60
+        self.assertContains(response, '0.33')
         self.assertContains(response, 'Done')
 
 
@@ -185,12 +185,12 @@ class TodoViewTests(TestCase):
         """
         Test that time_spent and status are displayed on the todo_detail page.
         """
-        task = TodoItem.objects.create(user=self.user, title='Detail Task', description='Detail Desc', time_spent=35, status='inprogress')
+        task = TodoItem.objects.create(user=self.user, title='Detail Task', description='Detail Desc', time_spent=0.58, status='inprogress')
         url = reverse('todo_detail', args=[task.id])
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'Detail Task')
-        self.assertContains(response, '0.58 hour(s)') # 35 minutes / 60 = 0.5833...
+        self.assertContains(response, '0.58')
         self.assertContains(response, 'In Progress') # Check for status display
 
     def test_task_report_view_filters_by_status(self):
@@ -198,12 +198,12 @@ class TodoViewTests(TestCase):
         Test the task_report view for correct aggregation and user isolation.
         """
         # Tasks for logged-in user
-        TodoItem.objects.create(user=self.user, title='Report Task 1', description='User1 Desc1', time_spent=50)
-        TodoItem.objects.create(user=self.user, title='Report Task 2', description='User1 Desc2', time_spent=25)
+        TodoItem.objects.create(user=self.user, title='Report Task 1', description='User1 Desc1', time_spent=0.83)
+        TodoItem.objects.create(user=self.user, title='Report Task 2', description='User1 Desc2', time_spent=0.42)
         TodoItem.objects.create(user=self.user, title='Report Task 3', description='User1 Desc3 ZeroTime') # time_spent defaults to 0
 
         # Task for another user - should not be included
-        TodoItem.objects.create(user=self.other_user, title='Other User Task', description='Other Desc', time_spent=100)
+        TodoItem.objects.create(user=self.other_user, title='Other User Task', description='Other Desc', time_spent=1.67)
 
         url = reverse('task_report')
         response = self.client.get(url)
@@ -211,30 +211,28 @@ class TodoViewTests(TestCase):
 
         # Check total time in context (more robust than checking raw HTML)
         # Total time should be based on ALL tasks for the user, regardless of whether they are shown in the paginated list.
-        # User has tasks with 50 mins, 25 mins, and 0 mins. Total = 75 mins = 1.25 hours.
+        # User has tasks with 0.83 hours, 0.42 hours, and 0 hours. Total = 1.25 hours.
         # This total_time_spent_today_hours in the report is for TODAY's tasks only.
-        # Let's adjust tasks or the assertion.
         # For this test, let's assume all tasks are for today for simplicity of total time check.
         from django.utils import timezone
         today = timezone.now().date()
-        TodoItem.objects.all().update(task_date=today) # Set all tasks to today for this test's total time check.
 
         # Re-fetch for updated task_date affecting total_time_spent_today_hours
         response = self.client.get(url)
         self.assertEqual(response.status_code, 200)
-        # Now, total_time_spent_today_hours should be 1.25 (50+25+0)
+        # Now, total_time_spent_today_hours should be 1.25 (0.83+0.42+0)
         self.assertAlmostEqual(response.context['total_time_spent_today_hours'], 1.25, places=2)
 
 
         # Check tasks in context (via page_obj) - this list is filtered by time_spent > 0
-        # So, only 'Report Task 1' (50 mins) and 'Report Task 2' (25 mins) should be here.
+        # So, only 'Report Task 1' (0.83 hours) and 'Report Task 2' (0.42 hours) should be here.
         self.assertEqual(len(response.context['page_obj'].object_list), 2) # Correct, as it filters time_spent > 0
 
         # Create tasks with different statuses
-        TodoItem.objects.create(user=self.user, title='Todo Task Report', time_spent=10, status='todo', task_date=today)
-        TodoItem.objects.create(user=self.user, title='In Progress Task Report', time_spent=20, status='inprogress', task_date=today)
-        TodoItem.objects.create(user=self.user, title='Done Task Report', time_spent=30, status='done', task_date=today)
-        TodoItem.objects.create(user=self.other_user, title='Other User Done Task', time_spent=40, status='done', task_date=today)
+        TodoItem.objects.create(user=self.user, title='Todo Task Report', time_spent=0.17, status='todo')
+        TodoItem.objects.create(user=self.user, title='In Progress Task Report', time_spent=0.33, status='inprogress')
+        TodoItem.objects.create(user=self.user, title='Done Task Report', time_spent=0.5, status='done')
+        TodoItem.objects.create(user=self.other_user, title='Other User Done Task', time_spent=0.67, status='done')
 
 
         # Test filter by status 'done'
@@ -274,7 +272,7 @@ class TodoViewTests(TestCase):
         self.assertEqual(response.context['total_time_spent_today_hours'], 0)
         self.assertEqual(len(response.context['page_obj'].object_list), 0)
         # The text "Total Time Spent on All Tasks" might have changed or depend on `total_time_spent_today_hours`
-        self.assertContains(response, '0.00 hour(s)') # Check for the value
+        self.assertContains(response, '0.00') # Check for the value
         self.assertContains(response, 'No tasks match your criteria.')
 
     def test_task_report_login_required(self):
@@ -312,9 +310,9 @@ class TodoViewTests(TestCase):
         """
         Test user cannot POST to edit another user's task (should 404, no data change).
         """
-        other_task = TodoItem.objects.create(user=self.other_user, title='Original Other Title', description='Original Other Desc', time_spent=10)
+        other_task = TodoItem.objects.create(user=self.other_user, title='Original Other Title', description='Original Other Desc', time_spent=0.17)
         url = reverse('edit_todo', args=[other_task.id])
-        post_data = {'title': 'Attempted New Title', 'description': 'Attempted New Desc', 'time_spent': 99}
+        post_data = {'title': 'Attempted New Title', 'description': 'Attempted New Desc', 'time_spent': 1.65}
 
         response = self.client.post(url, post_data)
         self.assertEqual(response.status_code, 404)
@@ -323,7 +321,7 @@ class TodoViewTests(TestCase):
         other_task.refresh_from_db()
         self.assertEqual(other_task.title, 'Original Other Title')
         self.assertEqual(other_task.description, 'Original Other Desc')
-        self.assertEqual(other_task.time_spent, 10)
+        self.assertEqual(other_task.time_spent, 0.17)
 
     def test_edit_todo_task_not_found_get(self):
         """
@@ -340,7 +338,7 @@ class TodoViewTests(TestCase):
         """
         non_existent_id = 9999
         url = reverse('edit_todo', args=[non_existent_id])
-        post_data = {'title': 'Title', 'description': 'Description', 'time_spent': 10}
+        post_data = {'title': 'Title', 'description': 'Description', 'time_spent_hours': 0.17}
         response = self.client.post(url, post_data)
         self.assertEqual(response.status_code, 404)
 
@@ -348,7 +346,7 @@ class TodoViewTests(TestCase):
         """
         Test successful GET request for edit_todo page.
         """
-        task = TodoItem.objects.create(user=self.user, title='My Edit Task', description='My Desc', time_spent=40)
+        task = TodoItem.objects.create(user=self.user, title='My Edit Task', description='My Desc', time_spent=0.67)
         url = reverse('edit_todo', args=[task.id])
         response = self.client.get(url)
 
@@ -356,20 +354,20 @@ class TodoViewTests(TestCase):
         self.assertIsInstance(response.context['form'], TodoForm)
         self.assertEqual(response.context['form'].initial['title'], 'My Edit Task')
         self.assertEqual(response.context['form'].initial['description'], 'My Desc')
-        self.assertEqual(response.context['form'].initial['time_spent_hours'], 40/60) # Check hours
+        self.assertEqual(response.context['form'].initial['time_spent_hours'], 0.67) # Check hours
         self.assertContains(response, 'My Edit Task') # Check if title is rendered
 
     def test_edit_todo_successful_post_update(self):
         """
         Test successful POST request to update a task, including its status.
         """
-        task = TodoItem.objects.create(user=self.user, title='Original Title', description='Original Desc', time_spent=20, status='todo')
+        task = TodoItem.objects.create(user=self.user, title='Original Title', description='Original Desc', time_spent=0.33, status='todo')
         url = reverse('edit_todo', args=[task.id])
 
         post_data_for_form = {
             'title': 'Updated Title',
             'description': 'Updated Desc',
-            'time_spent_hours': 88/60, # hours
+            'time_spent_hours': 1.47, # hours
             'status': 'done' # Update status
         }
 
@@ -381,7 +379,7 @@ class TodoViewTests(TestCase):
         task.refresh_from_db()
         self.assertEqual(task.title, 'Updated Title')
         self.assertEqual(task.description, 'Updated Desc')
-        self.assertEqual(task.time_spent, 88) # Check minutes
+        self.assertAlmostEqual(task.time_spent, 1.47, places=2) # Check hours
         self.assertEqual(task.status, 'done') # Verify status
 
 
@@ -389,12 +387,12 @@ class TodoViewTests(TestCase):
         """
         Test POST request with invalid data (e.g., blank title).
         """
-        task = TodoItem.objects.create(user=self.user, title='Valid Title', description='Valid Desc', time_spent=15)
+        task = TodoItem.objects.create(user=self.user, title='Valid Title', description='Valid Desc', time_spent=0.25)
         url = reverse('edit_todo', args=[task.id])
         invalid_data = {
             'title': '',  # Invalid: title is required
             'description': 'Description with no title',
-            'time_spent_hours': 10/60
+            'time_spent_hours': 0.17
         }
         response = self.client.post(url, invalid_data)
 
@@ -405,7 +403,7 @@ class TodoViewTests(TestCase):
         task.refresh_from_db()
         self.assertEqual(task.title, 'Valid Title') # Data should not have changed
         self.assertEqual(task.description, 'Valid Desc')
-        self.assertEqual(task.time_spent, 15)
+        self.assertEqual(task.time_spent, 0.25)
 
     def test_todo_list_displays_status(self):
         """
@@ -606,8 +604,7 @@ class CSVReportTests(TestCase):
             title='CSV Todo 1',
             description='Description for CSV 1',
             status='done',
-            time_spent=60, # 1 hour
-            task_date=self.todo1_date
+            time_spent=1, # 1 hour
         )
         # Manually set created_at and updated_at for predictable testing if necessary
         # For this test, auto_now_add and auto_now should be fine.
@@ -617,8 +614,7 @@ class CSVReportTests(TestCase):
             title='CSV Todo 2',
             description='Description for CSV 2',
             status='todo',
-            time_spent=30, # 0.5 hours
-            task_date=self.todo2_date
+            time_spent=0.5, # 0.5 hours
         )
         self.url = reverse('download_csv_report')
 
@@ -644,7 +640,7 @@ class CSVReportTests(TestCase):
         expected_header = [
             'Username', 'Email', 'Bio',
             'Todo Title', 'Todo Description', 'Project Name', 'Status',
-            'Time Spent (hours)', 'Created At', 'Updated At', 'Task Date'
+            'Time Spent (hours)', 'Created At', 'Updated At'
         ]
         self.assertEqual(header, expected_header)
 
@@ -683,7 +679,6 @@ class CSVReportTests(TestCase):
         self.assertEqual(float(row1_data[7]), self.todo1.time_spent_hours)
         self.assertIn(self.todo1.created_at.strftime('%Y-%m-%d'), row1_data[8])
         self.assertIn(self.todo1.updated_at.strftime('%Y-%m-%d'), row1_data[9])
-        self.assertEqual(row1_data[10], self.todo1.task_date.strftime('%Y-%m-%d'))
 
 
     def test_download_csv_report_no_todos(self):
@@ -706,11 +701,11 @@ class CSVReportTests(TestCase):
         self.assertEqual(rows[0], [
             'Username', 'Email', 'Bio',
             'Todo Title', 'Todo Description', 'Project Name', 'Status',
-            'Time Spent (hours)', 'Created At', 'Updated At', 'Task Date'
+            'Time Spent (hours)', 'Created At', 'Updated At'
         ])
         self.assertEqual(rows[1], [
             self.user.username, self.user.email, self.user.profile.bio,
-            'N/A', 'N/A', 'N/A', 'N/A', 'N/A', 'N/A', 'N/A', 'N/A'
+            'N/A', 'N/A', 'N/A', 'N/A', 'N/A', 'N/A', 'N/A'
         ])
 
     def test_download_csv_report_without_profile_bio(self):
@@ -747,10 +742,8 @@ class CSVReportTests(TestCase):
         # Indices after adding 'Project Name':
         # Created At: 8
         # Updated At: 9
-        # Task Date: 10
         self.assertEqual(row[8], self.todo1.created_at.strftime('%Y-%m-%d %H:%M:%S'))
         self.assertEqual(row[9], self.todo1.updated_at.strftime('%Y-%m-%d %H:%M:%S'))
-        self.assertEqual(row[10], self.todo1.task_date.strftime('%Y-%m-%d'))
 
     def test_download_csv_report_user_profile_does_not_exist_gracefully(self):
         """Test CSV output when user.profile does not exist (e.g., if signal failed or profile deleted)."""
@@ -956,7 +949,6 @@ class TodoViewWithProjectTests(TodoViewTests): # Inherit to reuse user/client se
             'description': task.description,
             'project': project2.id,
             'status': task.status,
-            'task_date': task.task_date.strftime('%Y-%m-%d') if task.task_date else '',
             'time_spent_hours': task.time_spent_hours # Use existing time_spent_hours
         }
         response = self.client.post(url, post_data_change)
@@ -970,7 +962,6 @@ class TodoViewWithProjectTests(TodoViewTests): # Inherit to reuse user/client se
             'description': task.description,
             'project': '', # Empty string to remove project
             'status': task.status,
-            'task_date': task.task_date.strftime('%Y-%m-%d') if task.task_date else '',
             'time_spent_hours': task.time_spent_hours
         }
         response = self.client.post(url, post_data_remove)

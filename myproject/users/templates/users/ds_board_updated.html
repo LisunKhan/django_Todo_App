@@ -1,0 +1,46 @@
+{% extends 'todo/base.html' %}
+{% load static %}
+
+{% block title %}DS Board Updated{% endblock title %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="row mb-3">
+        <div class="col">
+            <h1>DS Board Updated</h1>
+        </div>
+        <div class="col-md-4">
+            <label for="project-filter-select" class="form-label">Filter by Project:</label>
+            <select id="project-filter-select" class="form-select">
+                <option value="all" selected>All Projects</option>
+            </select>
+        </div>
+    </div>
+
+    <div id="ds-board-container" class="row">
+        <div class="col-md-3">
+            <h2>Members</h2>
+            <div id="members-container">
+                <!-- Members will be rendered here -->
+            </div>
+        </div>
+        <div class="col-md-9">
+            <h2>Tasks</h2>
+            <div class="mb-3">
+                <input type="text" id="task-search-input" class="form-control" placeholder="Search tasks...">
+            </div>
+            <div id="tasks-container">
+                <!-- Tasks will be rendered here -->
+            </div>
+            <nav aria-label="Task pagination">
+                <ul class="pagination" id="pagination-container">
+                    <!-- Pagination will be rendered here -->
+                </ul>
+            </nav>
+        </div>
+    </div>
+</div>
+
+<link rel="stylesheet" href="{% static 'css/ds_board.css' %}">
+<script src="{% static 'js/ds_board_updated.js' %}"></script>
+{% endblock content %}

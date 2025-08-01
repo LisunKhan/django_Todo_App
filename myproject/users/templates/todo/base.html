@@ -73,6 +73,12 @@
                             DS Board
                         </a>
                     </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.resolver_match.url_name == 'ds_board_updated' %}active{% endif %}" href="{% url 'ds_board_updated' %}">
+                            <i class="fas fa-tachometer-alt"></i>
+                            DS Board Updated
+                        </a>
+                    </li>
                     {% if user.is_authenticated %}
                     <li class="nav-item">
                         <a class="nav-link {% if request.resolver_match.url_name == 'project_list' or request.resolver_match.url_name == 'project_detail' %}active{% endif %}" href="{% url 'project_list' %}">

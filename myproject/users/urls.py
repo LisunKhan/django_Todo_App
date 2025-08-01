@@ -28,6 +28,7 @@ urlpatterns = [
     path('kanban/', views.kanban_board_view, name='kanban_board'),
     # DS Board URL
     path('ds_board/', views.ds_board_view, name='ds_board'),
+    path('ds_board_updated/', views.ds_board_updated_view, name='ds_board_updated'),
     # API URL for fetching Kanban tasks
     path('api/kanban_tasks/', views.api_get_kanban_tasks, name='api_kanban_tasks'),
     # DS Board APIs

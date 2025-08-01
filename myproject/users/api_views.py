@@ -23,9 +23,20 @@ def project_users_api(request, project_id):
     users_data = [{'id': user.id, 'username': user.username} for user in users]
     return JsonResponse(users_data, safe=False)
 
+from django.core.paginator import Paginator
+
 @login_required
 def project_tasks_api(request, project_id):
-    tasks = TodoItem.objects.filter(project_id=project_id)
+    tasks_query = TodoItem.objects.filter(project_id=project_id)
+
+    search_query = request.GET.get('search')
+    if search_query:
+        tasks_query = tasks_query.filter(title__icontains=search_query)
+
+    paginator = Paginator(tasks_query, 10) # 10 tasks per page
+    page_number = request.GET.get('page', 1)
+    page_obj = paginator.get_page(page_number)
+
     tasks_data = [{
         'id': task.id,
         'title': task.title,
@@ -33,8 +44,15 @@ def project_tasks_api(request, project_id):
         'status': task.status,
         'user_id': task.user.id,
         'estimation_time': task.estimation_time
-    } for task in tasks]
-    return JsonResponse(tasks_data, safe=False)
+    } for task in page_obj.object_list]
+
+    return JsonResponse({
+        'tasks': tasks_data,
+        'has_next': page_obj.has_next(),
+        'has_previous': page_obj.has_previous(),
+        'total_pages': paginator.num_pages,
+        'current_page': page_obj.number
+    })
 
 @login_required
 def project_logs_api(request, project_id):
