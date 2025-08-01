@@ -233,8 +233,8 @@ document.addEventListener('DOMContentLoaded', () => {
             saveButton.classList.add('btn', 'btn-success', 'btn-sm', 'ms-2');
 
             saveButton.addEventListener('click', async () => {
-                const logTime = input.value;
-                if (logTime) {
+                const logTimeValue = input.value;
+                if (logTimeValue) {
                     const taskId = taskCard.dataset.taskId;
                     const column = taskCard.closest('.task-column');
                     let date;
@@ -243,10 +243,10 @@ document.addEventListener('DOMContentLoaded', () => {
                     } else {
                         date = 'today';
                     }
-                    await logTime(taskId, logTime, date);
+                    await logTime(taskId, logTimeValue, date);
                     const totalTimeSpentEl = taskCard.querySelector('.total-time-spent');
                     const currentTotal = parseFloat(totalTimeSpentEl.textContent);
-                    totalTimeSpentEl.textContent = currentTotal + parseFloat(logTime);
+                    totalTimeSpentEl.textContent = currentTotal + parseFloat(logTimeValue);
                     cardBody.removeChild(input);
                     cardBody.removeChild(saveButton);
                 }
