@@ -18,18 +18,18 @@
     </div>
 
     <div id="ds-board-container" class="row">
-        <div class="col-md-3">
+        <div class="col-md-2">
             <h2>Members</h2>
             <div id="members-container">
                 <!-- Members will be rendered here -->
             </div>
         </div>
-        <div class="col-md-9">
-            <h2>Tasks</h2>
+        <div class="col-md-4">
+            <h2>All Tasks</h2>
             <div class="mb-3">
                 <input type="text" id="task-search-input" class="form-control" placeholder="Search tasks...">
             </div>
-            <div id="tasks-container">
+            <div id="tasks-container" class="task-column">
                 <!-- Tasks will be rendered here -->
             </div>
             <nav aria-label="Task pagination">
@@ -38,9 +38,22 @@
                 </ul>
             </nav>
         </div>
+        <div class="col-md-3">
+            <h2>Yesterday's Tasks</h2>
+            <div id="yesterday-tasks-container" class="task-column">
+                <!-- Yesterday's tasks will be rendered here -->
+            </div>
+        </div>
+        <div class="col-md-3">
+            <h2>Today's Tasks</h2>
+            <div id="today-tasks-container" class="task-column">
+                <!-- Today's tasks will be rendered here -->
+            </div>
+        </div>
     </div>
 </div>
 
 <link rel="stylesheet" href="{% static 'css/ds_board.css' %}">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
 <script src="{% static 'js/ds_board_updated.js' %}"></script>
 {% endblock content %}

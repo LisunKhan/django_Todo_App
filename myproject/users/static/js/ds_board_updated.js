@@ -2,6 +2,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const projectFilterSelect = document.getElementById('project-filter-select');
     const membersContainer = document.getElementById('members-container');
     const tasksContainer = document.getElementById('tasks-container');
+    const yesterdayTasksContainer = document.getElementById('yesterday-tasks-container');
+    const todayTasksContainer = document.getElementById('today-tasks-container');
     const taskSearchInput = document.getElementById('task-search-input');
     const paginationContainer = document.getElementById('pagination-container');
 
@@ -28,6 +30,8 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!projectId || projectId === 'all') {
             membersContainer.innerHTML = '';
             tasksContainer.innerHTML = '';
+            yesterdayTasksContainer.innerHTML = '';
+            todayTasksContainer.innerHTML = '';
             paginationContainer.innerHTML = '';
             return;
         }
@@ -67,11 +71,12 @@ document.addEventListener('DOMContentLoaded', () => {
         tasks.forEach(task => {
             const taskElement = document.createElement('div');
             taskElement.classList.add('card', 'mb-2');
+            taskElement.setAttribute('data-task-id', task.id);
             taskElement.innerHTML = `
                 <div class="card-body">
                     <h5 class="card-title">${task.title}</h5>
-                    <p class="card-text">${task.description}</p>
-                    <p class="card-text"><small class="text-muted">Status: ${task.status}</small></p>
+                    <p class="card-text">Estimation: ${task.estimation_time}h</p>
+                    <p class="card-text">Total Time Spent: ${task.time_spent}h</p>
                 </div>
             `;
             tasksContainer.appendChild(taskElement);
@@ -106,6 +111,63 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    function initializeSortable() {
+        new Sortable(tasksContainer, {
+            group: {
+                name: 'tasks',
+                pull: 'clone',
+                put: false
+            },
+            animation: 150,
+        });
+
+        [yesterdayTasksContainer, todayTasksContainer].forEach(container => {
+            new Sortable(container, {
+                group: 'tasks',
+                animation: 150,
+                onAdd: (event) => {
+                    const taskId = event.item.dataset.taskId;
+                    let date;
+                    if (event.to.id === 'yesterday-tasks-container') {
+                        date = 'yesterday';
+                    } else if (event.to.id === 'today-tasks-container') {
+                        date = 'today';
+                    }
+                    updateTaskLog(taskId, date);
+                }
+            });
+        });
+    }
+
+    async function updateTaskLog(taskId, date) {
+        await fetch('/api/ds_board_updated/update_task_log/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken'),
+            },
+            body: JSON.stringify({
+                task_id: taskId,
+                date: date,
+            }),
+        });
+    }
+
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+
     projectFilterSelect.addEventListener('change', () => {
         const selectedProjectId = projectFilterSelect.value;
         fetchProjectData(selectedProjectId);
@@ -127,4 +189,5 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     fetchProjects();
+    initializeSortable();
 });

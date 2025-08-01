@@ -46,4 +46,5 @@ urlpatterns = [
     path('api/ds_board/log/<int:log_id>/update/', api_views.update_log_api, name='update_log_api'),
     path('api/ds_board/log/<int:log_id>/delete/', api_views.delete_log_api, name='delete_log_api'),
     path('api/ds_board/update_task_log/', api_views.update_task_log_api, name='update_task_log_api'),
+    path('api/ds_board_updated/update_task_log/', api_views.update_task_log_api, name='update_task_log_api_updated'),
 ]

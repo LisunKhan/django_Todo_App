@@ -55,6 +55,34 @@ def project_tasks_api(request, project_id):
     })
 
 @login_required
+def update_task_log_api(request):
+    if request.method == 'POST':
+        data = json.loads(request.body)
+        task_id = data['task_id']
+        log_date_str = data['date']
+
+        task = TodoItem.objects.get(id=task_id)
+
+        if log_date_str == 'today':
+            log_date = date.today()
+        elif log_date_str == 'yesterday':
+            log_date = date.today() - timedelta(days=1)
+        else:
+            # If date is null, it means the task is in the pool, so we delete any existing log for today or yesterday
+            TodoLog.objects.filter(todo_item=task, task_date__in=[date.today(), date.today() - timedelta(days=1)], log_time=0).delete()
+            return JsonResponse({'success': True})
+
+        # Get or create a log for the task and date
+        log, created = TodoLog.objects.get_or_create(
+            todo_item=task,
+            task_date=log_date,
+            defaults={'log_time': 0}
+        )
+
+        return JsonResponse({'success': True})
+    return JsonResponse({'error': 'Invalid request method'}, status=405)
+
+@login_required
 def project_logs_api(request, project_id):
     date_param = request.GET.get('date')
     if date_param == 'yesterday':
