@@ -72,16 +72,18 @@ document.addEventListener('DOMContentLoaded', () => {
             const taskElement = document.createElement('div');
             taskElement.classList.add('card', 'mb-2');
             taskElement.setAttribute('data-task-id', task.id);
+            let logTimeButton = `<button class="btn btn-primary btn-sm float-end log-time-btn">Log Time</button>`;
             let cancelButton = '';
             if (showCancelButton) {
                 cancelButton = `<button class="btn btn-danger btn-sm float-end cancel-task-btn">X</button>`;
             }
             taskElement.innerHTML = `
                 <div class="card-body">
+                    ${logTimeButton}
                     ${cancelButton}
                     <h5 class="card-title">${task.title}</h5>
                     <p class="card-text">Estimation: ${task.estimation_time}h</p>
-                    <p class="card-text">Total Time Spent: ${task.time_spent}h</p>
+                    <p class="card-text">Total Time Spent: <span class="total-time-spent">${task.time_spent}</span>h</p>
                 </div>
             `;
             container.appendChild(taskElement);
@@ -137,8 +139,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 const taskId = itemEl.dataset.taskId;
                 updateTaskLog(taskId, 'yesterday');
 
-                console.log('onAdd triggered for yesterday');
-                // Add cancel button
                 const cardBody = itemEl.querySelector('.card-body');
                 cardBody.innerHTML = `<button class="btn btn-danger btn-sm float-end cancel-task-btn">X</button>` + cardBody.innerHTML;
             }
@@ -155,8 +155,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 const taskId = itemEl.dataset.taskId;
                 updateTaskLog(taskId, 'today');
 
-                console.log('onAdd triggered for today');
-                // Add cancel button
                 const cardBody = itemEl.querySelector('.card-body');
                 cardBody.innerHTML = `<button class="btn btn-danger btn-sm float-end cancel-task-btn">X</button>` + cardBody.innerHTML;
             }
@@ -164,7 +162,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     async function updateTaskLog(taskId, date) {
-        console.log(`updateTaskLog called with taskId: ${taskId}, date: ${date}`);
         await fetch('/api/ds_board_updated/update_task_log/', {
             method: 'POST',
             headers: {
@@ -173,6 +170,21 @@ document.addEventListener('DOMContentLoaded', () => {
             },
             body: JSON.stringify({
                 task_id: taskId,
+                date: date,
+            }),
+        });
+    }
+
+    async function logTime(taskId, logTime, date) {
+        await fetch('/api/ds_board_updated/log_time/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken'),
+            },
+            body: JSON.stringify({
+                task_id: taskId,
+                log_time: logTime,
                 date: date,
             }),
         });
@@ -193,20 +205,57 @@ document.addEventListener('DOMContentLoaded', () => {
         return cookieValue;
     }
 
-    const dsBoardContainer = document.getElementById('ds-board-container');
-    if (dsBoardContainer) {
-        dsBoardContainer.addEventListener('click', (event) => {
-            if (event.target.classList.contains('cancel-task-btn')) {
-                console.log('Cancel button clicked');
-                const taskCard = event.target.closest('.card');
-                console.log('taskCard:', taskCard);
-                const taskId = taskCard.dataset.taskId;
-                console.log('taskId:', taskId);
-                taskCard.remove();
-                updateTaskLog(taskId, null);
+    document.getElementById('ds-board-container').addEventListener('click', (event) => {
+        if (event.target.classList.contains('cancel-task-btn')) {
+            const taskCard = event.target.closest('.card');
+            const taskId = taskCard.dataset.taskId;
+            taskCard.remove();
+            updateTaskLog(taskId, null);
+        }
+
+        if (event.target.classList.contains('log-time-btn')) {
+            const taskCard = event.target.closest('.card');
+            const cardBody = taskCard.querySelector('.card-body');
+            const logTimeInput = cardBody.querySelector('.log-time-input');
+            if (logTimeInput) {
+                return;
             }
-        });
-    }
+
+            const input = document.createElement('input');
+            input.type = 'number';
+            input.min = '0';
+            input.step = '0.5';
+            input.placeholder = 'Hours';
+            input.classList.add('log-time-input');
+
+            const saveButton = document.createElement('button');
+            saveButton.textContent = 'Save';
+            saveButton.classList.add('btn', 'btn-success', 'btn-sm', 'ms-2');
+
+            saveButton.addEventListener('click', async () => {
+                const logTime = input.value;
+                if (logTime) {
+                    const taskId = taskCard.dataset.taskId;
+                    const column = taskCard.closest('.task-column');
+                    let date;
+                    if (column.id === 'yesterday-tasks-container') {
+                        date = 'yesterday';
+                    } else {
+                        date = 'today';
+                    }
+                    await logTime(taskId, logTime, date);
+                    const totalTimeSpentEl = taskCard.querySelector('.total-time-spent');
+                    const currentTotal = parseFloat(totalTimeSpentEl.textContent);
+                    totalTimeSpentEl.textContent = currentTotal + parseFloat(logTime);
+                    cardBody.removeChild(input);
+                    cardBody.removeChild(saveButton);
+                }
+            });
+
+            cardBody.appendChild(input);
+            cardBody.appendChild(saveButton);
+        }
+    });
 
     if (projectFilterSelect) {
         projectFilterSelect.addEventListener('change', () => {

@@ -56,6 +56,28 @@ def project_tasks_api(request, project_id):
     })
 
 @login_required
+def log_time_api_updated(request):
+    if request.method == 'POST':
+        data = json.loads(request.body)
+        task_id = data['task_id']
+        log_time = data['log_time']
+        date_str = data['date']
+
+        if date_str == 'yesterday':
+            log_date = date.today() - timedelta(days=1)
+        else:
+            log_date = date.today()
+
+        task = TodoItem.objects.get(id=task_id)
+        TodoLog.objects.create(
+            todo_item=task,
+            log_time=log_time,
+            task_date=log_date
+        )
+        return JsonResponse({'success': True})
+    return JsonResponse({'error': 'Invalid request method'}, status=405)
+
+@login_required
 def update_task_log_api(request):
     if request.method == 'POST':
         data = json.loads(request.body)
