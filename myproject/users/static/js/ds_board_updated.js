@@ -180,24 +180,31 @@ document.addEventListener('DOMContentLoaded', () => {
         return cookieValue;
     }
 
-    document.getElementById('ds-board-container').addEventListener('click', (event) => {
-        if (event.target.classList.contains('cancel-task-btn')) {
-            const taskCard = event.target.closest('.card');
-            const taskId = taskCard.dataset.taskId;
-            taskCard.remove();
-            updateTaskLog(taskId, null);
-        }
-    });
+    const dsBoardContainer = document.getElementById('ds-board-container');
+    if (dsBoardContainer) {
+        dsBoardContainer.addEventListener('click', (event) => {
+            if (event.target.classList.contains('cancel-task-btn')) {
+                const taskCard = event.target.closest('.card');
+                const taskId = taskCard.dataset.taskId;
+                taskCard.remove();
+                updateTaskLog(taskId, null);
+            }
+        });
+    }
 
-    projectFilterSelect.addEventListener('change', () => {
-        const selectedProjectId = projectFilterSelect.value;
-        fetchProjectData(selectedProjectId);
-    });
+    if (projectFilterSelect) {
+        projectFilterSelect.addEventListener('change', () => {
+            const selectedProjectId = projectFilterSelect.value;
+            fetchProjectData(selectedProjectId);
+        });
+    }
 
-    taskSearchInput.addEventListener('input', () => {
-        const searchQuery = taskSearchInput.value;
-        fetchProjectData(currentProjectId, 1, searchQuery);
-    });
+    if (taskSearchInput) {
+        taskSearchInput.addEventListener('input', () => {
+            const searchQuery = taskSearchInput.value;
+            fetchProjectData(currentProjectId, 1, searchQuery);
+        });
+    }
 
     if (paginationContainer) {
         paginationContainer.addEventListener('click', (event) => {
