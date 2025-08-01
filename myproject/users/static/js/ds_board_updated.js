@@ -126,27 +126,40 @@ document.addEventListener('DOMContentLoaded', () => {
             animation: 150,
         });
 
-        [yesterdayTasksContainer, todayTasksContainer].forEach(container => {
-            new Sortable(container, {
-                group: 'tasks',
-                animation: 150,
-                onAdd: (event) => {
-                    const itemEl = event.item;
-                    const taskId = itemEl.dataset.taskId;
-                    let date;
-                    if (event.to.id === 'yesterday-tasks-container') {
-                        date = 'yesterday';
-                    } else if (event.to.id === 'today-tasks-container') {
-                        date = 'today';
-                    }
-                    updateTaskLog(taskId, date);
+        new Sortable(yesterdayTasksContainer, {
+            group: {
+                name: 'yesterday-tasks',
+                put: ['tasks']
+            },
+            animation: 150,
+            onAdd: (event) => {
+                const itemEl = event.item;
+                const taskId = itemEl.dataset.taskId;
+                updateTaskLog(taskId, 'yesterday');
 
-                    console.log('onAdd triggered');
-                    // Add cancel button
-                    const cardBody = itemEl.querySelector('.card-body');
-                    cardBody.innerHTML = `<button class="btn btn-danger btn-sm float-end cancel-task-btn">X</button>` + cardBody.innerHTML;
-                }
-            });
+                console.log('onAdd triggered for yesterday');
+                // Add cancel button
+                const cardBody = itemEl.querySelector('.card-body');
+                cardBody.innerHTML = `<button class="btn btn-danger btn-sm float-end cancel-task-btn">X</button>` + cardBody.innerHTML;
+            }
+        });
+
+        new Sortable(todayTasksContainer, {
+            group: {
+                name: 'today-tasks',
+                put: ['tasks']
+            },
+            animation: 150,
+            onAdd: (event) => {
+                const itemEl = event.item;
+                const taskId = itemEl.dataset.taskId;
+                updateTaskLog(taskId, 'today');
+
+                console.log('onAdd triggered for today');
+                // Add cancel button
+                const cardBody = itemEl.querySelector('.card-body');
+                cardBody.innerHTML = `<button class="btn btn-danger btn-sm float-end cancel-task-btn">X</button>` + cardBody.innerHTML;
+            }
         });
     }
 
