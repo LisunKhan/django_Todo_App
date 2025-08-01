@@ -151,6 +151,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     async function updateTaskLog(taskId, date) {
+        console.log(`updateTaskLog called with taskId: ${taskId}, date: ${date}`);
         await fetch('/api/ds_board_updated/update_task_log/', {
             method: 'POST',
             headers: {
