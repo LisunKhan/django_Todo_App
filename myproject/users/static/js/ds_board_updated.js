@@ -6,6 +6,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const todayTasksContainer = document.getElementById('today-tasks-container');
     const taskSearchInput = document.getElementById('task-search-input');
     const paginationContainer = document.getElementById('pagination-container');
+    const editLogModal = document.getElementById('edit-log-modal');
+    const logList = document.getElementById('log-list');
+    const closeButton = document.querySelector('.close-button');
 
     let currentProjectId = null;
     let currentPage = 1;
@@ -72,14 +75,14 @@ document.addEventListener('DOMContentLoaded', () => {
             const taskElement = document.createElement('div');
             taskElement.classList.add('card', 'mb-2');
             taskElement.setAttribute('data-task-id', task.id);
-            let logTimeButton = `<button class="btn btn-primary btn-sm float-end log-time-btn">Log Time</button>`;
+            let editLogButton = `<button class="btn btn-primary btn-sm float-end edit-log-btn">Edit Log</button>`;
             let cancelButton = '';
             if (showCancelButton) {
                 cancelButton = `<button class="btn btn-danger btn-sm float-end cancel-task-btn">X</button>`;
             }
             taskElement.innerHTML = `
                 <div class="card-body">
-                    ${logTimeButton}
+                    ${editLogButton}
                     ${cancelButton}
                     <h5 class="card-title">${task.title}</h5>
                     <p class="card-text">Estimation: ${task.estimation_time}h</p>
@@ -175,19 +178,77 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    async function logTime(taskId, logTime, date) {
-        await fetch('/api/ds_board_updated/log_time/', {
+    async function showLogList(taskId) {
+        const response = await fetch(`/api/ds_board_updated/task/${taskId}/logs/`);
+        const logs = await response.json();
+        logList.innerHTML = '';
+        logs.forEach(log => {
+            const logElement = document.createElement('div');
+            logElement.setAttribute('data-log-id', log.id);
+            logElement.innerHTML = `
+                <p>Date: ${log.task_date}</p>
+                <p>Time: <span class="log-time">${log.log_time}</span>h</p>
+                <p>Notes: <span class="log-notes">${log.notes || ''}</span></p>
+                <button class="btn btn-primary btn-sm edit-log-btn">Edit</button>
+                <button class="btn btn-danger btn-sm delete-log-btn">Delete</button>
+            `;
+            logElement.querySelector('.edit-log-btn').addEventListener('click', () => editLog(log.id, logElement, taskId));
+            logElement.querySelector('.delete-log-btn').addEventListener('click', () => deleteLog(log.id, logElement, taskId));
+            logList.appendChild(logElement);
+        });
+        editLogModal.style.display = 'block';
+    }
+
+    function editLog(logId, logElement, taskId) {
+        const logTimeElement = logElement.querySelector('.log-time');
+        const logNotesElement = logElement.querySelector('.log-notes');
+        const logTime = parseFloat(logTimeElement.textContent);
+        const logNotes = logNotesElement.textContent;
+
+        const logTimeInput = document.createElement('input');
+        logTimeInput.type = 'number';
+        logTimeInput.value = logTime;
+
+        const logNotesInput = document.createElement('input');
+        logNotesInput.type = 'text';
+        logNotesInput.value = logNotes;
+
+        const saveButton = document.createElement('button');
+        saveButton.textContent = 'Save';
+        saveButton.classList.add('btn', 'btn-success', 'btn-sm', 'ms-2');
+        saveButton.addEventListener('click', () => updateLog(logId, logTimeInput.value, logNotesInput.value, taskId));
+
+        logElement.innerHTML = '';
+        logElement.appendChild(logTimeInput);
+        logElement.appendChild(logNotesInput);
+        logElement.appendChild(saveButton);
+    }
+
+    async function updateLog(logId, logTime, logNotes, taskId) {
+        await fetch(`/api/ds_board_updated/log/${logId}/update/`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'X-CSRFToken': getCookie('csrftoken'),
+                'X-CSRFToken': getCookie('csrftoken')
             },
             body: JSON.stringify({
-                task_id: taskId,
                 log_time: logTime,
-                date: date,
-            }),
+                notes: logNotes
+            })
         });
+        showLogList(taskId);
+    }
+
+    async function deleteLog(logId, logElement, taskId) {
+        if (confirm('Are you sure you want to delete this log?')) {
+            await fetch(`/api/ds_board_updated/log/${logId}/delete/`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': getCookie('csrftoken')
+                }
+            });
+            logElement.remove();
+        }
     }
 
     function getCookie(name) {
@@ -213,47 +274,10 @@ document.addEventListener('DOMContentLoaded', () => {
             updateTaskLog(taskId, null);
         }
 
-        if (event.target.classList.contains('log-time-btn')) {
+        if (event.target.classList.contains('edit-log-btn')) {
             const taskCard = event.target.closest('.card');
-            const cardBody = taskCard.querySelector('.card-body');
-            const logTimeInput = cardBody.querySelector('.log-time-input');
-            if (logTimeInput) {
-                return;
-            }
-
-            const input = document.createElement('input');
-            input.type = 'number';
-            input.min = '0';
-            input.step = '0.5';
-            input.placeholder = 'Hours';
-            input.classList.add('log-time-input');
-
-            const saveButton = document.createElement('button');
-            saveButton.textContent = 'Save';
-            saveButton.classList.add('btn', 'btn-success', 'btn-sm', 'ms-2');
-
-            saveButton.addEventListener('click', async () => {
-                const logTimeValue = input.value;
-                if (logTimeValue) {
-                    const taskId = taskCard.dataset.taskId;
-                    const column = taskCard.closest('.task-column');
-                    let date;
-                    if (column.id === 'yesterday-tasks-container') {
-                        date = 'yesterday';
-                    } else {
-                        date = 'today';
-                    }
-                    await logTime(taskId, logTimeValue, date);
-                    const totalTimeSpentEl = taskCard.querySelector('.total-time-spent');
-                    const currentTotal = parseFloat(totalTimeSpentEl.textContent);
-                    totalTimeSpentEl.textContent = currentTotal + parseFloat(logTimeValue);
-                    cardBody.removeChild(input);
-                    cardBody.removeChild(saveButton);
-                }
-            });
-
-            cardBody.appendChild(input);
-            cardBody.appendChild(saveButton);
+            const taskId = taskCard.dataset.taskId;
+            showLogList(taskId);
         }
     });
 
@@ -281,9 +305,19 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
         });
-    } else {
-        console.error('paginationContainer not found');
     }
+
+    if(closeButton) {
+        closeButton.addEventListener('click', () => {
+            editLogModal.style.display = 'none';
+        });
+    }
+
+    window.addEventListener('click', (event) => {
+        if (event.target == editLogModal) {
+            editLogModal.style.display = "none";
+        }
+    });
 
     fetchProjects();
     initializeSortable();
