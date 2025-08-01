@@ -184,8 +184,11 @@ document.addEventListener('DOMContentLoaded', () => {
     if (dsBoardContainer) {
         dsBoardContainer.addEventListener('click', (event) => {
             if (event.target.classList.contains('cancel-task-btn')) {
+                console.log('Cancel button clicked');
                 const taskCard = event.target.closest('.card');
+                console.log('taskCard:', taskCard);
                 const taskId = taskCard.dataset.taskId;
+                console.log('taskId:', taskId);
                 taskCard.remove();
                 updateTaskLog(taskId, null);
             }
