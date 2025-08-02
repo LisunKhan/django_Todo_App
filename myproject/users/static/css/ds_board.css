@@ -211,3 +211,24 @@ body {
 .member-stats .stat-value {
     color: #007bff;
 }
+
+#edit-log-modal .modal-content {
+    width: 90%;
+    max-width: 800px;
+}
+
+#log-list {
+    margin-top: 20px;
+}
+
+#log-list > div {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px;
+    border-bottom: 1px solid #eee;
+}
+
+#log-list input {
+    margin-right: 10px;
+}
