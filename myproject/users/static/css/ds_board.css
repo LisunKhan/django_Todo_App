@@ -283,7 +283,11 @@ body {
 }
 
 #task-search-input {
-    margin-bottom: 15px;
+    margin-bottom: 20px;
+    width: 90%;
+    margin-left: auto;
+    margin-right: auto;
+    display: block;
 }
 
 .logged-time-text {
