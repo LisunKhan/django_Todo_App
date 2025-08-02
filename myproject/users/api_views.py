@@ -107,6 +107,24 @@ def project_tasks_by_date_api(request, project_id, date_str):
     } for task in tasks]
     return JsonResponse(tasks_data, safe=False)
 
+from django.db.models import Sum
+
+@login_required
+def user_stats_api(request, user_id, date_str):
+    if date_str == 'yesterday':
+        log_date = date.today() - timedelta(days=1)
+    else:
+        log_date = date.today()
+
+    tasks = TodoItem.objects.filter(user_id=user_id, logs__task_date=log_date).distinct()
+    total_estimation_time = tasks.aggregate(Sum('estimation_time'))['estimation_time__sum'] or 0
+    total_time_spent = tasks.aggregate(Sum('time_spent'))['time_spent__sum'] or 0
+
+    return JsonResponse({
+        'total_estimation_time': total_estimation_time,
+        'total_time_spent': total_time_spent
+    })
+
 @login_required
 def delete_log_api_updated(request, log_id):
     if request.method == 'POST':

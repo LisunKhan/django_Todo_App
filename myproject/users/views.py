@@ -676,6 +676,13 @@ class ProjectDetailView(LoginRequiredMixin, UserPassesTestMixin, DetailView):
         return context
 
 @login_required
+def ds_board_view(request):
+    """
+    View to render the DS board page.
+    """
+    return render(request, 'users/ds_board.html')
+
+@login_required
 def ds_board_updated_view(request):
     """
     View to render the DS board updated page.

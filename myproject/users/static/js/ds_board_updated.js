@@ -65,18 +65,27 @@ document.addEventListener('DOMContentLoaded', () => {
         renderTasks(todayTasks, todayTasksContainer, true);
     }
 
-    function renderMembers(users) {
+    async function renderMembers(users) {
         membersContainer.innerHTML = '';
-        users.forEach(user => {
+        for (const user of users) {
             const memberElement = document.createElement('div');
             memberElement.classList.add('card', 'mb-2');
+
+            const yesterdayStatsResponse = await fetch(`/api/ds_board_updated/user/${user.id}/stats/yesterday/`);
+            const yesterdayStats = await yesterdayStatsResponse.json();
+
+            const todayStatsResponse = await fetch(`/api/ds_board_updated/user/${user.id}/stats/today/`);
+            const todayStats = await todayStatsResponse.json();
+
             memberElement.innerHTML = `
                 <div class="card-body">
                     <h5 class="card-title">${user.username}</h5>
+                    <p class="card-text">Yesterday: Est: ${yesterdayStats.total_estimation_time}h, Spent: ${yesterdayStats.total_time_spent}h</p>
+                    <p class="card-text">Today: Est: ${todayStats.total_estimation_time}h, Spent: ${todayStats.total_time_spent}h</p>
                 </div>
             `;
             membersContainer.appendChild(memberElement);
-        });
+        }
     }
 
     function renderTasks(tasks, container, showCancelButton = false) {
@@ -310,7 +319,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         if (event.target.classList.contains('log-time-btn')) {
-            console.log('Log Time button clicked');
             const taskCard = event.target.closest('.card');
             const cardBody = taskCard.querySelector('.card-body');
             const logTimeInput = cardBody.querySelector('.log-time-input');
