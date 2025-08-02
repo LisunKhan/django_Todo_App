@@ -6,6 +6,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const todayTasksContainer = document.getElementById('today-tasks-container');
     const taskSearchInput = document.getElementById('task-search-input');
     const paginationContainer = document.getElementById('pagination-container');
+    const editLogModal = document.getElementById('edit-log-modal');
+    const logList = document.getElementById('log-list');
+    const closeButton = document.querySelector('.close-button');
 
     let currentProjectId = null;
     let currentPage = 1;
@@ -82,16 +85,14 @@ document.addEventListener('DOMContentLoaded', () => {
             const taskElement = document.createElement('div');
             taskElement.classList.add('card', 'mb-2');
             taskElement.setAttribute('data-task-id', task.id);
-            let logTimeButton = `<button class="btn btn-primary btn-sm float-end log-time-btn">Log Time</button>`;
             let editLogButton = `<button class="btn btn-secondary btn-sm float-end edit-log-btn ms-2">Edit Log</button>`;
-            let logTimeButton = `<button class="btn btn-primary btn-sm float-end log-time-btn">Log Time</button>`;
+            let logTimeButton = `<button class="btn btn-primary btn-sm float-end log-time-btn ms-2">Log Time</button>`;
             let cancelButton = '';
             if (showCancelButton) {
                 cancelButton = `<button class="btn btn-danger btn-sm float-end cancel-task-btn">X</button>`;
             }
             taskElement.innerHTML = `
                 <div class="card-body">
-                    ${logTimeButton}
                     ${editLogButton}
                     ${logTimeButton}
                     ${cancelButton}
@@ -154,7 +155,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 updateTaskLog(taskId, 'yesterday');
 
                 const cardBody = itemEl.querySelector('.card-body');
-                cardBody.innerHTML = `<button class="btn btn-danger btn-sm float-end cancel-task-btn">X</button>` + cardBody.innerHTML;
+                const cancelButton = `<button class="btn btn-danger btn-sm float-end cancel-task-btn">X</button>`;
+                cardBody.innerHTML = cancelButton + cardBody.innerHTML;
             }
         });
 
@@ -170,7 +172,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 updateTaskLog(taskId, 'today');
 
                 const cardBody = itemEl.querySelector('.card-body');
-                cardBody.innerHTML = `<button class="btn btn-danger btn-sm float-end cancel-task-btn">X</button>` + cardBody.innerHTML;
+                const cancelButton = `<button class="btn btn-danger btn-sm float-end cancel-task-btn">X</button>`;
+                cardBody.innerHTML = cancelButton + cardBody.innerHTML;
             }
         });
     }
@@ -188,136 +191,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }),
         });
     }
-
-    async function logTime(taskId, logTime, date) {
-        await fetch('/api/ds_board_updated/log_time/', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRFToken': getCookie('csrftoken'),
-            },
-            body: JSON.stringify({
-                task_id: taskId,
-                log_time: logTime,
-                date: date,
-            }),
-        });
-    }
-
-    function getCookie(name) {
-        let cookieValue = null;
-        if (document.cookie && document.cookie !== '') {
-            const cookies = document.cookie.split(';');
-            for (let i = 0; i < cookies.length; i++) {
-                const cookie = cookies[i].trim();
-                if (cookie.substring(0, name.length + 1) === (name + '=')) {
-                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-                    break;
-                }
-            }
-        }
-        return cookieValue;
-    }
-
-    document.getElementById('ds-board-container').addEventListener('click', (event) => {
-        if (event.target.classList.contains('cancel-task-btn')) {
-            const taskCard = event.target.closest('.card');
-            const taskId = taskCard.dataset.taskId;
-            taskCard.remove();
-            updateTaskLog(taskId, null);
-        }
-
-        if (event.target.classList.contains('edit-log-btn')) {
-            const taskCard = event.target.closest('.card');
-            const taskId = taskCard.dataset.taskId;
-            showLogList(taskId);
-        }
-
-        if (event.target.classList.contains('log-time-btn')) {
-            const taskCard = event.target.closest('.card');
-            const cardBody = taskCard.querySelector('.card-body');
-            const logTimeInput = cardBody.querySelector('.log-time-input');
-            if (logTimeInput) {
-                return;
-            }
-
-            const input = document.createElement('input');
-            input.type = 'number';
-            input.min = '0';
-            input.step = '0.5';
-            input.placeholder = 'Hours';
-            input.classList.add('log-time-input');
-
-            const saveButton = document.createElement('button');
-            saveButton.textContent = 'Save';
-            saveButton.classList.add('btn', 'btn-success', 'btn-sm', 'ms-2');
-
-            saveButton.addEventListener('click', async () => {
-                const logTimeValue = input.value;
-                if (logTimeValue) {
-                    const taskId = taskCard.dataset.taskId;
-                    const column = taskCard.closest('.task-column');
-                    let date;
-                    if (column.id === 'yesterday-tasks-container') {
-                        date = 'yesterday';
-                    } else {
-                        date = 'today';
-                    }
-                    await logTime(taskId, logTimeValue, date);
-                    const totalTimeSpentEl = taskCard.querySelector('.total-time-spent');
-                    const currentTotal = parseFloat(totalTimeSpentEl.textContent);
-                    totalTimeSpentEl.textContent = currentTotal + parseFloat(logTimeValue);
-                    cardBody.removeChild(input);
-                    cardBody.removeChild(saveButton);
-                }
-            });
-
-            cardBody.appendChild(input);
-            cardBody.appendChild(saveButton);
-        }
-    });
-
-    if (projectFilterSelect) {
-        projectFilterSelect.addEventListener('change', () => {
-            const selectedProjectId = projectFilterSelect.value;
-            fetchProjectData(selectedProjectId);
-        });
-    }
-
-    if (taskSearchInput) {
-        taskSearchInput.addEventListener('input', () => {
-            const searchQuery = taskSearchInput.value;
-            fetchProjectData(currentProjectId, 1, searchQuery);
-        });
-    }
-
-    if (paginationContainer) {
-        paginationContainer.addEventListener('click', (event) => {
-            if (event.target.tagName === 'A') {
-                event.preventDefault();
-                const page = event.target.dataset.page;
-                if (page) {
-                    fetchProjectData(currentProjectId, page, currentSearchQuery);
-                }
-            }
-        });
-    }
-
-    const editLogModal = document.getElementById('edit-log-modal');
-    const logList = document.getElementById('log-list');
-    const closeButton = document.querySelector('.close-button');
-
-    if(closeButton) {
-        closeButton.addEventListener('click', () => {
-            editLogModal.style.display = 'none';
-        });
-    }
-
-    window.addEventListener('click', (event) => {
-        if (event.target == editLogModal) {
-            editLogModal.style.display = "none";
-        }
-    });
 
     async function showLogList(taskId) {
         const response = await fetch(`/api/ds_board_updated/task/${taskId}/logs/`);
@@ -391,6 +264,74 @@ document.addEventListener('DOMContentLoaded', () => {
             logElement.remove();
         }
     }
+
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+
+    document.getElementById('ds-board-container').addEventListener('click', (event) => {
+        if (event.target.classList.contains('cancel-task-btn')) {
+            const taskCard = event.target.closest('.card');
+            const taskId = taskCard.dataset.taskId;
+            taskCard.remove();
+            updateTaskLog(taskId, null);
+        }
+
+        if (event.target.classList.contains('edit-log-btn')) {
+            const taskCard = event.target.closest('.card');
+            const taskId = taskCard.dataset.taskId;
+            showLogList(taskId);
+        }
+    });
+
+    if (projectFilterSelect) {
+        projectFilterSelect.addEventListener('change', () => {
+            const selectedProjectId = projectFilterSelect.value;
+            fetchProjectData(selectedProjectId);
+        });
+    }
+
+    if (taskSearchInput) {
+        taskSearchInput.addEventListener('input', () => {
+            const searchQuery = taskSearchInput.value;
+            fetchProjectData(currentProjectId, 1, searchQuery);
+        });
+    }
+
+    if (paginationContainer) {
+        paginationContainer.addEventListener('click', (event) => {
+            if (event.target.tagName === 'A') {
+                event.preventDefault();
+                const page = event.target.dataset.page;
+                if (page) {
+                    fetchProjectData(currentProjectId, page, currentSearchQuery);
+                }
+            }
+        });
+    }
+
+    if(closeButton) {
+        closeButton.addEventListener('click', () => {
+            editLogModal.style.display = 'none';
+        });
+    }
+
+    window.addEventListener('click', (event) => {
+        if (event.target == editLogModal) {
+            editLogModal.style.display = "none";
+        }
+    });
 
     fetchProjects();
     initializeSortable();
