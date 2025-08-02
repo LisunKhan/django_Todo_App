@@ -242,6 +242,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function editLog(logId, logElement, taskId) {
         const logTimeElement = logElement.querySelector('.log-time');
         const logNotesElement = logElement.querySelector('.log-notes');
+        const logDate = logElement.querySelector('p').textContent.split(': ')[1];
         const logTime = parseFloat(logTimeElement.textContent);
         const logNotes = logNotesElement.textContent;
 
@@ -253,18 +254,23 @@ document.addEventListener('DOMContentLoaded', () => {
         logNotesInput.type = 'text';
         logNotesInput.value = logNotes;
 
+        const dateInput = document.createElement('input');
+        dateInput.type = 'date';
+        dateInput.value = logDate;
+
         const saveButton = document.createElement('button');
         saveButton.textContent = 'Save';
         saveButton.classList.add('btn', 'btn-success', 'btn-sm', 'ms-2');
-        saveButton.addEventListener('click', () => updateLog(logId, logTimeInput.value, logNotesInput.value, taskId));
+        saveButton.addEventListener('click', () => updateLog(logId, logTimeInput.value, logNotesInput.value, dateInput.value, taskId));
 
         logElement.innerHTML = '';
+        logElement.appendChild(dateInput);
         logElement.appendChild(logTimeInput);
         logElement.appendChild(logNotesInput);
         logElement.appendChild(saveButton);
     }
 
-    async function updateLog(logId, logTime, logNotes, taskId) {
+    async function updateLog(logId, logTime, logNotes, date, taskId) {
         await fetch(`/api/ds_board_updated/log/${logId}/update/`, {
             method: 'POST',
             headers: {
@@ -273,7 +279,8 @@ document.addEventListener('DOMContentLoaded', () => {
             },
             body: JSON.stringify({
                 log_time: logTime,
-                notes: logNotes
+                notes: logNotes,
+                task_date: date
             })
         });
         showLogList(taskId);
@@ -335,6 +342,10 @@ document.addEventListener('DOMContentLoaded', () => {
             input.placeholder = 'Hours';
             input.classList.add('log-time-input');
 
+            const dateInput = document.createElement('input');
+            dateInput.type = 'date';
+            dateInput.classList.add('log-time-input', 'ms-2');
+
             const saveButton = document.createElement('button');
             saveButton.textContent = 'Save';
             saveButton.classList.add('btn', 'btn-success', 'btn-sm', 'ms-2');
@@ -347,19 +358,27 @@ document.addEventListener('DOMContentLoaded', () => {
                     let date;
                     if (column.id === 'yesterday-tasks-container') {
                         date = 'yesterday';
-                    } else {
+                    } else if (column.id === 'today-tasks-container') {
                         date = 'today';
+                    } else {
+                        date = dateInput.value;
                     }
                     await logTime(taskId, logTimeValue, date);
                     const totalTimeSpentEl = taskCard.querySelector('.total-time-spent');
                     const currentTotal = parseFloat(totalTimeSpentEl.textContent);
                     totalTimeSpentEl.textContent = currentTotal + parseFloat(logTimeValue);
                     cardBody.removeChild(input);
+                    if (dateInput) {
+                        cardBody.removeChild(dateInput);
+                    }
                     cardBody.removeChild(saveButton);
                 }
             });
 
             cardBody.appendChild(input);
+            if (taskCard.closest('.task-column').id === 'tasks-container') {
+                cardBody.appendChild(dateInput);
+            }
             cardBody.appendChild(saveButton);
         }
     });

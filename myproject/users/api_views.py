@@ -61,12 +61,14 @@ def log_time_api_updated(request):
         data = json.loads(request.body)
         task_id = data['task_id']
         log_time = data['log_time']
-        date_str = data['date']
+        date_str = data.get('date')
 
         if date_str == 'yesterday':
             log_date = date.today() - timedelta(days=1)
-        else:
+        elif date_str == 'today':
             log_date = date.today()
+        else:
+            log_date = date_str
 
         task = TodoItem.objects.get(id=task_id)
         TodoLog.objects.create(
@@ -84,6 +86,8 @@ def update_log_api_updated(request, log_id):
         log = TodoLog.objects.get(id=log_id)
         log.log_time = data['log_time']
         log.notes = data['notes']
+        if 'task_date' in data:
+            log.task_date = data['task_date']
         log.save()
         return JsonResponse({'success': True})
     return JsonResponse({'error': 'Invalid request method'}, status=405)
