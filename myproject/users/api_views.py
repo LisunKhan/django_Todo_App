@@ -89,6 +89,25 @@ def update_log_api_updated(request, log_id):
     return JsonResponse({'error': 'Invalid request method'}, status=405)
 
 @login_required
+def project_tasks_by_date_api(request, project_id, date_str):
+    if date_str == 'yesterday':
+        log_date = date.today() - timedelta(days=1)
+    else:
+        log_date = date.today()
+
+    tasks = TodoItem.objects.filter(project_id=project_id, logs__task_date=log_date).distinct()
+    tasks_data = [{
+        'id': task.id,
+        'title': task.title,
+        'description': task.description,
+        'status': task.status,
+        'user_id': task.user.id,
+        'estimation_time': task.estimation_time,
+        'time_spent': task.time_spent
+    } for task in tasks]
+    return JsonResponse(tasks_data, safe=False)
+
+@login_required
 def delete_log_api_updated(request, log_id):
     if request.method == 'POST':
         log = TodoLog.objects.get(id=log_id)

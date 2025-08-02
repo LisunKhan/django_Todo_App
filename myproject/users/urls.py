@@ -51,4 +51,5 @@ urlpatterns = [
     path('api/ds_board_updated/task/<int:task_id>/logs/', api_views.task_logs_api_updated, name='task_logs_api_updated'),
     path('api/ds_board_updated/log/<int:log_id>/update/', api_views.update_log_api_updated, name='update_log_api_updated'),
     path('api/ds_board_updated/log/<int:log_id>/delete/', api_views.delete_log_api_updated, name='delete_log_api_updated'),
+    path('api/ds_board_updated/project/<int:project_id>/tasks/<str:date_str>/', api_views.project_tasks_by_date_api, name='project_tasks_by_date_api'),
 ]

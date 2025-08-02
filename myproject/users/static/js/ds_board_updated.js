@@ -48,40 +48,21 @@ document.addEventListener('DOMContentLoaded', () => {
         const users = await usersResponse.json();
         renderMembers(users);
 
-        // Fetch tasks
+        // Fetch all tasks
         const tasksResponse = await fetch(`/api/ds_board/project/${projectId}/tasks/?page=${page}&search=${searchQuery}`);
         const tasksData = await tasksResponse.json();
-
-        // Fetch logs
-        const logsResponse = await fetch(`/api/ds_board/project/${projectId}/logs/`);
-        const logs = await logsResponse.json();
-
-        const allTasks = tasksData.tasks;
-        const yesterdayTasks = [];
-        const todayTasks = [];
-
-        const yesterday = new Date();
-        yesterday.setDate(yesterday.getDate() - 1);
-        const yesterdayDateString = yesterday.toISOString().split('T')[0];
-
-        const today = new Date();
-        const todayDateString = today.toISOString().split('T')[0];
-
-        logs.forEach(log => {
-            const task = allTasks.find(t => t.id === log.task_id);
-            if (task) {
-                if (log.task_date === yesterdayDateString) {
-                    yesterdayTasks.push(task);
-                } else if (log.task_date === todayDateString) {
-                    todayTasks.push(task);
-                }
-            }
-        });
-
-        renderTasks(allTasks, tasksContainer);
-        renderTasks(yesterdayTasks, yesterdayTasksContainer, true);
-        renderTasks(todayTasks, todayTasksContainer, true);
+        renderTasks(tasksData.tasks, tasksContainer);
         renderPagination(tasksData);
+
+        // Fetch yesterday's tasks
+        const yesterdayTasksResponse = await fetch(`/api/ds_board_updated/project/${projectId}/tasks/yesterday/`);
+        const yesterdayTasks = await yesterdayTasksResponse.json();
+        renderTasks(yesterdayTasks, yesterdayTasksContainer, true);
+
+        // Fetch today's tasks
+        const todayTasksResponse = await fetch(`/api/ds_board_updated/project/${projectId}/tasks/today/`);
+        const todayTasks = await todayTasksResponse.json();
+        renderTasks(todayTasks, todayTasksContainer, true);
     }
 
     function renderMembers(users) {
@@ -105,6 +86,7 @@ document.addEventListener('DOMContentLoaded', () => {
             taskElement.classList.add('card', 'mb-2');
             taskElement.setAttribute('data-task-id', task.id);
             let editLogButton = `<button class="btn btn-secondary btn-sm float-end edit-log-btn ms-2">Edit Log</button>`;
+            let logTimeButton = `<button class="btn btn-primary btn-sm float-end log-time-btn">Log Time</button>`;
             let cancelButton = '';
             if (showCancelButton) {
                 cancelButton = `<button class="btn btn-danger btn-sm float-end cancel-task-btn">X</button>`;
@@ -112,6 +94,7 @@ document.addEventListener('DOMContentLoaded', () => {
             taskElement.innerHTML = `
                 <div class="card-body">
                     ${editLogButton}
+                    ${logTimeButton}
                     ${cancelButton}
                     <h5 class="card-title">${task.title}</h5>
                     <p class="card-text">Estimation: ${task.estimation_time}h</p>
