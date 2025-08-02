@@ -254,3 +254,7 @@ body {
     content: ' ✏️';
     font-size: 12px;
 }
+
+.edit-log-btn {
+    background-color: #007bff !important;
+}
