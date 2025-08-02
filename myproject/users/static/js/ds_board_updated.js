@@ -178,6 +178,21 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    async function logTime(taskId, logTime, date) {
+        await fetch('/api/ds_board_updated/log_time/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken'),
+            },
+            body: JSON.stringify({
+                task_id: taskId,
+                log_time: logTime,
+                date: date,
+            }),
+        });
+    }
+
     async function updateTaskLog(taskId, date) {
         await fetch('/api/ds_board_updated/update_task_log/', {
             method: 'POST',
