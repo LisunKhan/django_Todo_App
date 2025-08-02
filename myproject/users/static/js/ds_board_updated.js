@@ -357,6 +357,10 @@ document.addEventListener('DOMContentLoaded', () => {
             saveButton.textContent = 'Save';
             saveButton.classList.add('btn', 'btn-success', 'btn-sm', 'ms-2');
 
+            const cancelButton = document.createElement('button');
+            cancelButton.textContent = 'Cancel';
+            cancelButton.classList.add('btn', 'btn-danger', 'btn-sm', 'ms-2');
+
             saveButton.addEventListener('click', async () => {
                 const logTimeValue = input.value;
                 if (logTimeValue) {
@@ -379,7 +383,17 @@ document.addEventListener('DOMContentLoaded', () => {
                         cardBody.removeChild(dateInput);
                     }
                     cardBody.removeChild(saveButton);
+                    cardBody.removeChild(cancelButton);
                 }
+            });
+
+            cancelButton.addEventListener('click', () => {
+                cardBody.removeChild(input);
+                if (dateInput) {
+                    cardBody.removeChild(dateInput);
+                }
+                cardBody.removeChild(saveButton);
+                cardBody.removeChild(cancelButton);
             });
 
             cardBody.appendChild(input);
@@ -387,6 +401,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 cardBody.appendChild(dateInput);
             }
             cardBody.appendChild(saveButton);
+            cardBody.appendChild(cancelButton);
         }
 
         if (event.target.classList.contains('log-time-btn')) {
@@ -412,6 +427,10 @@ document.addEventListener('DOMContentLoaded', () => {
             saveButton.textContent = 'Save';
             saveButton.classList.add('btn', 'btn-success', 'btn-sm', 'ms-2');
 
+            const cancelButton = document.createElement('button');
+            cancelButton.textContent = 'Cancel';
+            cancelButton.classList.add('btn', 'btn-danger', 'btn-sm', 'ms-2');
+
             saveButton.addEventListener('click', async () => {
                 const logTimeValue = input.value;
                 if (logTimeValue) {
@@ -434,7 +453,17 @@ document.addEventListener('DOMContentLoaded', () => {
                         cardBody.removeChild(dateInput);
                     }
                     cardBody.removeChild(saveButton);
+                    cardBody.removeChild(cancelButton);
                 }
+            });
+
+            cancelButton.addEventListener('click', () => {
+                cardBody.removeChild(input);
+                if (dateInput) {
+                    cardBody.removeChild(dateInput);
+                }
+                cardBody.removeChild(saveButton);
+                cardBody.removeChild(cancelButton);
             });
 
             cardBody.appendChild(input);
@@ -442,6 +471,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 cardBody.appendChild(dateInput);
             }
             cardBody.appendChild(saveButton);
+            cardBody.appendChild(cancelButton);
         }
     });
 
