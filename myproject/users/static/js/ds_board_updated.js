@@ -6,9 +6,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const todayTasksContainer = document.getElementById('today-tasks-container');
     const taskSearchInput = document.getElementById('task-search-input');
     const paginationContainer = document.getElementById('pagination-container');
-    const editLogModal = document.getElementById('edit-log-modal');
-    const logList = document.getElementById('log-list');
-    const closeButton = document.querySelector('.close-button');
 
     let currentProjectId = null;
     let currentPage = 1;
@@ -51,36 +48,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // Fetch tasks
         const tasksResponse = await fetch(`/api/ds_board/project/${projectId}/tasks/?page=${page}&search=${searchQuery}`);
         const tasksData = await tasksResponse.json();
-
-        // Fetch logs
-        const logsResponse = await fetch(`/api/ds_board/project/${projectId}/logs/`);
-        const logs = await logsResponse.json();
-
-        const allTasks = tasksData.tasks;
-        const yesterdayTasks = [];
-        const todayTasks = [];
-
-        const yesterday = new Date();
-        yesterday.setDate(yesterday.getDate() - 1);
-        const yesterdayDateString = yesterday.toISOString().split('T')[0];
-
-        const today = new Date();
-        const todayDateString = today.toISOString().split('T')[0];
-
-        logs.forEach(log => {
-            const task = allTasks.find(t => t.id === log.task_id);
-            if (task) {
-                if (log.task_date === yesterdayDateString) {
-                    yesterdayTasks.push(task);
-                } else if (log.task_date === todayDateString) {
-                    todayTasks.push(task);
-                }
-            }
-        });
-
-        renderTasks(allTasks, tasksContainer);
-        renderTasks(yesterdayTasks, yesterdayTasksContainer, true);
-        renderTasks(todayTasks, todayTasksContainer, true);
+        renderTasks(tasksData.tasks, tasksContainer);
         renderPagination(tasksData);
     }
 
@@ -104,6 +72,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const taskElement = document.createElement('div');
             taskElement.classList.add('card', 'mb-2');
             taskElement.setAttribute('data-task-id', task.id);
+            let logTimeButton = `<button class="btn btn-primary btn-sm float-end log-time-btn">Log Time</button>`;
             let editLogButton = `<button class="btn btn-secondary btn-sm float-end edit-log-btn ms-2">Edit Log</button>`;
             let cancelButton = '';
             if (showCancelButton) {
@@ -111,6 +80,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             taskElement.innerHTML = `
                 <div class="card-body">
+                    ${logTimeButton}
                     ${editLogButton}
                     ${cancelButton}
                     <h5 class="card-title">${task.title}</h5>
@@ -207,6 +177,136 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    async function logTime(taskId, logTime, date) {
+        await fetch('/api/ds_board_updated/log_time/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken'),
+            },
+            body: JSON.stringify({
+                task_id: taskId,
+                log_time: logTime,
+                date: date,
+            }),
+        });
+    }
+
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+
+    document.getElementById('ds-board-container').addEventListener('click', (event) => {
+        if (event.target.classList.contains('cancel-task-btn')) {
+            const taskCard = event.target.closest('.card');
+            const taskId = taskCard.dataset.taskId;
+            taskCard.remove();
+            updateTaskLog(taskId, null);
+        }
+
+        if (event.target.classList.contains('edit-log-btn')) {
+            const taskCard = event.target.closest('.card');
+            const taskId = taskCard.dataset.taskId;
+            showLogList(taskId);
+        }
+
+        if (event.target.classList.contains('log-time-btn')) {
+            const taskCard = event.target.closest('.card');
+            const cardBody = taskCard.querySelector('.card-body');
+            const logTimeInput = cardBody.querySelector('.log-time-input');
+            if (logTimeInput) {
+                return;
+            }
+
+            const input = document.createElement('input');
+            input.type = 'number';
+            input.min = '0';
+            input.step = '0.5';
+            input.placeholder = 'Hours';
+            input.classList.add('log-time-input');
+
+            const saveButton = document.createElement('button');
+            saveButton.textContent = 'Save';
+            saveButton.classList.add('btn', 'btn-success', 'btn-sm', 'ms-2');
+
+            saveButton.addEventListener('click', async () => {
+                const logTimeValue = input.value;
+                if (logTimeValue) {
+                    const taskId = taskCard.dataset.taskId;
+                    const column = taskCard.closest('.task-column');
+                    let date;
+                    if (column.id === 'yesterday-tasks-container') {
+                        date = 'yesterday';
+                    } else {
+                        date = 'today';
+                    }
+                    await logTime(taskId, logTimeValue, date);
+                    const totalTimeSpentEl = taskCard.querySelector('.total-time-spent');
+                    const currentTotal = parseFloat(totalTimeSpentEl.textContent);
+                    totalTimeSpentEl.textContent = currentTotal + parseFloat(logTimeValue);
+                    cardBody.removeChild(input);
+                    cardBody.removeChild(saveButton);
+                }
+            });
+
+            cardBody.appendChild(input);
+            cardBody.appendChild(saveButton);
+        }
+    });
+
+    if (projectFilterSelect) {
+        projectFilterSelect.addEventListener('change', () => {
+            const selectedProjectId = projectFilterSelect.value;
+            fetchProjectData(selectedProjectId);
+        });
+    }
+
+    if (taskSearchInput) {
+        taskSearchInput.addEventListener('input', () => {
+            const searchQuery = taskSearchInput.value;
+            fetchProjectData(currentProjectId, 1, searchQuery);
+        });
+    }
+
+    if (paginationContainer) {
+        paginationContainer.addEventListener('click', (event) => {
+            if (event.target.tagName === 'A') {
+                event.preventDefault();
+                const page = event.target.dataset.page;
+                if (page) {
+                    fetchProjectData(currentProjectId, page, currentSearchQuery);
+                }
+            }
+        });
+    }
+
+    const editLogModal = document.getElementById('edit-log-modal');
+    const logList = document.getElementById('log-list');
+    const closeButton = document.querySelector('.close-button');
+
+    if(closeButton) {
+        closeButton.addEventListener('click', () => {
+            editLogModal.style.display = 'none';
+        });
+    }
+
+    window.addEventListener('click', (event) => {
+        if (event.target == editLogModal) {
+            editLogModal.style.display = "none";
+        }
+    });
+
     async function showLogList(taskId) {
         const response = await fetch(`/api/ds_board_updated/task/${taskId}/logs/`);
         const logs = await response.json();
@@ -279,74 +379,6 @@ document.addEventListener('DOMContentLoaded', () => {
             logElement.remove();
         }
     }
-
-    function getCookie(name) {
-        let cookieValue = null;
-        if (document.cookie && document.cookie !== '') {
-            const cookies = document.cookie.split(';');
-            for (let i = 0; i < cookies.length; i++) {
-                const cookie = cookies[i].trim();
-                if (cookie.substring(0, name.length + 1) === (name + '=')) {
-                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-                    break;
-                }
-            }
-        }
-        return cookieValue;
-    }
-
-    document.getElementById('ds-board-container').addEventListener('click', (event) => {
-        if (event.target.classList.contains('cancel-task-btn')) {
-            const taskCard = event.target.closest('.card');
-            const taskId = taskCard.dataset.taskId;
-            taskCard.remove();
-            updateTaskLog(taskId, null);
-        }
-
-        if (event.target.classList.contains('edit-log-btn')) {
-            const taskCard = event.target.closest('.card');
-            const taskId = taskCard.dataset.taskId;
-            showLogList(taskId);
-        }
-    });
-
-    if (projectFilterSelect) {
-        projectFilterSelect.addEventListener('change', () => {
-            const selectedProjectId = projectFilterSelect.value;
-            fetchProjectData(selectedProjectId);
-        });
-    }
-
-    if (taskSearchInput) {
-        taskSearchInput.addEventListener('input', () => {
-            const searchQuery = taskSearchInput.value;
-            fetchProjectData(currentProjectId, 1, searchQuery);
-        });
-    }
-
-    if (paginationContainer) {
-        paginationContainer.addEventListener('click', (event) => {
-            if (event.target.tagName === 'A') {
-                event.preventDefault();
-                const page = event.target.dataset.page;
-                if (page) {
-                    fetchProjectData(currentProjectId, page, currentSearchQuery);
-                }
-            }
-        });
-    }
-
-    if(closeButton) {
-        closeButton.addEventListener('click', () => {
-            editLogModal.style.display = 'none';
-        });
-    }
-
-    window.addEventListener('click', (event) => {
-        if (event.target == editLogModal) {
-            editLogModal.style.display = "none";
-        }
-    });
 
     fetchProjects();
     initializeSortable();
