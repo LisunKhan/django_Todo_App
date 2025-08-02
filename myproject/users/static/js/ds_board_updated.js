@@ -293,6 +293,50 @@ document.addEventListener('DOMContentLoaded', () => {
             const taskId = taskCard.dataset.taskId;
             showLogList(taskId);
         }
+
+        if (event.target.classList.contains('log-time-btn')) {
+            console.log('Log Time button clicked');
+            const taskCard = event.target.closest('.card');
+            const cardBody = taskCard.querySelector('.card-body');
+            const logTimeInput = cardBody.querySelector('.log-time-input');
+            if (logTimeInput) {
+                return;
+            }
+
+            const input = document.createElement('input');
+            input.type = 'number';
+            input.min = '0';
+            input.step = '0.5';
+            input.placeholder = 'Hours';
+            input.classList.add('log-time-input');
+
+            const saveButton = document.createElement('button');
+            saveButton.textContent = 'Save';
+            saveButton.classList.add('btn', 'btn-success', 'btn-sm', 'ms-2');
+
+            saveButton.addEventListener('click', async () => {
+                const logTimeValue = input.value;
+                if (logTimeValue) {
+                    const taskId = taskCard.dataset.taskId;
+                    const column = taskCard.closest('.task-column');
+                    let date;
+                    if (column.id === 'yesterday-tasks-container') {
+                        date = 'yesterday';
+                    } else {
+                        date = 'today';
+                    }
+                    await logTime(taskId, logTimeValue, date);
+                    const totalTimeSpentEl = taskCard.querySelector('.total-time-spent');
+                    const currentTotal = parseFloat(totalTimeSpentEl.textContent);
+                    totalTimeSpentEl.textContent = currentTotal + parseFloat(logTimeValue);
+                    cardBody.removeChild(input);
+                    cardBody.removeChild(saveButton);
+                }
+            });
+
+            cardBody.appendChild(input);
+            cardBody.appendChild(saveButton);
+        }
     });
 
     if (projectFilterSelect) {
