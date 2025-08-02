@@ -45,11 +45,21 @@ document.addEventListener('DOMContentLoaded', () => {
         const users = await usersResponse.json();
         renderMembers(users);
 
-        // Fetch tasks
+        // Fetch all tasks
         const tasksResponse = await fetch(`/api/ds_board/project/${projectId}/tasks/?page=${page}&search=${searchQuery}`);
         const tasksData = await tasksResponse.json();
         renderTasks(tasksData.tasks, tasksContainer);
         renderPagination(tasksData);
+
+        // Fetch yesterday's tasks
+        const yesterdayTasksResponse = await fetch(`/api/ds_board_updated/project/${projectId}/tasks/yesterday/`);
+        const yesterdayTasks = await yesterdayTasksResponse.json();
+        renderTasks(yesterdayTasks, yesterdayTasksContainer, true);
+
+        // Fetch today's tasks
+        const todayTasksResponse = await fetch(`/api/ds_board_updated/project/${projectId}/tasks/today/`);
+        const todayTasks = await todayTasksResponse.json();
+        renderTasks(todayTasks, todayTasksContainer, true);
     }
 
     function renderMembers(users) {
@@ -74,6 +84,7 @@ document.addEventListener('DOMContentLoaded', () => {
             taskElement.setAttribute('data-task-id', task.id);
             let logTimeButton = `<button class="btn btn-primary btn-sm float-end log-time-btn">Log Time</button>`;
             let editLogButton = `<button class="btn btn-secondary btn-sm float-end edit-log-btn ms-2">Edit Log</button>`;
+            let logTimeButton = `<button class="btn btn-primary btn-sm float-end log-time-btn">Log Time</button>`;
             let cancelButton = '';
             if (showCancelButton) {
                 cancelButton = `<button class="btn btn-danger btn-sm float-end cancel-task-btn">X</button>`;
@@ -82,6 +93,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 <div class="card-body">
                     ${logTimeButton}
                     ${editLogButton}
+                    ${logTimeButton}
                     ${cancelButton}
                     <h5 class="card-title">${task.title}</h5>
                     <p class="card-text">Estimation: ${task.estimation_time}h</p>
