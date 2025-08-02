@@ -102,14 +102,10 @@ document.addEventListener('DOMContentLoaded', () => {
             if (showCancelButton) {
                 cancelButton = `<button class="btn btn-danger btn-sm float-end cancel-task-btn">X</button>`;
             }
-            let totalLogTime = '';
-            if (task.total_log_time) {
-                totalLogTime = `<p class="card-text logged-time-text">Logged: ${task.total_log_time}h</p>`;
-            }
+            const totalLogTime = `<p class="card-text logged-time-text">Logged: ${task.total_log_time || 0}h</p>`;
             taskElement.innerHTML = `
                 <div class="card-body">
                     ${editLogButton}
-                    ${logTimeButton}
                     ${cancelButton}
                     <h5 class="card-title">${task.title}</h5>
                     <p class="card-text">Estimation: ${task.estimation_time}h</p>
