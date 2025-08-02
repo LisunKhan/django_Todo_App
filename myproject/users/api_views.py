@@ -116,9 +116,11 @@ def user_stats_api(request, user_id, date_str):
     else:
         log_date = date.today()
 
+    logs = TodoLog.objects.filter(todo_item__user_id=user_id, task_date=log_date)
+    total_time_spent = logs.aggregate(Sum('log_time'))['log_time__sum'] or 0
+
     tasks = TodoItem.objects.filter(user_id=user_id, logs__task_date=log_date).distinct()
     total_estimation_time = tasks.aggregate(Sum('estimation_time'))['estimation_time__sum'] or 0
-    total_time_spent = tasks.aggregate(Sum('time_spent'))['time_spent__sum'] or 0
 
     return JsonResponse({
         'total_estimation_time': total_estimation_time,

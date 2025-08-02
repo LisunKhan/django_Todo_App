@@ -80,8 +80,10 @@ document.addEventListener('DOMContentLoaded', () => {
             memberElement.innerHTML = `
                 <div class="card-body">
                     <h5 class="card-title">${user.username}</h5>
-                    <p class="card-text">Yesterday: Est: ${yesterdayStats.total_estimation_time}h, Spent: ${yesterdayStats.total_time_spent}h</p>
-                    <p class="card-text">Today: Est: ${todayStats.total_estimation_time}h, Spent: ${todayStats.total_time_spent}h</p>
+                    <div class="member-stats">
+                        <p><span class="stat-label">Yesterday:</span> Est: <span class="stat-value">${yesterdayStats.total_estimation_time}h</span>, Spent: <span class="stat-value">${yesterdayStats.total_time_spent}h</span></p>
+                        <p><span class="stat-label">Today:</span> Est: <span class="stat-value">${todayStats.total_estimation_time}h</span>, Spent: <span class="stat-value">${todayStats.total_time_spent}h</span></p>
+                    </div>
                 </div>
             `;
             membersContainer.appendChild(memberElement);
