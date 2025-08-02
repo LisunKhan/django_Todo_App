@@ -363,23 +363,26 @@ document.addEventListener('DOMContentLoaded', () => {
 
             saveButton.addEventListener('click', async () => {
                 const logTimeValue = input.value;
-                if (logTimeValue) {
-                    const taskId = taskCard.dataset.taskId;
-                    const column = taskCard.closest('.task-column');
-                    let date;
-                    if (column.id === 'yesterday-tasks-container') {
-                        date = 'yesterday';
-                    } else if (column.id === 'today-tasks-container') {
-                        date = 'today';
-                    } else {
-                        date = dateInput.value;
+                try {
+                    if (logTimeValue) {
+                        const taskId = taskCard.dataset.taskId;
+                        const column = taskCard.closest('.task-column');
+                        let date;
+                        if (column.id === 'yesterday-tasks-container') {
+                            date = 'yesterday';
+                        } else if (column.id === 'today-tasks-container') {
+                            date = 'today';
+                        } else {
+                            date = dateInput.value;
+                        }
+                        await logTime(taskId, logTimeValue, date);
+                        const totalTimeSpentEl = taskCard.querySelector('.total-time-spent');
+                        const currentTotal = parseFloat(totalTimeSpentEl.textContent);
+                        totalTimeSpentEl.textContent = currentTotal + parseFloat(logTimeValue);
                     }
-                    await logTime(taskId, logTimeValue, date);
-                    const totalTimeSpentEl = taskCard.querySelector('.total-time-spent');
-                    const currentTotal = parseFloat(totalTimeSpentEl.textContent);
-                    totalTimeSpentEl.textContent = currentTotal + parseFloat(logTimeValue);
+                } finally {
                     cardBody.removeChild(input);
-                    if (dateInput) {
+                    if (dateInput.parentElement) {
                         cardBody.removeChild(dateInput);
                     }
                     cardBody.removeChild(saveButton);
@@ -389,7 +392,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             cancelButton.addEventListener('click', () => {
                 cardBody.removeChild(input);
-                if (dateInput) {
+                if (dateInput.parentElement) {
                     cardBody.removeChild(dateInput);
                 }
                 cardBody.removeChild(saveButton);
@@ -433,23 +436,26 @@ document.addEventListener('DOMContentLoaded', () => {
 
             saveButton.addEventListener('click', async () => {
                 const logTimeValue = input.value;
-                if (logTimeValue) {
-                    const taskId = taskCard.dataset.taskId;
-                    const column = taskCard.closest('.task-column');
-                    let date;
-                    if (column.id === 'yesterday-tasks-container') {
-                        date = 'yesterday';
-                    } else if (column.id === 'today-tasks-container') {
-                        date = 'today';
-                    } else {
-                        date = dateInput.value;
+                try {
+                    if (logTimeValue) {
+                        const taskId = taskCard.dataset.taskId;
+                        const column = taskCard.closest('.task-column');
+                        let date;
+                        if (column.id === 'yesterday-tasks-container') {
+                            date = 'yesterday';
+                        } else if (column.id === 'today-tasks-container') {
+                            date = 'today';
+                        } else {
+                            date = dateInput.value;
+                        }
+                        await logTime(taskId, logTimeValue, date);
+                        const totalTimeSpentEl = taskCard.querySelector('.total-time-spent');
+                        const currentTotal = parseFloat(totalTimeSpentEl.textContent);
+                        totalTimeSpentEl.textContent = currentTotal + parseFloat(logTimeValue);
                     }
-                    await logTime(taskId, logTimeValue, date);
-                    const totalTimeSpentEl = taskCard.querySelector('.total-time-spent');
-                    const currentTotal = parseFloat(totalTimeSpentEl.textContent);
-                    totalTimeSpentEl.textContent = currentTotal + parseFloat(logTimeValue);
+                } finally {
                     cardBody.removeChild(input);
-                    if (dateInput) {
+                    if (dateInput.parentElement) {
                         cardBody.removeChild(dateInput);
                     }
                     cardBody.removeChild(saveButton);
@@ -459,7 +465,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             cancelButton.addEventListener('click', () => {
                 cardBody.removeChild(input);
-                if (dateInput) {
+                if (dateInput.parentElement) {
                     cardBody.removeChild(dateInput);
                 }
                 cardBody.removeChild(saveButton);
