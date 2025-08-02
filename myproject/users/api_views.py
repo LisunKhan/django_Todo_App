@@ -110,16 +110,16 @@ def project_tasks_by_date_api(request, project_id, date_str):
 from django.db.models import Sum
 
 @login_required
-def user_stats_api(request, user_id, date_str):
+def user_stats_api(request, project_id, user_id, date_str):
     if date_str == 'yesterday':
         log_date = date.today() - timedelta(days=1)
     else:
         log_date = date.today()
 
-    logs = TodoLog.objects.filter(todo_item__user_id=user_id, task_date=log_date)
+    logs = TodoLog.objects.filter(todo_item__project_id=project_id, todo_item__user_id=user_id, task_date=log_date)
     total_time_spent = logs.aggregate(Sum('log_time'))['log_time__sum'] or 0
 
-    tasks = TodoItem.objects.filter(user_id=user_id, logs__task_date=log_date).distinct()
+    tasks = TodoItem.objects.filter(project_id=project_id, user_id=user_id, logs__task_date=log_date).distinct()
     total_estimation_time = tasks.aggregate(Sum('estimation_time'))['estimation_time__sum'] or 0
 
     return JsonResponse({

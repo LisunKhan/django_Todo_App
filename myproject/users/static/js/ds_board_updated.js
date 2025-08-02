@@ -71,10 +71,10 @@ document.addEventListener('DOMContentLoaded', () => {
             const memberElement = document.createElement('div');
             memberElement.classList.add('card', 'mb-2');
 
-            const yesterdayStatsResponse = await fetch(`/api/ds_board_updated/user/${user.id}/stats/yesterday/`);
+            const yesterdayStatsResponse = await fetch(`/api/ds_board_updated/project/${currentProjectId}/user/${user.id}/stats/yesterday/`);
             const yesterdayStats = await yesterdayStatsResponse.json();
 
-            const todayStatsResponse = await fetch(`/api/ds_board_updated/user/${user.id}/stats/today/`);
+            const todayStatsResponse = await fetch(`/api/ds_board_updated/project/${currentProjectId}/user/${user.id}/stats/today/`);
             const todayStats = await todayStatsResponse.json();
 
             memberElement.innerHTML = `
