@@ -23,6 +23,13 @@ body {
     padding: 20px;
     border-radius: 12px;
     background-color: #f4f5f7;
+    min-height: 500px;
+    border: 2px dashed transparent;
+    transition: border-color 0.3s;
+}
+
+.task-column.sortable-ghost {
+    border-color: #0052cc;
 }
 
 .task-column h2 {
@@ -273,6 +280,10 @@ body {
 
 #log-list input {
     margin-right: 10px;
+}
+
+#task-search-input {
+    margin-bottom: 15px;
 }
 
 .logged-time-text {
