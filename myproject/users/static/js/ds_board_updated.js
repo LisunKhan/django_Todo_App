@@ -331,12 +331,16 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         if (event.target.classList.contains('logged-time-text')) {
-            const taskCard = event.target.closest('.card');
+            const loggedTimeText = event.target;
+            const taskCard = loggedTimeText.closest('.card');
             const cardBody = taskCard.querySelector('.card-body');
             const logTimeInput = cardBody.querySelector('.log-time-input');
             if (logTimeInput) {
                 return;
             }
+
+            const originalText = loggedTimeText.textContent;
+            loggedTimeText.style.display = 'none';
 
             const input = document.createElement('input');
             input.type = 'number';
@@ -357,6 +361,16 @@ document.addEventListener('DOMContentLoaded', () => {
             cancelButton.textContent = 'Cancel';
             cancelButton.classList.add('btn', 'btn-danger', 'btn-sm', 'ms-2');
 
+            const tempContainer = document.createElement('div');
+            tempContainer.appendChild(input);
+            if (taskCard.closest('.task-column').id === 'tasks-container') {
+                tempContainer.appendChild(dateInput);
+            }
+            tempContainer.appendChild(saveButton);
+            tempContainer.appendChild(cancelButton);
+
+            loggedTimeText.parentElement.insertBefore(tempContainer, loggedTimeText.nextSibling);
+
             saveButton.addEventListener('click', async () => {
                 const logTimeValue = input.value;
                 try {
@@ -375,32 +389,18 @@ document.addEventListener('DOMContentLoaded', () => {
                         const totalTimeSpentEl = taskCard.querySelector('.total-time-spent');
                         const currentTotal = parseFloat(totalTimeSpentEl.textContent);
                         totalTimeSpentEl.textContent = currentTotal + parseFloat(logTimeValue);
+                        loggedTimeText.textContent = `Logged: ${parseFloat(originalText.split(' ')[1]) + parseFloat(logTimeValue)}h`;
                     }
                 } finally {
-                    cardBody.removeChild(input);
-                    if (dateInput.parentElement) {
-                        cardBody.removeChild(dateInput);
-                    }
-                    cardBody.removeChild(saveButton);
-                    cardBody.removeChild(cancelButton);
+                    loggedTimeText.style.display = 'block';
+                    tempContainer.remove();
                 }
             });
 
             cancelButton.addEventListener('click', () => {
-                cardBody.removeChild(input);
-                if (dateInput.parentElement) {
-                    cardBody.removeChild(dateInput);
-                }
-                cardBody.removeChild(saveButton);
-                cardBody.removeChild(cancelButton);
+                loggedTimeText.style.display = 'block';
+                tempContainer.remove();
             });
-
-            cardBody.appendChild(input);
-            if (taskCard.closest('.task-column').id === 'tasks-container') {
-                cardBody.appendChild(dateInput);
-            }
-            cardBody.appendChild(saveButton);
-            cardBody.appendChild(cancelButton);
         }
 
         if (event.target.classList.contains('log-time-btn')) {

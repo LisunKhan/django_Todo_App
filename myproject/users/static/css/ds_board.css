@@ -235,8 +235,13 @@ body {
 
 .logged-time-text {
     cursor: pointer;
+    border: 1px solid #ccc;
+    padding: 5px;
+    border-radius: 3px;
+    background-color: #f8f9fa;
 }
 
 .logged-time-text:hover {
-    text-decoration: underline;
+    background-color: #e9ecef;
+    border-color: #b8b8b8;
 }
