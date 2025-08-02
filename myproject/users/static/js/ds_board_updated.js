@@ -78,11 +78,20 @@ document.addEventListener('DOMContentLoaded', () => {
             const todayStats = await todayStatsResponse.json();
 
             memberElement.innerHTML = `
-                <div class="card-body">
+                <div class="card-body member-card">
                     <h5 class="card-title">${user.username}</h5>
+                    <p class="card-text text-muted">${user.email}</p>
                     <div class="member-stats">
-                        <p><span class="stat-label">Yesterday:</span> Est: <span class="stat-value">${yesterdayStats.total_estimation_time}h</span>, Spent: <span class="stat-value">${yesterdayStats.total_time_spent}h</span></p>
-                        <p><span class="stat-label">Today:</span> Est: <span class="stat-value">${todayStats.total_estimation_time}h</span>, Spent: <span class="stat-value">${todayStats.total_time_spent}h</span></p>
+                        <div class="stat">
+                            <span class="stat-label">Yesterday</span>
+                            <span class="stat-value">Est: ${yesterdayStats.total_estimation_time}h</span>
+                            <span class="stat-value">Spent: ${yesterdayStats.total_time_spent}h</span>
+                        </div>
+                        <div class="stat">
+                            <span class="stat-label">Today</span>
+                            <span class="stat-value">Est: ${todayStats.total_estimation_time}h</span>
+                            <span class="stat-value">Spent: ${todayStats.total_time_spent}h</span>
+                        </div>
                     </div>
                 </div>
             `;
