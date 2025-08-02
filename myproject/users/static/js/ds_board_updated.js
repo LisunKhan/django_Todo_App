@@ -171,7 +171,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 updateTaskLog(taskId, 'yesterday');
 
                 const cardBody = itemEl.querySelector('.card-body');
-                const cancelButton = `<button class="btn btn-danger btn-sm float-end cancel-task-btn">X</button>`;
+                const cancelButton = `<button class="btn btn-danger btn-sm float-end cancel-task-btn ms-2">X</button>`;
                 const logTimeButton = `<button class="btn btn-primary btn-sm float-end log-time-btn ms-2">Log Time</button>`;
                 const editLogButton = `<button class="btn btn-secondary btn-sm float-end edit-log-btn ms-2">Edit Log</button>`;
                 cardBody.innerHTML = cancelButton + logTimeButton + editLogButton + cardBody.innerHTML;
