@@ -675,12 +675,6 @@ class ProjectDetailView(LoginRequiredMixin, UserPassesTestMixin, DetailView):
         context['tasks'] = TodoItem.objects.filter(project=project).order_by('status', 'created_at')
         return context
 
-@login_required
-def ds_board_view(request):
-    """
-    View to render the DS board page.
-    """
-    return render(request, 'users/ds_board.html')
 
 @login_required
 def ds_board_updated_view(request):
