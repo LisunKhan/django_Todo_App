@@ -100,15 +100,19 @@ def project_tasks_by_date_api(request, project_id, date_str):
         log_date = date.today()
 
     tasks = TodoItem.objects.filter(project_id=project_id, logs__task_date=log_date).distinct()
-    tasks_data = [{
-        'id': task.id,
-        'title': task.title,
-        'description': task.description,
-        'status': task.status,
-        'user_id': task.user.id,
-        'estimation_time': task.estimation_time,
-        'time_spent': task.time_spent
-    } for task in tasks]
+    tasks_data = []
+    for task in tasks:
+        total_log_time = task.logs.filter(task_date=log_date).aggregate(Sum('log_time'))['log_time__sum'] or 0
+        tasks_data.append({
+            'id': task.id,
+            'title': task.title,
+            'description': task.description,
+            'status': task.status,
+            'user_id': task.user.id,
+            'estimation_time': task.estimation_time,
+            'time_spent': task.time_spent,
+            'total_log_time': total_log_time
+        })
     return JsonResponse(tasks_data, safe=False)
 
 from django.db.models import Sum

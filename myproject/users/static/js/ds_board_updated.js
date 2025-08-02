@@ -102,6 +102,10 @@ document.addEventListener('DOMContentLoaded', () => {
             if (showCancelButton) {
                 cancelButton = `<button class="btn btn-danger btn-sm float-end cancel-task-btn">X</button>`;
             }
+            let totalLogTime = '';
+            if (task.total_log_time) {
+                totalLogTime = `<p class="card-text">Logged: ${task.total_log_time}h</p>`;
+            }
             taskElement.innerHTML = `
                 <div class="card-body">
                     ${editLogButton}
@@ -110,6 +114,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     <h5 class="card-title">${task.title}</h5>
                     <p class="card-text">Estimation: ${task.estimation_time}h</p>
                     <p class="card-text">Total Time Spent: <span class="total-time-spent">${task.time_spent}</span>h</p>
+                    ${totalLogTime}
                 </div>
             `;
             container.appendChild(taskElement);
