@@ -104,7 +104,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             let totalLogTime = '';
             if (task.total_log_time) {
-                totalLogTime = `<p class="card-text">Logged: ${task.total_log_time}h</p>`;
+                totalLogTime = `<p class="card-text logged-time-text">Logged: ${task.total_log_time}h</p>`;
             }
             taskElement.innerHTML = `
                 <div class="card-body">
@@ -332,6 +332,61 @@ document.addEventListener('DOMContentLoaded', () => {
             const taskCard = event.target.closest('.card');
             const taskId = taskCard.dataset.taskId;
             showLogList(taskId);
+        }
+
+        if (event.target.classList.contains('logged-time-text')) {
+            const taskCard = event.target.closest('.card');
+            const cardBody = taskCard.querySelector('.card-body');
+            const logTimeInput = cardBody.querySelector('.log-time-input');
+            if (logTimeInput) {
+                return;
+            }
+
+            const input = document.createElement('input');
+            input.type = 'number';
+            input.min = '0';
+            input.step = '0.5';
+            input.placeholder = 'Hours';
+            input.classList.add('log-time-input');
+
+            const dateInput = document.createElement('input');
+            dateInput.type = 'date';
+            dateInput.classList.add('log-time-input', 'ms-2');
+
+            const saveButton = document.createElement('button');
+            saveButton.textContent = 'Save';
+            saveButton.classList.add('btn', 'btn-success', 'btn-sm', 'ms-2');
+
+            saveButton.addEventListener('click', async () => {
+                const logTimeValue = input.value;
+                if (logTimeValue) {
+                    const taskId = taskCard.dataset.taskId;
+                    const column = taskCard.closest('.task-column');
+                    let date;
+                    if (column.id === 'yesterday-tasks-container') {
+                        date = 'yesterday';
+                    } else if (column.id === 'today-tasks-container') {
+                        date = 'today';
+                    } else {
+                        date = dateInput.value;
+                    }
+                    await logTime(taskId, logTimeValue, date);
+                    const totalTimeSpentEl = taskCard.querySelector('.total-time-spent');
+                    const currentTotal = parseFloat(totalTimeSpentEl.textContent);
+                    totalTimeSpentEl.textContent = currentTotal + parseFloat(logTimeValue);
+                    cardBody.removeChild(input);
+                    if (dateInput) {
+                        cardBody.removeChild(dateInput);
+                    }
+                    cardBody.removeChild(saveButton);
+                }
+            });
+
+            cardBody.appendChild(input);
+            if (taskCard.closest('.task-column').id === 'tasks-container') {
+                cardBody.appendChild(dateInput);
+            }
+            cardBody.appendChild(saveButton);
         }
 
         if (event.target.classList.contains('log-time-btn')) {
