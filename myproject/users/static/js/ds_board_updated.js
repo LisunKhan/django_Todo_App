@@ -500,37 +500,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    const yesterdayTaskSearchInput = document.getElementById('yesterday-task-search-input');
-    if (yesterdayTaskSearchInput) {
-        yesterdayTaskSearchInput.addEventListener('input', () => {
-            const searchQuery = yesterdayTaskSearchInput.value.toLowerCase();
-            const tasks = Array.from(yesterdayTasksContainer.children);
-            tasks.forEach(task => {
-                const title = task.querySelector('.card-title').textContent.toLowerCase();
-                if (title.includes(searchQuery)) {
-                    task.style.display = '';
-                } else {
-                    task.style.display = 'none';
-                }
-            });
-        });
-    }
-
-    const todayTaskSearchInput = document.getElementById('today-task-search-input');
-    if (todayTaskSearchInput) {
-        todayTaskSearchInput.addEventListener('input', () => {
-            const searchQuery = todayTaskSearchInput.value.toLowerCase();
-            const tasks = Array.from(todayTasksContainer.children);
-            tasks.forEach(task => {
-                const title = task.querySelector('.card-title').textContent.toLowerCase();
-                if (title.includes(searchQuery)) {
-                    task.style.display = '';
-                } else {
-                    task.style.display = 'none';
-                }
-            });
-        });
-    }
 
     if (paginationContainer) {
         paginationContainer.addEventListener('click', (event) => {
