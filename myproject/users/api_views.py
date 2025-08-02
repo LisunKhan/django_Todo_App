@@ -20,7 +20,7 @@ def project_list_api(request):
 def project_users_api(request, project_id):
     project = Project.objects.get(id=project_id)
     users = project.members.all()
-    users_data = [{'id': user.id, 'username': user.username} for user in users]
+    users_data = [{'id': user.id, 'username': user.username, 'email': user.email} for user in users]
     return JsonResponse(users_data, safe=False)
 
 from django.core.paginator import Paginator
