@@ -21,12 +21,19 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function populateProjectFilter(projects) {
-        projects.forEach(project => {
+        projects.forEach((project, index) => {
             const option = document.createElement('option');
             option.value = project.id;
             option.textContent = project.name;
+            if (index === 0) {
+                option.selected = true;
+            }
             projectFilterSelect.appendChild(option);
         });
+
+        if (projects.length > 0) {
+            fetchProjectData(projects[0].id);
+        }
     }
 
     async function fetchProjectData(projectId, page = 1, searchQuery = '') {
