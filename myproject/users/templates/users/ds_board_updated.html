@@ -12,7 +12,6 @@
         <div class="col-md-4">
             <label for="project-filter-select" class="form-label">Filter by Project:</label>
             <select id="project-filter-select" class="form-select">
-                <option value="all" selected>All Projects</option>
             </select>
         </div>
     </div>
@@ -42,12 +41,18 @@
                 </div>
                 <div class="col-md-4">
                     <h2>Yesterday's Tasks</h2>
+                    <div class="mb-3">
+                        <input type="text" id="yesterday-task-search-input" class="form-control" placeholder="Search yesterday's tasks...">
+                    </div>
                     <div id="yesterday-tasks-container" class="task-column">
                         <!-- Yesterday's tasks will be rendered here -->
                     </div>
                 </div>
                 <div class="col-md-4">
                     <h2>Today's Tasks</h2>
+                    <div class="mb-3">
+                        <input type="text" id="today-task-search-input" class="form-control" placeholder="Search today's tasks...">
+                    </div>
                     <div id="today-tasks-container" class="task-column">
                         <!-- Today's tasks will be rendered here -->
                     </div>
