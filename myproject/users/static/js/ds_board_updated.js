@@ -1,6 +1,9 @@
 document.addEventListener('DOMContentLoaded', () => {
     const projectFilterSelect = document.getElementById('project-filter-select');
-    const userRowsContainer = document.getElementById('user-rows-container');
+    const membersContainer = document.getElementById('members-container');
+    const tasksContainer = document.getElementById('tasks-container');
+    const yesterdayTasksContainer = document.getElementById('yesterday-tasks-container');
+    const todayTasksContainer = document.getElementById('today-tasks-container');
     const taskSearchInput = document.getElementById('task-search-input');
     const paginationContainer = document.getElementById('pagination-container');
     const editLogModal = document.getElementById('edit-log-modal');
@@ -35,7 +38,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     async function fetchProjectData(projectId, page = 1, searchQuery = '') {
         if (!projectId || projectId === 'all') {
-            userRowsContainer.innerHTML = '';
+            membersContainer.innerHTML = '';
+            tasksContainer.innerHTML = '';
+            yesterdayTasksContainer.innerHTML = '';
+            todayTasksContainer.innerHTML = '';
             paginationContainer.innerHTML = '';
             return;
         }
@@ -44,66 +50,60 @@ document.addEventListener('DOMContentLoaded', () => {
         currentPage = page;
         currentSearchQuery = searchQuery;
 
-        userRowsContainer.innerHTML = '';
-
+        // Fetch members
         const usersResponse = await fetch(`/api/ds_board/project/${projectId}/users/`);
         const users = await usersResponse.json();
+        renderMembers(users);
 
-        for (const user of users) {
-            await renderUserRow(user, page, searchQuery);
-        }
-    }
-
-    async function renderUserRow(user, page, searchQuery) {
-        const userRow = document.createElement('div');
-        userRow.classList.add('user-row', 'mb-4');
-        userRow.innerHTML = `
-            <div class="row">
-                <div class="col-md-12">
-                    <h3>${user.username}</h3>
-                </div>
-            </div>
-            <div class="row">
-                <div class="col-md-4">
-                    <h2>All Tasks</h2>
-                    <div class="task-column all-tasks-container" data-user-id="${user.id}"></div>
-                </div>
-                <div class="col-md-4">
-                    <h2>Yesterday's Tasks</h2>
-                    <div class="task-column yesterday-tasks-container" data-user-id="${user.id}"></div>
-                </div>
-                <div class="col-md-4">
-                    <h2>Today's Tasks</h2>
-                    <div class="task-column today-tasks-container" data-user-id="${user.id}"></div>
-                </div>
-            </div>
-        `;
-        userRowsContainer.appendChild(userRow);
-
-        const allTasksContainer = userRow.querySelector('.all-tasks-container');
-        const yesterdayTasksContainer = userRow.querySelector('.yesterday-tasks-container');
-        const todayTasksContainer = userRow.querySelector('.today-tasks-container');
-
-        // Fetch all tasks for the user
-        const tasksResponse = await fetch(`/api/ds_board/project/${currentProjectId}/tasks/?page=${page}&search=${searchQuery}&user_id=${user.id}`);
+        // Fetch all tasks
+        const tasksResponse = await fetch(`/api/ds_board/project/${projectId}/tasks/?page=${page}&search=${searchQuery}`);
         const tasksData = await tasksResponse.json();
-        renderTasks(tasksData.tasks, allTasksContainer);
-        if (user.id === users[0].id) { // Render pagination only for the first user to avoid duplicates
-            renderPagination(tasksData);
-        }
+        renderTasks(tasksData.tasks, tasksContainer);
+        renderPagination(tasksData);
 
-
-        // Fetch yesterday's tasks for the user
-        const yesterdayTasksResponse = await fetch(`/api/ds_board_updated/project/${currentProjectId}/tasks/yesterday/?user_id=${user.id}`);
+        // Fetch yesterday's tasks
+        const yesterdayTasksResponse = await fetch(`/api/ds_board_updated/project/${projectId}/tasks/yesterday/`);
         const yesterdayTasks = await yesterdayTasksResponse.json();
         renderTasks(yesterdayTasks, yesterdayTasksContainer, true);
 
-        // Fetch today's tasks for the user
-        const todayTasksResponse = await fetch(`/api/ds_board_updated/project/${currentProjectId}/tasks/today/?user_id=${user.id}`);
+        // Fetch today's tasks
+        const todayTasksResponse = await fetch(`/api/ds_board_updated/project/${projectId}/tasks/today/`);
         const todayTasks = await todayTasksResponse.json();
         renderTasks(todayTasks, todayTasksContainer, true);
+    }
 
-        initializeSortable(allTasksContainer, yesterdayTasksContainer, todayTasksContainer);
+    async function renderMembers(users) {
+        membersContainer.innerHTML = '';
+        for (const user of users) {
+            const memberElement = document.createElement('div');
+            memberElement.classList.add('card', 'mb-2');
+
+            const yesterdayStatsResponse = await fetch(`/api/ds_board_updated/project/${currentProjectId}/user/${user.id}/stats/yesterday/`);
+            const yesterdayStats = await yesterdayStatsResponse.json();
+
+            const todayStatsResponse = await fetch(`/api/ds_board_updated/project/${currentProjectId}/user/${user.id}/stats/today/`);
+            const todayStats = await todayStatsResponse.json();
+
+            memberElement.innerHTML = `
+                <div class="card-body member-card">
+                    <h5 class="card-title">${user.username}</h5>
+                    <p class="card-text text-muted">${user.email}</p>
+                    <div class="member-stats">
+                        <div class="stat">
+                            <span class="stat-label">Yesterday</span>
+                            <span class="stat-value">Est: ${yesterdayStats.total_estimation_time}h</span>
+                            <span class="stat-value">Spent: ${yesterdayStats.total_time_spent}h</span>
+                        </div>
+                        <div class="stat">
+                            <span class="stat-label">Today</span>
+                            <span class="stat-value">Est: ${todayStats.total_estimation_time}h</span>
+                            <span class="stat-value">Spent: ${todayStats.total_time_spent}h</span>
+                        </div>
+                    </div>
+                </div>
+            `;
+            membersContainer.appendChild(memberElement);
+        }
     }
 
     function renderTasks(tasks, container, showCancelButton = false) {
@@ -161,8 +161,8 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    function initializeSortable(allTasksContainer, yesterdayTasksContainer, todayTasksContainer) {
-        new Sortable(allTasksContainer, {
+    function initializeSortable() {
+        new Sortable(tasksContainer, {
             group: {
                 name: 'tasks',
                 pull: 'clone',
@@ -205,6 +205,21 @@ document.addEventListener('DOMContentLoaded', () => {
                 const cancelButton = `<button class="btn btn-danger btn-sm float-end cancel-task-btn">X</button>`;
                 cardBody.innerHTML = cancelButton + cardBody.innerHTML;
             }
+        });
+    }
+
+    async function logTime(taskId, logTime, date) {
+        await fetch('/api/ds_board_updated/log_time/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken'),
+            },
+            body: JSON.stringify({
+                task_id: taskId,
+                log_time: logTime,
+                date: date,
+            }),
         });
     }
 
@@ -422,7 +437,7 @@ document.addEventListener('DOMContentLoaded', () => {
         return cookieValue;
     }
 
-    document.getElementById('user-rows-container').addEventListener('click', (event) => {
+    document.getElementById('ds-board-container').addEventListener('click', (event) => {
         if (event.target.classList.contains('cancel-task-btn')) {
             const taskCard = event.target.closest('.card');
             const taskId = taskCard.dataset.taskId;
@@ -434,6 +449,152 @@ document.addEventListener('DOMContentLoaded', () => {
             const taskCard = event.target.closest('.card');
             const taskId = taskCard.dataset.taskId;
             showLogList(taskId);
+        }
+
+        if (event.target.classList.contains('logged-time-text')) {
+            const loggedTimeText = event.target;
+            const taskCard = loggedTimeText.closest('.card');
+            const cardBody = taskCard.querySelector('.card-body');
+            const logTimeInput = cardBody.querySelector('.log-time-input');
+            if (logTimeInput) {
+                return;
+            }
+
+            const originalText = loggedTimeText.textContent;
+            loggedTimeText.style.display = 'none';
+
+            const input = document.createElement('input');
+            input.type = 'number';
+            input.min = '0';
+            input.step = '0.5';
+            input.placeholder = 'Hours';
+            input.classList.add('log-time-input');
+
+            const dateInput = document.createElement('input');
+            dateInput.type = 'date';
+            dateInput.classList.add('log-time-input', 'ms-2');
+
+            const saveButton = document.createElement('button');
+            saveButton.textContent = 'Save';
+            saveButton.classList.add('btn', 'btn-success', 'btn-sm', 'ms-2');
+
+            const cancelButton = document.createElement('button');
+            cancelButton.textContent = 'Cancel';
+            cancelButton.classList.add('btn', 'btn-danger', 'btn-sm', 'ms-2');
+
+            const tempContainer = document.createElement('div');
+            tempContainer.appendChild(input);
+            if (taskCard.closest('.task-column').id === 'tasks-container') {
+                tempContainer.appendChild(dateInput);
+            }
+            tempContainer.appendChild(saveButton);
+            tempContainer.appendChild(cancelButton);
+
+            loggedTimeText.parentElement.insertBefore(tempContainer, loggedTimeText.nextSibling);
+
+            saveButton.addEventListener('click', async () => {
+                const logTimeValue = input.value;
+                try {
+                    if (logTimeValue) {
+                        const taskId = taskCard.dataset.taskId;
+                        const column = taskCard.closest('.task-column');
+                        let date;
+                        if (column.id === 'yesterday-tasks-container') {
+                            date = 'yesterday';
+                        } else if (column.id === 'today-tasks-container') {
+                            date = 'today';
+                        } else {
+                            date = dateInput.value;
+                        }
+                        await logTime(taskId, logTimeValue, date);
+                        const totalTimeSpentEl = taskCard.querySelector('.total-time-spent');
+                        const currentTotal = parseFloat(totalTimeSpentEl.textContent);
+                        totalTimeSpentEl.textContent = currentTotal + parseFloat(logTimeValue);
+                        loggedTimeText.textContent = `Logged: ${parseFloat(originalText.split(' ')[1]) + parseFloat(logTimeValue)}h`;
+                    }
+                } finally {
+                    loggedTimeText.style.display = 'block';
+                    tempContainer.remove();
+                }
+            });
+
+            cancelButton.addEventListener('click', () => {
+                loggedTimeText.style.display = 'block';
+                tempContainer.remove();
+            });
+        }
+
+        if (event.target.classList.contains('log-time-btn')) {
+            const taskCard = event.target.closest('.card');
+            const cardBody = taskCard.querySelector('.card-body');
+            const logTimeInput = cardBody.querySelector('.log-time-input');
+            if (logTimeInput) {
+                return;
+            }
+
+            const input = document.createElement('input');
+            input.type = 'number';
+            input.min = '0';
+            input.step = '0.5';
+            input.placeholder = 'Hours';
+            input.classList.add('log-time-input');
+
+            const dateInput = document.createElement('input');
+            dateInput.type = 'date';
+            dateInput.classList.add('log-time-input', 'ms-2');
+
+            const saveButton = document.createElement('button');
+            saveButton.textContent = 'Save';
+            saveButton.classList.add('btn', 'btn-success', 'btn-sm', 'ms-2');
+
+            const cancelButton = document.createElement('button');
+            cancelButton.textContent = 'Cancel';
+            cancelButton.classList.add('btn', 'btn-danger', 'btn-sm', 'ms-2');
+
+            saveButton.addEventListener('click', async () => {
+                const logTimeValue = input.value;
+                try {
+                    if (logTimeValue) {
+                        const taskId = taskCard.dataset.taskId;
+                        const column = taskCard.closest('.task-column');
+                        let date;
+                        if (column.id === 'yesterday-tasks-container') {
+                            date = 'yesterday';
+                        } else if (column.id === 'today-tasks-container') {
+                            date = 'today';
+                        } else {
+                            date = dateInput.value;
+                        }
+                        await logTime(taskId, logTimeValue, date);
+                        const totalTimeSpentEl = taskCard.querySelector('.total-time-spent');
+                        const currentTotal = parseFloat(totalTimeSpentEl.textContent);
+                        totalTimeSpentEl.textContent = currentTotal + parseFloat(logTimeValue);
+                    }
+                } finally {
+                    cardBody.removeChild(input);
+                    if (dateInput.parentElement) {
+                        cardBody.removeChild(dateInput);
+                    }
+                    cardBody.removeChild(saveButton);
+                    cardBody.removeChild(cancelButton);
+                }
+            });
+
+            cancelButton.addEventListener('click', () => {
+                cardBody.removeChild(input);
+                if (dateInput.parentElement) {
+                    cardBody.removeChild(dateInput);
+                }
+                cardBody.removeChild(saveButton);
+                cardBody.removeChild(cancelButton);
+            });
+
+            cardBody.appendChild(input);
+            if (taskCard.closest('.task-column').id === 'tasks-container') {
+                cardBody.appendChild(dateInput);
+            }
+            cardBody.appendChild(saveButton);
+            cardBody.appendChild(cancelButton);
         }
     });
 
@@ -477,4 +638,5 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     fetchProjects();
+    initializeSortable();
 });

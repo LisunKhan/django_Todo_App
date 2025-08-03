@@ -33,10 +33,6 @@ def project_tasks_api(request, project_id):
     if search_query:
         tasks_query = tasks_query.filter(title__icontains=search_query)
 
-    user_id = request.GET.get('user_id')
-    if user_id:
-        tasks_query = tasks_query.filter(user_id=user_id)
-
     paginator = Paginator(tasks_query, 10) # 10 tasks per page
     page_number = request.GET.get('page', 1)
     page_obj = paginator.get_page(page_number)
