@@ -19,7 +19,7 @@ def project_list_api(request):
 @login_required
 def project_users_api(request, project_id):
     project = Project.objects.get(id=project_id)
-    users = project.members.all()
+    users = project.members.filter(id=request.user.id)
     users_data = [{'id': user.id, 'username': user.username, 'email': user.email} for user in users]
     return JsonResponse(users_data, safe=False)
 
@@ -27,7 +27,7 @@ from django.core.paginator import Paginator
 
 @login_required
 def project_tasks_api(request, project_id):
-    tasks_query = TodoItem.objects.filter(project_id=project_id)
+    tasks_query = TodoItem.objects.filter(project_id=project_id, user=request.user)
 
     search_query = request.GET.get('search')
     if search_query:
@@ -110,7 +110,7 @@ def project_tasks_by_date_api(request, project_id, date_str):
     else:
         log_date = date.today()
 
-    tasks = TodoItem.objects.filter(project_id=project_id, logs__task_date=log_date).distinct()
+    tasks = TodoItem.objects.filter(project_id=project_id, user=request.user, logs__task_date=log_date).distinct()
     tasks_data = []
     for task in tasks:
         total_log_time = task.logs.filter(task_date=log_date).aggregate(Sum('log_time'))['log_time__sum'] or 0
