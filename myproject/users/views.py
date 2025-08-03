@@ -682,3 +682,31 @@ def ds_board_updated_view(request):
     View to render the DS board updated page.
     """
     return render(request, 'users/ds_board_updated.html')
+
+
+from datetime import timedelta
+
+@login_required
+def project_summary_view(request, project_id):
+    project = get_object_or_404(Project, id=project_id)
+    members = project.members.all()
+
+    today = date.today()
+    yesterday = today - timedelta(days=1)
+
+    summary_data = []
+    for member in members:
+        yesterday_tasks = TodoItem.objects.filter(user=member, project=project, logs__task_date=yesterday).distinct()
+        today_tasks = TodoItem.objects.filter(user=member, project=project, logs__task_date=today).distinct()
+
+        summary_data.append({
+            'member': member,
+            'yesterday_tasks': yesterday_tasks,
+            'today_tasks': today_tasks,
+        })
+
+    context = {
+        'project': project,
+        'summary_data': summary_data,
+    }
+    return render(request, 'users/project_summary.html', context)

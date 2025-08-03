@@ -9,6 +9,7 @@ urlpatterns = [
     # Project URLs
     path('projects/', views.ProjectListView.as_view(), name='project_list'),
     path('projects/<int:pk>/', views.ProjectDetailView.as_view(), name='project_detail'),
+    path('projects/<int:project_id>/summary/', views.project_summary_view, name='project_summary'),
 
     path('todo_list/', views.todo_list, name='todo_list'),
     path('add_todo/', views.add_todo, name='add_todo'),

@@ -1,0 +1,48 @@
+{% extends "todo/base.html" %}
+
+{% block title %}{{ project.name }} - Summary{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1 class="mb-4">Project Summary: {{ project.name }}</h1>
+
+    <div class="card">
+        <div class="card-body">
+            <table class="table table-bordered">
+                <thead>
+                    <tr>
+                        <th>Member Name</th>
+                        <th>Yesterday's Tasks</th>
+                        <th>Today's Tasks</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in summary_data %}
+                    <tr>
+                        <td>{{ item.member.username }}</td>
+                        <td>
+                            <ul class="list-unstyled">
+                                {% for task in item.yesterday_tasks %}
+                                    <li>{{ task.title }} ({{ task.time_spent }}h)</li>
+                                {% empty %}
+                                    <li>No tasks yesterday.</li>
+                                {% endfor %}
+                            </ul>
+                        </td>
+                        <td>
+                            <ul class="list-unstyled">
+                                {% for task in item.today_tasks %}
+                                    <li>{{ task.title }} ({{ task.time_spent }}h)</li>
+                                {% empty %}
+                                    <li>No tasks today.</li>
+                                {% endfor %}
+                            </ul>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
