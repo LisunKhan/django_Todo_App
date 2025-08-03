@@ -485,9 +485,11 @@ document.addEventListener('DOMContentLoaded', () => {
                         const column = taskCard.closest('.task-column');
                         let date;
                         if (column.classList.contains('yesterday-tasks-container')) {
-                            date = 'yesterday';
+                            const yesterday = new Date();
+                            yesterday.setDate(yesterday.getDate() - 1);
+                            date = yesterday.toISOString().slice(0, 10);
                         } else if (column.classList.contains('today-tasks-container')) {
-                            date = 'today';
+                            date = new Date().toISOString().slice(0, 10);
                         } else {
                             date = dateInput.value;
                         }
