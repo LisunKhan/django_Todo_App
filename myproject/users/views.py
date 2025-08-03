@@ -696,11 +696,28 @@ def project_summary_view(request, project_id):
 
     summary_data = []
     for member in members:
-        yesterday_tasks = TodoItem.objects.filter(user=member, project=project, logs__task_date=yesterday).distinct()
-        today_tasks = TodoItem.objects.filter(user=member, project=project, logs__task_date=today).distinct()
+        yesterday_logs = TodoLog.objects.filter(todo_item__user=member, todo_item__project=project, task_date=yesterday)
+        today_logs = TodoLog.objects.filter(todo_item__user=member, todo_item__project=project, task_date=today)
+
+        total_yesterday = yesterday_logs.aggregate(Sum('log_time'))['log_time__sum'] or 0
+        total_today = today_logs.aggregate(Sum('log_time'))['log_time__sum'] or 0
+
+        yesterday_tasks = {}
+        for log in yesterday_logs:
+            if log.todo_item.title not in yesterday_tasks:
+                yesterday_tasks[log.todo_item.title] = 0
+            yesterday_tasks[log.todo_item.title] += log.log_time
+
+        today_tasks = {}
+        for log in today_logs:
+            if log.todo_item.title not in today_tasks:
+                today_tasks[log.todo_item.title] = 0
+            today_tasks[log.todo_item.title] += log.log_time
 
         summary_data.append({
             'member': member,
+            'total_yesterday': total_yesterday,
+            'total_today': total_today,
             'yesterday_tasks': yesterday_tasks,
             'today_tasks': today_tasks,
         })

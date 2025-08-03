@@ -19,11 +19,15 @@
                 <tbody>
                     {% for item in summary_data %}
                     <tr>
-                        <td>{{ item.member.username }}</td>
+                        <td>
+                            <strong>{{ item.member.username }}</strong><br>
+                            <small>Yesterday: {{ item.total_yesterday }}h</small><br>
+                            <small>Today: {{ item.total_today }}h</small>
+                        </td>
                         <td>
                             <ul class="list-unstyled">
-                                {% for task in item.yesterday_tasks %}
-                                    <li>{{ task.title }} ({{ task.time_spent }}h)</li>
+                                {% for task_title, time_spent in item.yesterday_tasks.items %}
+                                    <li>{{ task_title }} ({{ time_spent }}h)</li>
                                 {% empty %}
                                     <li>No tasks yesterday.</li>
                                 {% endfor %}
@@ -31,8 +35,8 @@
                         </td>
                         <td>
                             <ul class="list-unstyled">
-                                {% for task in item.today_tasks %}
-                                    <li>{{ task.title }} ({{ task.time_spent }}h)</li>
+                                {% for task_title, time_spent in item.today_tasks.items %}
+                                    <li>{{ task_title }} ({{ time_spent }}h)</li>
                                 {% empty %}
                                     <li>No tasks today.</li>
                                 {% endfor %}
