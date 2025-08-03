@@ -241,52 +241,66 @@ document.addEventListener('DOMContentLoaded', () => {
         const response = await fetch(`/api/ds_board_updated/task/${taskId}/logs/`);
         const logs = await response.json();
         logList.innerHTML = '';
+
+        const table = document.createElement('table');
+        table.classList.add('table');
+        const thead = document.createElement('thead');
+        thead.innerHTML = `
+            <tr>
+                <th>Date</th>
+                <th>Time (h)</th>
+                <th>Notes</th>
+                <th>Actions</th>
+            </tr>
+        `;
+        table.appendChild(thead);
+
+        const tbody = document.createElement('tbody');
         logs.forEach(log => {
-            const logElement = document.createElement('div');
-            logElement.setAttribute('data-log-id', log.id);
-            logElement.innerHTML = `
-                <p>Date: ${log.task_date}</p>
-                <p>Time: <span class="log-time">${log.log_time}</span>h</p>
-                <p>Notes: <span class="log-notes">${log.notes || ''}</span></p>
-                <button class="btn btn-primary btn-sm edit-log-btn">Edit</button>
-                <button class="btn btn-danger btn-sm delete-log-btn">Delete</button>
+            const row = document.createElement('tr');
+            row.setAttribute('data-log-id', log.id);
+            row.innerHTML = `
+                <td>${log.task_date}</td>
+                <td><span class="log-time">${log.log_time}</span></td>
+                <td><span class="log-notes">${log.notes || ''}</span></td>
+                <td>
+                    <button class="btn btn-sm btn-edit">Edit</button>
+                    <button class="btn btn-sm btn-delete">Delete</button>
+                </td>
             `;
-            logElement.querySelector('.edit-log-btn').addEventListener('click', () => editLog(log.id, logElement, taskId));
-            logElement.querySelector('.delete-log-btn').addEventListener('click', () => deleteLog(log.id, logElement, taskId));
-            logList.appendChild(logElement);
+            row.querySelector('.btn-edit').addEventListener('click', () => editLog(log.id, row, taskId));
+            row.querySelector('.btn-delete').addEventListener('click', () => deleteLog(log.id, row, taskId));
+            tbody.appendChild(row);
         });
+        table.appendChild(tbody);
+        logList.appendChild(table);
         editLogModal.style.display = 'block';
     }
 
     function editLog(logId, logElement, taskId) {
-        const logTimeElement = logElement.querySelector('.log-time');
-        const logNotesElement = logElement.querySelector('.log-notes');
-        const logDate = logElement.querySelector('p').textContent.split(': ')[1];
-        const logTime = parseFloat(logTimeElement.textContent);
-        const logNotes = logNotesElement.textContent;
+        const tds = logElement.querySelectorAll('td');
+        const logDate = tds[0].textContent;
+        const logTime = parseFloat(tds[1].textContent);
+        const logNotes = tds[2].textContent;
 
-        const logTimeInput = document.createElement('input');
-        logTimeInput.type = 'number';
-        logTimeInput.value = logTime;
+        tds[0].innerHTML = `<input type="date" class="form-control" value="${logDate}">`;
+        tds[1].innerHTML = `<input type="number" class="form-control" value="${logTime}">`;
+        tds[2].innerHTML = `<input type="text" class="form-control" value="${logNotes}">`;
+        tds[3].innerHTML = `
+            <button class="btn btn-sm btn-save">Save</button>
+            <button class="btn btn-sm btn-cancel">Cancel</button>
+        `;
 
-        const logNotesInput = document.createElement('input');
-        logNotesInput.type = 'text';
-        logNotesInput.value = logNotes;
+        const dateInput = tds[0].querySelector('input');
+        const timeInput = tds[1].querySelector('input');
+        const notesInput = tds[2].querySelector('input');
 
-        const dateInput = document.createElement('input');
-        dateInput.type = 'date';
-        dateInput.value = logDate;
-
-        const saveButton = document.createElement('button');
-        saveButton.textContent = 'Save';
-        saveButton.classList.add('btn', 'btn-success', 'btn-sm', 'ms-2');
-        saveButton.addEventListener('click', () => updateLog(logId, logTimeInput.value, logNotesInput.value, dateInput.value, taskId));
-
-        logElement.innerHTML = '';
-        logElement.appendChild(dateInput);
-        logElement.appendChild(logTimeInput);
-        logElement.appendChild(logNotesInput);
-        logElement.appendChild(saveButton);
+        tds[3].querySelector('.btn-save').addEventListener('click', () => {
+            updateLog(logId, timeInput.value, notesInput.value, dateInput.value, taskId);
+        });
+        tds[3].querySelector('.btn-cancel').addEventListener('click', () => {
+            showLogList(taskId);
+        });
     }
 
     async function updateLog(logId, logTime, logNotes, date, taskId) {
