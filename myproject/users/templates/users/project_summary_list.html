@@ -1,0 +1,19 @@
+{% extends "todo/base.html" %}
+
+{% block title %}Project Summaries{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1 class="mb-4">Project Summaries</h1>
+
+    <div class="list-group">
+        {% for project in projects %}
+            <a href="{% url 'project_summary' project.id %}" class="list-group-item list-group-item-action">
+                {{ project.name }}
+            </a>
+        {% empty %}
+            <p>You are not a member of any projects.</p>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

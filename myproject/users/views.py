@@ -710,3 +710,12 @@ def project_summary_view(request, project_id):
         'summary_data': summary_data,
     }
     return render(request, 'users/project_summary.html', context)
+
+
+@login_required
+def project_summary_list_view(request):
+    projects = Project.objects.filter(members=request.user)
+    context = {
+        'projects': projects,
+    }
+    return render(request, 'users/project_summary_list.html', context)
