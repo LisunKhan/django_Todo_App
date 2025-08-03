@@ -115,6 +115,11 @@ def project_tasks_by_date_api(request, project_id, date_str):
         log_date = date.today()
 
     tasks = TodoItem.objects.filter(project_id=project_id, logs__task_date=log_date).distinct()
+
+    user_id = request.GET.get('user_id')
+    if user_id:
+        tasks = tasks.filter(user_id=user_id)
+
     tasks_data = []
     for task in tasks:
         total_log_time = task.logs.filter(task_date=log_date).aggregate(Sum('log_time'))['log_time__sum'] or 0
