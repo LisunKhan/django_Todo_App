@@ -435,6 +435,75 @@ document.addEventListener('DOMContentLoaded', () => {
             const taskId = taskCard.dataset.taskId;
             showLogList(taskId);
         }
+
+        if (event.target.classList.contains('logged-time-text')) {
+            const loggedTimeText = event.target;
+            const taskCard = loggedTimeText.closest('.card');
+            const cardBody = taskCard.querySelector('.card-body');
+            const logTimeInput = cardBody.querySelector('.log-time-input');
+            if (logTimeInput) {
+                return;
+            }
+
+            const originalText = loggedTimeText.textContent;
+            loggedTimeText.style.display = 'none';
+
+            const input = document.createElement('input');
+            input.type = 'number';
+            input.min = '0';
+            input.step = '0.5';
+            input.placeholder = 'Hours';
+            input.classList.add('log-time-input');
+
+            const dateInput = document.createElement('input');
+            dateInput.type = 'date';
+            dateInput.classList.add('log-time-input', 'ms-2');
+
+            const saveButton = document.createElement('button');
+            saveButton.textContent = 'Save';
+            saveButton.classList.add('btn', 'btn-success', 'btn-sm', 'ms-2');
+
+            const cancelButton = document.createElement('button');
+            cancelButton.textContent = 'Cancel';
+            cancelButton.classList.add('btn', 'btn-danger', 'btn-sm', 'ms-2');
+
+            const tempContainer = document.createElement('div');
+            tempContainer.appendChild(input);
+            if (taskCard.closest('.task-column').classList.contains('all-tasks-container')) {
+                tempContainer.appendChild(dateInput);
+            }
+            tempContainer.appendChild(saveButton);
+            tempContainer.appendChild(cancelButton);
+
+            loggedTimeText.parentElement.insertBefore(tempContainer, loggedTimeText.nextSibling);
+
+            saveButton.addEventListener('click', async () => {
+                const logTimeValue = input.value;
+                try {
+                    if (logTimeValue) {
+                        const taskId = taskCard.dataset.taskId;
+                        const column = taskCard.closest('.task-column');
+                        let date;
+                        if (column.classList.contains('yesterday-tasks-container')) {
+                            date = 'yesterday';
+                        } else if (column.classList.contains('today-tasks-container')) {
+                            date = 'today';
+                        } else {
+                            date = dateInput.value;
+                        }
+                        await saveNewLog(taskId, logTimeValue, '', date);
+                    }
+                } finally {
+                    loggedTimeText.style.display = 'block';
+                    tempContainer.remove();
+                }
+            });
+
+            cancelButton.addEventListener('click', () => {
+                loggedTimeText.style.display = 'block';
+                tempContainer.remove();
+            });
+        }
     });
 
     if (projectFilterSelect) {
