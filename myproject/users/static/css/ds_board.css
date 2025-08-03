@@ -311,3 +311,8 @@ body {
 .edit-log-btn {
     background-color: #007bff;
 }
+
+.task-column h2 {
+    text-align: center;
+    font-weight: 500;
+}
