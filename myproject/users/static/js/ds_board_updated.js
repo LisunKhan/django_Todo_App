@@ -50,11 +50,11 @@ document.addEventListener('DOMContentLoaded', () => {
         const users = await usersResponse.json();
 
         for (const user of users) {
-            await renderUserRow(user, users, page, searchQuery);
+            await renderUserRow(user, page, searchQuery);
         }
     }
 
-    async function renderUserRow(user, users, page, searchQuery) {
+    async function renderUserRow(user, page, searchQuery) {
         const userRow = document.createElement('div');
         userRow.classList.add('user-row', 'mb-4');
         userRow.innerHTML = `
