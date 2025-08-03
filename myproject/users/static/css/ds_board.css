@@ -309,3 +309,20 @@ body {
 .edit-log-btn {
     background-color: #007bff;
 }
+
+.task-column-title-m h2 {
+    text-align: center;
+    font-weight: 600;
+}
+.task-column-title-at h2 {
+    text-align: center;
+    font-weight: 600;
+}
+.task-column-title-y h2 {
+    text-align: center;
+    font-weight: 600;
+}
+.task-column-title-t h2 {
+    text-align: center;
+    font-weight: 600;
+}
