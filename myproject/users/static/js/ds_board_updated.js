@@ -242,6 +242,12 @@ document.addEventListener('DOMContentLoaded', () => {
         const logs = await response.json();
         logList.innerHTML = '';
 
+        const addLogButton = document.createElement('button');
+        addLogButton.textContent = 'Add New Log';
+        addLogButton.classList.add('btn', 'btn-primary', 'mb-3');
+        addLogButton.addEventListener('click', () => addLog(taskId));
+        logList.appendChild(addLogButton);
+
         const table = document.createElement('table');
         table.classList.add('table');
         const thead = document.createElement('thead');
@@ -277,6 +283,63 @@ document.addEventListener('DOMContentLoaded', () => {
         editLogModal.style.display = 'block';
     }
 
+    function addLog(taskId) {
+        const table = logList.querySelector('table');
+        const tbody = table.querySelector('tbody');
+        const newRow = document.createElement('tr');
+        newRow.innerHTML = `
+            <td><input type="date" class="form-control" value="${new Date().toISOString().slice(0, 10)}"></td>
+            <td><input type="number" class="form-control" placeholder="Time"></td>
+            <td><input type="text" class="form-control" placeholder="Notes"></td>
+            <td>
+                <button class="btn btn-sm btn-save-new">Save</button>
+                <button class="btn btn-sm btn-cancel-new">Cancel</button>
+            </td>
+        `;
+        tbody.appendChild(newRow);
+
+        newRow.querySelector('.btn-save-new').addEventListener('click', () => {
+            const date = newRow.querySelector('input[type="date"]').value;
+            const time = newRow.querySelector('input[type="number"]').value;
+            const notes = newRow.querySelector('input[type="text"]').value;
+            saveNewLog(taskId, time, notes, date);
+        });
+
+        newRow.querySelector('.btn-cancel-new').addEventListener('click', () => {
+            newRow.remove();
+        });
+    }
+
+    async function saveNewLog(taskId, logTime, notes, date) {
+        const response = await fetch(`/api/ds_board_updated/task/${taskId}/log/create/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: JSON.stringify({
+                log_time: logTime,
+                notes: notes,
+                task_date: date
+            })
+        });
+        const data = await response.json();
+        if (data.success) {
+            const taskCard = document.querySelector(`[data-task-id="${taskId}"]`);
+            if (taskCard) {
+                const totalTimeSpentEl = taskCard.querySelector('.total-time-spent');
+                const loggedTimeTextEl = taskCard.querySelector('.logged-time-text');
+                if (totalTimeSpentEl) {
+                    totalTimeSpentEl.textContent = data.total_time_spent;
+                }
+                if (loggedTimeTextEl) {
+                    loggedTimeTextEl.textContent = `Logged: ${data.total_log_time}h`;
+                }
+            }
+            showLogList(taskId);
+        }
+    }
+
     function editLog(logId, logElement, taskId) {
         const tds = logElement.querySelectorAll('td');
         const logDate = tds[0].textContent;
@@ -304,7 +367,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     async function updateLog(logId, logTime, logNotes, date, taskId) {
-        await fetch(`/api/ds_board_updated/log/${logId}/update/`, {
+        const response = await fetch(`/api/ds_board_updated/log/${logId}/update/`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -316,18 +379,46 @@ document.addEventListener('DOMContentLoaded', () => {
                 task_date: date
             })
         });
-        showLogList(taskId);
+        const data = await response.json();
+        if (data.success) {
+            const taskCard = document.querySelector(`[data-task-id="${taskId}"]`);
+            if (taskCard) {
+                const totalTimeSpentEl = taskCard.querySelector('.total-time-spent');
+                const loggedTimeTextEl = taskCard.querySelector('.logged-time-text');
+                if (totalTimeSpentEl) {
+                    totalTimeSpentEl.textContent = data.total_time_spent;
+                }
+                if (loggedTimeTextEl) {
+                    loggedTimeTextEl.textContent = `Logged: ${data.total_log_time}h`;
+                }
+            }
+            showLogList(taskId);
+        }
     }
 
     async function deleteLog(logId, logElement, taskId) {
         if (confirm('Are you sure you want to delete this log?')) {
-            await fetch(`/api/ds_board_updated/log/${logId}/delete/`, {
+            const response = await fetch(`/api/ds_board_updated/log/${logId}/delete/`, {
                 method: 'POST',
                 headers: {
                     'X-CSRFToken': getCookie('csrftoken')
                 }
             });
-            logElement.remove();
+            const data = await response.json();
+            if (data.success) {
+                const taskCard = document.querySelector(`[data-task-id="${taskId}"]`);
+                if (taskCard) {
+                    const totalTimeSpentEl = taskCard.querySelector('.total-time-spent');
+                    const loggedTimeTextEl = taskCard.querySelector('.logged-time-text');
+                    if (totalTimeSpentEl) {
+                        totalTimeSpentEl.textContent = data.total_time_spent;
+                    }
+                    if (loggedTimeTextEl) {
+                        loggedTimeTextEl.textContent = `Logged: ${data.total_log_time}h`;
+                    }
+                }
+                logElement.remove();
+            }
         }
     }
 

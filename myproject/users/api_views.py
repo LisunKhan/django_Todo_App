@@ -89,7 +89,18 @@ def update_log_api_updated(request, log_id):
         if 'task_date' in data:
             log.task_date = data['task_date']
         log.save()
-        return JsonResponse({'success': True})
+
+        task = log.todo_item
+        task.time_spent = task.logs.aggregate(Sum('log_time'))['log_time__sum'] or 0
+        task.save()
+
+        total_log_time_today = task.logs.filter(task_date=date.today()).aggregate(Sum('log_time'))['log_time__sum'] or 0
+
+        return JsonResponse({
+            'success': True,
+            'total_time_spent': task.time_spent,
+            'total_log_time': total_log_time_today,
+        })
     return JsonResponse({'error': 'Invalid request method'}, status=405)
 
 @login_required
@@ -139,8 +150,19 @@ def user_stats_api(request, project_id, user_id, date_str):
 def delete_log_api_updated(request, log_id):
     if request.method == 'POST':
         log = TodoLog.objects.get(id=log_id)
+        task = log.todo_item
         log.delete()
-        return JsonResponse({'success': True})
+
+        task.time_spent = task.logs.aggregate(Sum('log_time'))['log_time__sum'] or 0
+        task.save()
+
+        total_log_time_today = task.logs.filter(task_date=date.today()).aggregate(Sum('log_time'))['log_time__sum'] or 0
+
+        return JsonResponse({
+            'success': True,
+            'total_time_spent': task.time_spent,
+            'total_log_time': total_log_time_today,
+        })
     return JsonResponse({'error': 'Invalid request method'}, status=405)
 
 @login_required
@@ -276,6 +298,31 @@ def delete_log_api(request, log_id):
         log = TodoLog.objects.get(id=log_id)
         log.delete()
         return JsonResponse({'success': True})
+    return JsonResponse({'error': 'Invalid request method'}, status=405)
+
+
+@login_required
+def create_log_api(request, task_id):
+    if request.method == 'POST':
+        data = json.loads(request.body)
+        task = TodoItem.objects.get(id=task_id)
+        log = TodoLog.objects.create(
+            todo_item=task,
+            log_time=data['log_time'],
+            notes=data['notes'],
+            task_date=data['task_date']
+        )
+
+        task.time_spent = task.logs.aggregate(Sum('log_time'))['log_time__sum'] or 0
+        task.save()
+
+        total_log_time_today = task.logs.filter(task_date=date.today()).aggregate(Sum('log_time'))['log_time__sum'] or 0
+
+        return JsonResponse({
+            'success': True,
+            'total_time_spent': task.time_spent,
+            'total_log_time': total_log_time_today,
+        })
     return JsonResponse({'error': 'Invalid request method'}, status=405)
 
 
